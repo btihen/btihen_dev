@@ -2,12 +2,13 @@
 # An instance of the Featured widget.
 # Documentation: https://wowchemy.com/docs/page-builder/
 widget: collection
+active: false        # Activate this widget? true/false
 
 # This file represents a page section.
 headless: true
 
 # Order that this section appears on the page.
-weight: 80
+weight: 10
 
 title: Featured Publications
 subtitle: ''
@@ -16,7 +17,7 @@ content:
   # Page type to display. E.g. post, talk, publication...
   page_type: publication
   # Choose how many pages you would like to display (0 = all pages)
-  count: 0
+  count: 3
   # Filter on criteria
   filters:
     featured_only: true

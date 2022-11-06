@@ -19,7 +19,7 @@ marketing:
     local_business_type: ''
     org_name: ''
     description: 'A highly-customizable Hugo academic resume theme powered by Wowchemy website builder.'
-    twitter: 'wowchemy'
+    twitter: 'btihen'
   analytics:
     google_analytics: ''
     baidu_tongji: ''
@@ -53,8 +53,8 @@ footer:
 # Localization
 
 locale:
-  date_format: 'Jan 2, 2006'
-  time_format: '3:04 PM'
+  date_format: 'Mon, 02 Jan 2006'
+  time_format: '15:04'
   address_format: en-us
 
 # Site features
@@ -68,7 +68,7 @@ features:
   privacy_pack:
     enable: false
   repository:
-    url: 'https://github.com/<username>/<repository>'
+    url: 'https://github.com/btihen/<repository>'
     content_dir: content
     branch: main
   avatar:
