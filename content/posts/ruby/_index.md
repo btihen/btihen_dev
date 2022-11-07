@@ -1,5 +1,5 @@
 ---
-title: Ruby Posts
+title: Ruby Language
 cms_exclude: true
 
 # View.

@@ -1,5 +1,5 @@
 ---
-title: Educational Posts
+title: Agile Education
 layout: posts  # Do not modify.
 
 # View.

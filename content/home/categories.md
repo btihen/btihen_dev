@@ -7,7 +7,7 @@ widget: tag_cloud
 headless: true
 
 # Order that this section appears on the page.
-weight: 50
+weight: 250
 
 title: Site Categories
 subtitle: ''

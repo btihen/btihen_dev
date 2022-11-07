@@ -1,5 +1,5 @@
 ---
-title: Crystal Posts
+title: Crystal Language
 cms_exclude: true
 
 # View.

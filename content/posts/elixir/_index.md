@@ -1,5 +1,5 @@
 ---
-title: Elixir Posts
+title: Elixir Language
 cms_exclude: true
 
 # View.

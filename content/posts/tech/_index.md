@@ -1,5 +1,5 @@
 ---
-title: Tech Posts
+title: Technologies
 cms_exclude: true
 
 # View.

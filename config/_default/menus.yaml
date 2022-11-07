@@ -4,24 +4,50 @@
 #   The weight parameter defines the order that the links will appear in.
 
 main:
+  # - name: Posts
+  #   url: '#posts'
+  #   weight: 20
   - name: Posts
-    url: '#posts'
     weight: 20
-  # - name: Elixir
-  #   url: '#posts_elixir'
-  #   weight: 30
-  # - name: Crystal
-  #   url: '#posts_crystal'
-  #   weight: 40
-  # - name: Tech
-  #   url: '#posts_tech'
-  #   weight: 50
-  # - name: Agile/Edu
-  #   url: '#posts_agile_edu'
-  #   weight: 60
+    identifier: blogs
+  - name: All Blogs
+    PageRef: posts/_index.md
+    weight: 10
+    parent: blogs
+  - name: Ruby
+    PageRef: posts/ruby/_index.md
+    weight: 10
+    parent: blogs
+  - name: Elixir
+    PageRef: posts/elixir/_index.md
+    weight: 20
+    parent: blogs
+  - name: EDgility
+    PageRef: posts/edgility/_index.md
+    weight: 30
+    parent: blogs
+  - name: Crystal
+    PageRef: posts/crystal/_index.md
+    weight: 40
+    parent: blogs
+  - name: Tech
+    PageRef: posts/tech/_index.md
+    weight: 50
+    parent: blogs
+  # - name: Tutorials
+  #   url: '#tutorials'
+  #   weight: 70
   - name: Tutorials
-    url: '#tutorials'
     weight: 70
+    identifier: tutorials
+  - name: All Tutorials
+    PageRef: tutorials/_index.md
+    weight: 10
+    parent: tutorials
+  - name: Ash Framework
+    PageRef: tutorials/ash_2_1/_index.md
+    weight: 10
+    parent: tutorials
   - name: Publications
     url: '#publications'
     weight: 80
