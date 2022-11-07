@@ -25,7 +25,7 @@ date_format: Mon, 02 Jan 2006
 #   Begin multi-line descriptions with YAML's `|2-` multi-line prefix.
 item:
   - title: Ash Framework 2.1 - Beginner's Tutorial
-    url: '/tutorials/tutorial_ash_2_1'
+    url: '/tutorials/ash_2_1'
     # certificate_url: /tutorial_ash_2_1
     date_end: ''
     date_start: '2022-11-05'

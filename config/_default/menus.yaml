@@ -41,11 +41,11 @@ main:
     weight: 70
     identifier: tutorials
   - name: All Tutorials
-    PageRef: tutorials/_index.md
+    url: tutorials/
     weight: 10
     parent: tutorials
   - name: Ash Framework
-    PageRef: tutorials/ash_2_1/_index.md
+    url: tutorials/ash_2_1/
     weight: 10
     parent: tutorials
   - name: Publications

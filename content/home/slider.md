@@ -16,7 +16,7 @@ design:
 content:
   slides:
     - title: Explore
-      content: Ideas
+      content: ''
       align: center
       background:
         position: right
@@ -24,7 +24,7 @@ content:
         brightness: 0.7
         media: gemmipass.jpeg
     - title: Appreciate
-      content: People
+      content: ''
       align: right
       background:
         position: center
