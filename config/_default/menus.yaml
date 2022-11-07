@@ -4,24 +4,59 @@
 #   The weight parameter defines the order that the links will appear in.
 
 main:
-  - name: Home
-    url: '#about'
-    weight: 10
+  # - name: Posts
+  #   url: '#posts'
+  #   weight: 20
   - name: Posts
-    url: '#posts'
     weight: 20
-  - name: Projects
-    url: '#projects'
+    identifier: blogs
+  - name: All Blogs
+    PageRef: posts/_index.md
+    weight: 10
+    parent: blogs
+  - name: Ruby
+    PageRef: posts/ruby/_index.md
+    weight: 10
+    parent: blogs
+  - name: Elixir
+    PageRef: posts/elixir/_index.md
+    weight: 20
+    parent: blogs
+  - name: EDgility
+    PageRef: posts/edgility/_index.md
     weight: 30
-  - name: Talks
-    url: '#talks'
+    parent: blogs
+  - name: Crystal
+    PageRef: posts/crystal/_index.md
     weight: 40
-  - name: Publications
-    url: '#featured'
+    parent: blogs
+  - name: Tech
+    PageRef: posts/tech/_index.md
     weight: 50
+    parent: blogs
+  # - name: Tutorials
+  #   url: '#tutorials'
+  #   weight: 70
+  - name: Tutorials
+    weight: 70
+    identifier: tutorials
+  - name: All Tutorials
+    PageRef: tutorials/_index.md
+    weight: 10
+    parent: tutorials
+  - name: Ash Framework
+    PageRef: tutorials/ash_2_1/_index.md
+    weight: 10
+    parent: tutorials
+  - name: Publications
+    url: '#publications'
+    weight: 80
   - name: Contact
     url: '#contact'
-    weight: 60
+    weight: 90
+  - name: About
+    url: '#about'
+    weight: 100
 
 # Link to a PDF of your resume/CV from the menu.
 # To enable, copy your resume/CV to `static/uploads/resume.pdf` and uncomment the lines below.
