@@ -33,7 +33,11 @@ content:
   order: desc
 
 design:
-  # Choose a view for the listings:
-  view: compact
+  # Toggle between the various page layout types.
+  #   1 = List
+  #   2 = Compact
+  #   3 = Card
+  #   5 = Showcase
+  view: Compact
   columns: '2'
 ---

@@ -80,10 +80,10 @@ user_groups: []
 # - Visitors
 ---
 
-On a quest to explore and uplift.
-
 Developer, Educator and very curious.
 
-I love exploring / hiking in the alps with my dog and I love learning new programming ideas.
+I love exploring & hiking in the mountains and nature.
 
-Feel free to checkout my exploratory repository.
+I also enjoy learning - especially coding and technology ideas.
+
+These are my tech notes / journal, but feel free to help me improve the content.

@@ -4,7 +4,7 @@
 # This file is formatted using YAML syntax - learn more at https://learnxinyminutes.com/docs/yaml/
 
 title: btihen # Website name
-baseURL: 'https://btihen.me/' # Website URL
+baseURL: 'https://btihen.dev/' # Website URL
 
 ############################
 ## LANGUAGE

@@ -18,7 +18,7 @@ marketing:
     site_type: Person
     local_business_type: ''
     org_name: ''
-    description: 'A highly-customizable Hugo academic resume theme powered by Wowchemy website builder.'
+    description: 'btihen tech notes'
     twitter: 'btihen'
   analytics:
     google_analytics: ''
@@ -68,7 +68,7 @@ features:
   privacy_pack:
     enable: false
   repository:
-    url: 'https://github.com/btihen/<repository>'
+    url: 'https://github.com/btihen/btihen_dev'
     content_dir: content
     branch: main
   avatar:

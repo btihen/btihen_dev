@@ -4,7 +4,7 @@ headless: true
 active: false        # Activate this widget? true/false
 weight: 10
 title: Hugo Academic Theme
-hero_media: hero-academic.png
+hero_media: icon.png
 cta:
   label: '**Get Started**'
   url: https://wowchemy.com/templates/
