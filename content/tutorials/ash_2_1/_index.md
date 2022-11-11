@@ -1,9 +1,17 @@
 ---
-title: Ash Framework 2.1
-type: book # Do not modify.
+title:  '05-Authentication'
 toc: false
 tags: ["tutorial", "Elixir"]
 categories: ["Code", "Ash Framework", "Elixir"]
+weight: 6
+icon: book-reader
+icon_pack: fas
+
+# Page metadata.
+title: '03-Relationships: HasMany'
+date: '2022-11-11T00:00:00Z'
+type: book # Do not modify.
+draft: true
 ---
 
 Welcome to the Beginner's Guide to the Ash Framework 2.1!
@@ -22,3 +30,5 @@ It is expected that you are already familiar with (but you need not be an expert
 
 * **Elixir** - if you want to learn more about Elixir I recommend both [Dockyard Academy Curriculum](https://github.com/DockYard-Academy/beta_curriculum) and [Exercism](https://exercism.org/)
 * **Relationships** - `belongs_to`, `has_many`, `has_one` and `join_tables`
+
+PS - Big shout-out to the helpful Ash Discord community

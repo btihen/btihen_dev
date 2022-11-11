@@ -55,8 +55,20 @@ However, I like to think of Ash as having four Layers:
 
 ## Install Phoenix (1.7)
 
-First I let's install the unreleased version of Phoenix 1.7 by following these [instructions](https://github.com/phoenixframework/phoenix/blob/master/installer/README.md):
+First I let's install the unreleased version of [Phoenix 1.7](
+https://www.phoenixframework.org/blog/phoenix-1.7-released) - **Note** For the rc period, you’ll need to explicitly install the phx.new generator from hex to try out a fresh project:
+```bash
+mix archive.uninstall phx_new
+mix archive.install hex phx_new helpdesk
+cd helpdesk
+mix ecto.create
+git init
+git add .
+git commit -m "initial phoenix commit"
+iex -S mix phx.server
+```
 
+Or install `main` (bleeding edge) using hese [instructions](https://github.com/phoenixframework/phoenix/blob/master/installer/README.md):
 ```bash
 mix archive.uninstall phx_new
 git clone https://github.com/phoenixframework/phoenix

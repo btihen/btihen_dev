@@ -2,7 +2,7 @@
 # Title, summary, and page position.
 linktitle: 01-Resources
 summary: The basic building block for Ash
-weight: 1
+weight: 2
 # icon: book
 icon: book-reader
 icon_pack: fas
