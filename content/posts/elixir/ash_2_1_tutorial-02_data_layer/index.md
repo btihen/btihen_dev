@@ -1,7 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Ash 2.1 Tutorial - 02 Data Layer"
+title: "Ash 2.1 Tutorial - 02 Data Layer: Persistence"
 subtitle: "Data Persistence"
 # Summary for listings and search engines
 summary: "Beginner's guide to the Ash framework"
@@ -9,8 +9,8 @@ authors: ["btihen"]
 tags: ["Elixir", "Ash", "Phoenix", "GraphQL", "JSON API"]
 categories: ["Code", "Elixir Language", "Ash Framework"]
 date: 2022-11-05T01:01:53+02:00
-lastmod: 2022-11-05T01:01:53+02:00
-featured: true
+lastmod: 2022-11-11T01:01:53+02:00
+featured: false
 draft: false
 
 # Featured image

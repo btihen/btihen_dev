@@ -1,19 +1,30 @@
 ---
 # Title, summary, and page position.
-linktitle: 03-Relationships
+linktitle: '03-Relationships: HasMany'
 summary: Learn how to use Academic's docs layout for publishing online courses, software documentation, and tutorials.
 weight: 1
 icon: book-reader
 icon_pack: fas
 
 # Page metadata.
-title: 03-Relationships
-date: '2022-11-04T00:00:00Z'
+title: '03-Relationships: HasMany'
+date: '2022-11-11T00:00:00Z'
 type: book # Do not modify.
 draft: true
 ---
 
-In order to build relationships we will need more than one resource.  So lets quickly build the 'ticket' resource - also using ETS as the data layer (for now).  I won't explain the `actions` and `attributes` since that has already been covered in the [Resources Article](/posts_elixir/ash_2_1_tutorial-01_resources/).
+
+In order to build relationships we will need more than one resource.  So let's build the support 'ticket' and exchange 'comments' resource.  We will continue using ETS as the data layer (for now).  I won't explain the `actions` and `attributes` since that has already been covered in the [Resources Article](/tutorials/ash_2_1/01_resources/).
+
+Relationships declare the relationship between 'resources' we have:
+
+* `belongs_to` - associated with ONE resource, if the remote resource is deleted, this resource will need to be deleted (first).  For example ONE ticket is associated with ONE user who created the ticket.  If the user who created the ticket is deleted then the `ticket` will need to be removed too.
+* `has_many` - A user can create MULTIPLE ticket, again, if the remote resource is deleted, this remote resource will need to be deleted (first).
+* `has_one` - not commonly used, but its the inverse of belongs_to
+
+## Belongs To
+
+So now we will show how `belongs_to` is defined in Ash.  Notice that in Ticket, we are referencing two different `User` resources, and this establishes two different relationships (with sensible relationship names)
 
 ```elixir
 # lib/support/resources/ticket.ex
@@ -49,10 +60,44 @@ defmodule Support.Ticket do
       allow_nil? false
     end
   end
+
+  # ONE 'reporter' creates a ticket
+  # ONE 'technician' helps the 'reporter' with the support ticket
+  relationships do
+    belongs_to :reporter, Support.User
+    belongs_to :technician, Support.User
+  end
 end
 ```
 
-Now we need to update the registry to include Ticket too:
+```elixir
+# lib/support/resources/comment.ex
+defmodule Support.Comment do
+  use Ash.Resource,
+    data_layer: Ash.DataLayer.Ets
+
+  actions do
+    defaults [:create, :read, :update, :destroy]
+  end
+
+  attributes do
+    uuid_primary_key :id
+
+    attribute :message, :string do
+      allow_nil? false
+    end
+  end
+
+  # ONE 'author' (reporter or representative)) writes a comment
+  # ONE 'ticket' is associated with the comment.
+  relationships do
+    belongs_to :author, Support.User
+    belongs_to :ticket, Support.Ticket
+  end
+end
+```
+
+Be sure to update the registry!
 
 ```elixir
 # lib/support/registry.ex
@@ -63,83 +108,130 @@ defmodule Support.Registry do
     ]
 
   entries do
+    entry Support.Comment
     entry Support.Ticket
     entry Support.User
   end
 end
 ```
 
-## Ash Relationships
+## Has Many
 
-### Belongs to
-
-The tickets will need a `relationship` section that points to the users - in this case we have two 'relationships':
-
-* a reporter (customers or employees)
-* a representative (only employees)
-that both point back to the same user 'resource'.  We use `belong_to` meaning that the destination attribute is unique, meaning only one related record could exist.
-
-```elixir
-# lib/support/resources/ticket.ex
-  # ...
-  relationships do
-    belongs_to :reporter, Support.User
-    belongs_to :representative, Support.User
-  end
-  # ...
-```
-
-### Has many
+Now let's see how we define our `has_many` relationships within Ash. The 'User' may have has `authored` MANY 'comments'.  A 'User' (customer or employee) may have `created` MANY 'tickets'. A 'User' (employees) may have been `assigned` MANY 'Tickets'.  Here we see we need to use the
 
 ```elixir
 # lib/support/resources/user.ex
   # ...
   relationships do
-    # in a simple relationship this works if the other side references user_id
-    # has_many :tickets, Support.Ticket
+    has_many :authored_comments, Support.Comment do
+      destination_attribute :author_id
+    end
 
     # with overloaded references we need to declare the remote key
-    has_many :assigned_tickets, Support.Ticket do
-      destination_attribute :representative_id
-    end
-    has_many :reported_tickets, Support.Ticket do
+    has_many :created_tickets, Support.Ticket do
       destination_attribute :reporter_id
+    end
+    has_many :assigned_tickets, Support.Ticket do
+      destination_attribute :technician_id
     end
   end
   # ...
 ```
 
-### Testing
+We also want to be able to find the possible MANY comments associated with a ticket.
+
+```elixir
+# lib/support/resources/ticket.ex
+  # ...
+  relationships do
+    has_many :comments, Support.Comment do
+      destination_attribute :ticket_id
+    end
+
+    belongs_to :reporter, Support.User
+    belongs_to :technician, Support.User
+  end
+  # ...
+```
+
+**TEST**
 
 ```elixir
 iex -S mix phx.server
 
+# Create a Customer and a technician
 customer = (
   Support.User
   |> Ash.Changeset.for_create(
-      :new_customer, %{first_name: "Ratna", last_name: "Sönam", email: "nyima@example.com"}
+      :new_customer, %{first_name: "Ratna", last_name: "Sönam", email: "ratna@example.com"}
     )
   |> Support.AshApi.create!()
 )
-employee = (
+technician = (
   Support.User
   |> Ash.Changeset.for_create(
       :new_employee, %{first_name: "Nyima", last_name: "Sönam", email: "nyima@example.com",
-                       department: "Office Actor", account_type: :employee}
+                       department_name: "Tech Support"}
     )
   |> Support.AshApi.create!()
 )
-admin = (
+
+# Customer reports a ticket - reporter_id remains blank! :(
+ticket1 = (
+  Support.Ticket
+  |> Ash.Changeset.for_create(
+      :create, %{subject: "No Power", description: "nothing happens", reporter_id: customer.id}
+    )
+  |> Support.AshApi.create!()
+)
+```
+
+NOTICE:
+
+* we added a reporter_id we created a ticket without a reporter - we don't want that, so we will add a validation.
+* we need a `relationship` changeset to add relationships - a normal changeset only updates `attributes`
+
+To require a relationship we can rewrite our relationships to:
+```elixir
+# lib/support/resources/ticket.ex
+  # ...
+  relationships do
+    has_many :comments, Support.Comment do
+      destination_attribute :ticket_id
+    end
+
+    belongs_to :reporter, Support.User
+    belongs_to :technician, Support.User
+  end
+  # ...
+```
+[belongs_to Docs](<https://ash-hq.org/docs/dsl/ash/latest/resource/relationships/belongs_to#allow_nil>)
+
+**TEST**
+
+```elixir
+iex -S mix phx.server
+# or
+recompile()
+
+# Create a Customer and a technician
+customer = (
   Support.User
   |> Ash.Changeset.for_create(
-      :new_admin, %{first_name: "Karma", last_name: "Sönam", email: "karma@example.com",
-                    department: "Office Admin", account_type: :employee, admin: true}
+      :new_customer, %{first_name: "Ratna", last_name: "Sönam", email: "ratna@example.com"}
+    )
+  |> Support.AshApi.create!()
+)
+technician = (
+  Support.User
+  |> Ash.Changeset.for_create(
+      :new_employee, %{first_name: "Nyima", last_name: "Sönam", email: "nyima@example.com",
+                       department_name: "Tech Support"}
     )
   |> Support.AshApi.create!()
 )
 
-
-# Create new tickets
+# Customer reports a ticket - reporter_id remains blank! :(
 ticket1 = (
   Support.Ticket
   |> Ash.Changeset.for_create(
@@ -148,11 +240,138 @@ ticket1 = (
   |> Support.AshApi.create!()
 )
 
-ticket2 = (
+# NOW WE SHOULD GET!
+** (Ash.Error.Invalid) Input Invalid
+
+* relationship reporter is required
+```
+
+### Relationship Changesets - Create 'Belongs To' Records
+
+OK, we are protected from creating records without required relationship, now we need to learn to `manage_relationships`
+
+To do this we will make a changeset with `manage_relationship` which looks like:
+```elixir
+customer = (
+  Support.User
+  |> Ash.Changeset.for_create(
+      :new_customer, %{first_name: "Ratna", last_name: "Sönam", email: "ratna@example.com"}
+    )
+  |> Support.AshApi.create!()
+)
+
+# TODO - fix
+ticket = (
   Support.Ticket
   |> Ash.Changeset.for_create(
-      :create, %{subject: "Screen Broken", description: "it has crack", status: :open,
-                 priority: :high, reporter_id: customer.id, representative_id: employee.id}
+      :create, %{subject: "No Power", description: "nothing happens", reporter_id: customer.id}
+    )
+  |> Ash.Changeset.manage_relationship(:reporter, type: :append_and_remove)
+  |> Support.AshApi.create!()
+)
+```
+
+### Custom Actions with relationships
+
+To simplify relationships we can add them to custom actions:
+
+```elixir
+# lib/support/resources/ticket.ex
+  # ...
+  actions do
+    defaults [:create, :read, :update, :destroy]
+
+    create :new do
+      accept [:subject, :description, :priority]
+
+      argument :reporter_id, :uuid do
+        allow_nil? false # This action requires reporter_id
+      end
+      # add the reporter
+      change manage_relationship(:reporter_id, :reporter, type: :append_and_remove)
+    end
+  end
+  # ...
+```
+
+Now we can do:
+```elixir
+# old way - doesn't require a reporter
+customer = (
+  Support.User
+  |> Ash.Changeset.for_create(
+      :new_customer, %{first_name: "Ratna", last_name: "Sönam", email: "ratna@example.com"}
+    )
+  |> Support.AshApi.create!()
+)
+
+# using custom action - which requires a reporter and is simpler
+ticket = (
+  Support.Ticket
+  |> Ash.Changeset.for_create(
+      :new, %{subject: "No Power", description: "nothing happens", reporter_id: customer.id}
+    )
+  |> Support.AshApi.create!()
+)
+```
+
+### Query Relationships
+
+Notice that you need to pin (^) the customer.id and to get the associated 'repoter' you need to `load` the relationship(s) like in the following query:
+
+```elixir
+Support.Ticket
+  |> Ash.Query.filter(priority == :low)
+  |> Ash.Query.filter(reporter_id == ^customer.id)
+  |> Ash.Query.load([:reporter])
+  |> Support.AshApi.read!()
+```
+
+The `filter` function is very capable - to learn more visit:
+
+* [Ash Queries](https://www.ash-hq.org/docs/module/ash/2.4.1/ash-query)
+* [Writing an Ash Filter](https://www.ash-hq.org/docs/module/ash/2.4.1/ash-filter)
+
+
+### Update 'belongs_to' Relationships
+
+### Update 'belongs_to' Custom Actions
+
+Of course we can simplify with a custom action:
+```elixir
+# lib/support/resources/ticket.ex
+
+update :assign do
+  # No attributes should be accepted
+  accept []
+
+  # We accept a representative's id as input here
+  argument :technician_id, :uuid do
+    # This action requires representative_id
+    allow_nil? false
+  end
+
+  # We use a change here to replace the related Representative
+  # If there is a different representative for this Ticket, it will be changed to the new one
+  # The Representative itself is not modified in any way
+  change manage_relationship(:technician_id, :technician, type: :append_and_remove)
+end
+```
+and now we
+
+**TEST**
+
+
+
+
+
+## Has Many
+
+```elixir
+comment1 = (
+  Support.Comment
+  |> Ash.Changeset.for_create(
+      :create, %{message: "I plugged it in", author_id: customer.id, ticket_id: ticket1.id}
     )
   |> Support.AshApi.update!()
 )
