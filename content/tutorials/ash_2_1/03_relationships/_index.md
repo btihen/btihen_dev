@@ -10,6 +10,7 @@ icon_pack: fas
 title: 03-Relationships
 date: '2022-11-04T00:00:00Z'
 type: book # Do not modify.
+draft: true
 ---
 
 In order to build relationships we will need more than one resource.  So lets quickly build the 'ticket' resource - also using ETS as the data layer (for now).  I won't explain the `actions` and `attributes` since that has already been covered in the [Resources Article](/posts_elixir/ash_2_1_tutorial-01_resources/).
