@@ -2,15 +2,15 @@
 # An instance of the Pages widget.
 # Documentation: https://wowchemy.com/docs/page-builder/
 widget: collection
-active: false        # Activate this widget? true/false
+active: true        # Activate this widget? true/false
 
 # This file represents a page section.
 headless: true
 
 # Order that this section appears on the page.
-weight: 20
+weight: 40
 
-title: Ruby Posts
+title: Recent Posts
 subtitle:
 
 content:
@@ -18,10 +18,10 @@ content:
   filters:
     folders:
       - posts
-    tag: 'Ruby'
-    category: 'ruby language'
+    tag: ''
+    category: ''
     publication_type: ''
-    author: ''
+    author: 'btihen'
     exclude_featured: false
     exclude_future: false
     exclude_past: false
