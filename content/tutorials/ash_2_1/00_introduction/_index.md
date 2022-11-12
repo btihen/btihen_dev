@@ -9,7 +9,7 @@ icon_pack: fas
 # Page metadata.
 title: 00-Introduction
 date: '2022-11-04T00:00:00Z'
-# type: book # Do not modify.
+type: book # Do not modify.
 ---
 
 ## Overview
