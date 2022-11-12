@@ -1,17 +1,9 @@
 ---
-title:  '05-Authentication'
+title: Ash Framework 2.1
+type: book # Do not modify.
 toc: false
 tags: ["tutorial", "Elixir"]
 categories: ["Code", "Ash Framework", "Elixir"]
-weight: 6
-icon: book-reader
-icon_pack: fas
-
-# Page metadata.
-title: '03-Relationships: HasMany'
-date: '2022-11-11T00:00:00Z'
-type: book # Do not modify.
-draft: true
 ---
 
 Welcome to the Beginner's Guide to the Ash Framework 2.1!
