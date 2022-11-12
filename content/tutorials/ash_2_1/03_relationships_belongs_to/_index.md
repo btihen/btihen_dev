@@ -295,6 +295,8 @@ The `filter` function is very capable - to learn more visit:
 
 To do this we will make a changeset with `manage_relationship` which looks like:
 ```elixir
+iex -S mix phx.server
+
 customer = (
   Support.User
   |> Ash.Changeset.for_create(
@@ -327,37 +329,26 @@ ticket
   |> Support.AshApi.update!()
 ```
 
+### Validate Technician
 
-### Update 'belongs_to' Custom Actions
+We want to ensure that if the ticket is `open` or `closed` it has a technician who is responsible.
 
-Of course we can simplify with a custom action:
 ```elixir
 # lib/support/resources/ticket.ex
-
-update :assign do
-  # No attributes should be accepted
-  accept []
-
-  # We accept a representative's id as input here
-  argument :technician_id, :uuid do
-    # This action requires representative_id
-    allow_nil? false
+  # ...
+  validations do
+    validate present(:technician_id),
+             where: attribute_does_not_equal(:status, :new),
+             message: "A technician must be assigned to a ticket that is not new"
   end
-
-  # We use a change here to replace the related Representative
-  # If there is a different representative for this Ticket, it will be changed to the new one
-  # The Representative itself is not modified in any way
-  change manage_relationship(:technician_id, :technician, type: :append_and_remove)
-end
+  # ...
 ```
-
 
 **TEST**
 
 ```elixir
 iex -S mix phx.server
 
-# Create a Customer and a technician
 customer = (
   Support.User
   |> Ash.Changeset.for_create(
@@ -375,6 +366,7 @@ technician = (
   |> Support.AshApi.create!()
 )
 
+
 # Customer reports a ticket - reporter_id remains blank! :(
 ticket = (
   Support.Ticket
@@ -384,9 +376,94 @@ ticket = (
   |> Support.AshApi.create!()
 )
 
-ticket
-|> Ash.Changeset.for_update(:assign, %{technician_id: technician.id})
-|> Support.AshApi.update!()
+ticket = (
+  ticket
+  |> Ash.Changeset.for_update(:update, %{status: :open})
+  |> Support.AshApi.update!()
+)
+# as expected (wanted)
+** (Ash.Error.Invalid) Input Invalid
+
+* Invalid value provided for technician_id: A technician must be assigned to a ticket that is not new.
+
+
+# However This works
+ticket = (
+  ticket
+  |> Ash.Changeset.for_update(:update, %{technician: %{id: technician.id}})
+  |> Ash.Changeset.manage_relationship(:technician, %{id: technician.id}, type: :append_and_remove)
+  |> Support.AshApi.update!()
+)
+
+ticket = (
+  ticket
+  |> Ash.Changeset.for_update(:update, %{technician_id: technician.id})
+  |> Ash.Changeset.manage_relationship(:technician, %{id: technician.id}, type: :append_and_remove)
+  |> Support.AshApi.update!()
+)
+
+ticket = (
+  ticket
+  |> Ash.Changeset.for_update(:update, %{status: :open})
+  |> Support.AshApi.update!()
+)
+
+# oddly this doesn't work (technician and status together) - hmm
+ticket = (
+  Support.Ticket
+  |> Ash.Changeset.for_create(
+      :new, %{subject: "No Power", description: "nothing happens", reporter_id: customer.id}
+    )
+  |> Support.AshApi.create!()
+)
+
+ticket = (
+  ticket
+  |> Ash.Changeset.for_update(:update, %{status: :open, technician: %{id: technician.id}})
+  |> Ash.Changeset.manage_relationship(:technician, %{id: technician.id}, type: :append_and_remove)
+  |> Support.AshApi.update!()
+)
+** (Ash.Error.Invalid) Input Invalid
+
+* Invalid value provided for technician_id: A technician must be assigned to a ticket that is not new.
+```
+
+### Update 'belongs_to' Custom Actions
+
+Of course we can simplify this with a custom action:
+
+```elixir
+    update :open do
+      # No attributes should be accepted
+      accept []
+      # We accept a technician's id as input here
+      argument :technician_id, :uuid do
+        allow_nil? false # requires technician_id
+      end
+      # We use a change here to replace the related technician
+      change manage_relationship(:technician_id, :technician, type: :append_and_remove)
+      change set_attribute(:status, :open)
+    end
+```
+
+**TEST**
+
+```elixir
+
+ticket = (
+  Support.Ticket
+  |> Ash.Changeset.for_create(
+      :new, %{subject: "No Power", description: "nothing happens", reporter_id: customer.id}
+    )
+  |> Support.AshApi.create!()
+)
+
+# Assign tech and open in one step
+ticket = (
+  ticket
+  |> Ash.Changeset.for_update(:open, %{technician_id: technician.id})
+  |> Support.AshApi.update!()
+)
 ```
 
 ## Aggregates
