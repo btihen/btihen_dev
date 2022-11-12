@@ -11,7 +11,7 @@ categories: ["Code", "Elixir Language", "Ash Framework"]
 date: 2022-11-05T01:01:53+02:00
 lastmod: 2022-11-11T01:01:53+02:00
 featured: false
-draft: false
+draft: true
 
 # Featured image
 # To use, add an image named `featured.jpg/png` to your page's folder.

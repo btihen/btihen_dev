@@ -29,30 +29,9 @@ image:
 projects: []
 ---
 
-**Ash Framework 2.1 - A Beginner's Tutorial**
-
-1. [Introduction](/posts_elixir/ash_2_1_tutorial-00_introduction/)
-2. [Resources](/posts_elixir/ash_2_1_tutorial-01_resources/)
-3. [Data-Layer](/posts_elixir/ash_2_1_tutorial-02_data_layer/)
-4. [Relationships](/posts_elixir/ash_2_1_tutorial-03_relationships/)
-5. Authentication
-6. Authorization
-7. Architecture
-8. Engines & Flow
-9. LiveView
-10. GraphQL
-11. JSON API
-
-This article builds on the the Ash Article [Ash 2.1 Tutorial - 02 Data Layer](/posts_elixir/ash_2_1_tutorial-02_data_layer/)
-
------------
 
 In order to build relationships we will need more than one resource.  So lets quickly build the 'ticket' resource - also using ETS as the data layer (for now).  I won't explain the `actions` and `attributes` since that has already been covered in the [Resources Article](/posts_elixir/ash_2_1_tutorial-01_resources/).
 
-date: '2022-11-11T00:00:00Z'
-type: book # Do not modify.
-draft: false
----
 
 In order to build relationships we will need more than one resource.  So let's build the support 'ticket' and exchange 'comments' resource.  We will continue using ETS as the data layer (for now).  I won't explain the `actions` and `attributes` since that has already been covered in the [Resources Article](/tutorials/ash_2_1/01_resources/).
 
