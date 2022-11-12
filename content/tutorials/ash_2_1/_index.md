@@ -8,7 +8,7 @@ categories: ["Code", "Ash Framework", "Elixir"]
 
 Welcome to the Beginner's Guide to the Ash Framework 2.1!
 
-{{< cta cta_text="Visit Tutorial" cta_link="00_introduction" >}}
+{{< cta cta_text="Begin Tutorial" cta_link="00_introduction" >}}
 
 ## Overview
 
@@ -22,5 +22,13 @@ It is expected that you are already familiar with (but you need not be an expert
 
 * **Elixir** - if you want to learn more about Elixir I recommend both [Dockyard Academy Curriculum](https://github.com/DockYard-Academy/beta_curriculum) and [Exercism](https://exercism.org/)
 * **Relationships** - `belongs_to`, `has_many`, `has_one` and `join_tables`
+* **Phoenix & LiveView**
+* **JSON API** (optional)
+* **GraphQL & Absinth** (optional)
 
-PS - Big shout-out to the helpful Ash Discord community
+## Shout Out
+
+To the helpful people on the Ash Discord community, especially:
+
+* Zach Daniel
+* frankdugan3

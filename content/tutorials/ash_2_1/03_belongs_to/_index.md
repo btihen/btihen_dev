@@ -41,7 +41,7 @@ defmodule Support.Ticket do
     uuid_primary_key :id
 
     attribute :status, :atom do
-      constraints [one_of: [:new, :open, :closed]]
+      constraints [one_of: [:new, :active, :closed]]
       default :new
       allow_nil? false
     end
@@ -136,7 +136,6 @@ technician = (
   |> Support.AshApi.create!()
 )
 
-# Customer reports a ticket - reporter_id remains blank! :(
 ticket = (
   Support.Ticket
   |> Ash.Changeset.for_create(
@@ -276,6 +275,8 @@ ticket = (
 Notice that you need to pin (^) the customer.id and to get the associated 'repoter' you need to `load` the relationship(s) like in the following query:
 
 ```elixir
+
+
 Support.Ticket
   |> Ash.Query.filter(priority == :low)
   |> Ash.Query.filter(reporter_id == ^customer.id)
@@ -324,7 +325,7 @@ ticket = (
 )
 
 ticket
-  |> Ash.Changeset.for_update(:update, %{status: :open})
+  |> Ash.Changeset.for_update(:update, %{status: :active})
   |> Ash.Changeset.manage_relationship(:technician, %{id: technician.id}, type: :append_and_remove)
   |> Support.AshApi.update!()
 ```
@@ -378,7 +379,7 @@ ticket = (
 
 ticket = (
   ticket
-  |> Ash.Changeset.for_update(:update, %{status: :open})
+  |> Ash.Changeset.for_update(:update, %{status: :active})
   |> Support.AshApi.update!()
 )
 # as expected (wanted)
@@ -404,10 +405,16 @@ ticket = (
 
 ticket = (
   ticket
-  |> Ash.Changeset.for_update(:update, %{status: :open})
+  |> Ash.Changeset.for_update(:update, %{status: :active})
   |> Support.AshApi.update!()
 )
+```
 
+### When Managed Relationships Happen
+
+Our current validation fails under one condition when we might expect it to work - when we update both the technician and the status.  Unfortunately this fails:
+
+```elixir
 # oddly this doesn't work (technician and status together) - hmm
 ticket = (
   Support.Ticket
@@ -416,11 +423,9 @@ ticket = (
     )
   |> Support.AshApi.create!()
 )
-
 ticket = (
   ticket
-  |> Ash.Changeset.for_update(:update, %{status: :open, technician: %{id: technician.id}})
-  |> Ash.Changeset.manage_relationship(:technician, %{id: technician.id}, type: :append_and_remove)
+  |> Ash.Changeset.for_update(:update, %{status: :active, technician_id: technician.id})
   |> Support.AshApi.update!()
 )
 ** (Ash.Error.Invalid) Input Invalid
@@ -428,12 +433,86 @@ ticket = (
 * Invalid value provided for technician_id: A technician must be assigned to a ticket that is not new.
 ```
 
+This is because the relationship is being set early in the process a straight-forward fix is to change the `belongs_to` to be a writeable `attribute` - not just a 'managed relationship'.  We can do this with the following code:
+```elixir
+# lib/support/resources/ticket.ex
+  # ...
+  belongs_to :technician, Support.Technician do
+    attribute_writable? true
+  end
+  # ...
+```
+
+Now if we adjust our code to assigning the `technician_id` (that we just enabled) - we can set the status and set the technician at the same time!
+```elixir
+ticket = (
+  Support.Ticket
+  |> Ash.Changeset.for_create(
+      :new, %{subject: "No Power", description: "nothing happens", reporter_id: customer.id}
+    )
+  |> Support.AshApi.create!()
+)
+ticket = (
+  ticket
+  |> Ash.Changeset.for_update(:update, %{status: :active, technician_id: technician.id})
+  |> Support.AshApi.update!()
+)
+```
+
+**Solutions** from the Framework author - _Zach Daniel_:
+
+I think you may be running into an issue around when managed relationships actually happen. Managing relationships is a bit special insofar as the logic to actually do so is handled by calling the action.
+So when your validation runs, the technician_id is never going to be set.
+You have a few options:
+
+1. don't use managed relationships for the belongs_to relationship
+2. run your validation in an after_action hook in a custom change
+3. run your validations in the action, based on the arguments instead
+
+
+**Solution #1:** looks like this (the solution described in detail above):
+```elixir
+belongs_to :technician, Technician do
+  attribute_writable? true
+end
+```
+This makes the belongs_to attribute public and writable. Now you can just say `%{..., technician_id: <id>}` when calling your actions, and you can validate its presence like any other attribute. This is the simplest and is probably what I'd suggest based on how you're using the relationship.
+
+**Solution #2:** - run your validation in an after_action hook in a custom change
+```elixir
+def change(changeset, _,_) do
+  changeset
+  |> Ash.Changeset.after_action(fn _changeset, result ->
+    if ... do
+      {:error, Ash.Error.Invalid.exception(...)}
+    else
+       {:ok, result}
+    end
+  end)
+end
+```
+
+**Solution #3** - is very similar to the custom action describe in the next section - but of course only works with the custom action.
+```elixir
+update :update do
+  # you don't *have* to do the nested input if you don't want to,
+  # you can do it like this if you only ever pass an id
+  argument :technician_id, :uuid
+
+  # a validation can be placed inside an individual action
+  validate present(:technician_id), where: <condition>
+
+  # if the argument name is different from the relationship, you just need to specify both here
+  change manage_relationship(:technician_id, :technician, type: :append_and_remove)
+end
+```
+
 ### Update 'belongs_to' Custom Actions
 
 Of course we can simplify this with a custom action:
 
 ```elixir
-    update :open do
+    update :activate do
       # No attributes should be accepted
       accept []
       # We accept a technician's id as input here
@@ -442,7 +521,7 @@ Of course we can simplify this with a custom action:
       end
       # We use a change here to replace the related technician
       change manage_relationship(:technician_id, :technician, type: :append_and_remove)
-      change set_attribute(:status, :open)
+      change set_attribute(:status, :active)
     end
 ```
 
@@ -461,20 +540,7 @@ ticket = (
 # Assign tech and open in one step
 ticket = (
   ticket
-  |> Ash.Changeset.for_update(:open, %{technician_id: technician.id})
+  |> Ash.Changeset.for_update(:activate, %{technician_id: technician.id})
   |> Support.AshApi.update!()
 )
 ```
-
-## Aggregates
-
-Summarizing relationships
-
-
-
-
-# Resources
-
-* <https://www.youtube.com/watch?v=2U3vQHXCF0s>
-* <https://hexdocs.pm/ash/relationships.html#loading-related-data>
-* <https://www.ash-hq.org/docs/guides/ash/2.4.1/tutorials/get-started.md>

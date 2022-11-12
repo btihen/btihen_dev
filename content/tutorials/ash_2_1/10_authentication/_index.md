@@ -1,17 +1,19 @@
 ---
 # Title, summary, and page position.
-linktitle: 0?-Authentication
+linktitle: 10-Authentication
 summary: Ash's Data-Layer handles data Persistence within each resource.
-weight: 1
+weight: 11
 icon: book-reader
 icon_pack: fas
 
 # Page metadata.
-title: Data-Layer
+title: 10-Authentication
 date: '2022-11-04T00:00:00Z'
 type: book # Do not modify.
-draft: true
+draft: false
 ---
+
+**IN PROGRESS**- Probably lots of errors
 
 ## TODO: Encrypted Data (Passwords)
 

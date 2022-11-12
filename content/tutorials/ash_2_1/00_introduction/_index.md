@@ -53,13 +53,12 @@ However, I like to think of Ash as having four Layers:
 
 ----------
 
-## Install Phoenix (1.7)
+## Install Phoenix
 
-First I let's install the unreleased version of [Phoenix 1.7](
-https://www.phoenixframework.org/blog/phoenix-1.7-released) - **Note** For the rc period, you’ll need to explicitly install the phx.new generator from hex to try out a fresh project:
+Assuming you have Erlang and Elixir installed (if not you can follow these [instructions](/posts/elixir/phoenix_1_5_petal_setup_with_asdf/) first) then you can simply do:
 ```bash
 mix archive.uninstall phx_new
-mix archive.install hex phx_new helpdesk
+mix archive.install phx_new helpdesk
 cd helpdesk
 mix ecto.create
 git init
@@ -68,23 +67,7 @@ git commit -m "initial phoenix commit"
 iex -S mix phx.server
 ```
 
-Or install `main` (bleeding edge) using hese [instructions](https://github.com/phoenixframework/phoenix/blob/master/installer/README.md):
-```bash
-mix archive.uninstall phx_new
-git clone https://github.com/phoenixframework/phoenix
-cd phoenix/installer
-MIX_ENV=prod mix do archive.build, archive.install
-cd ../..
-mix phx.new helpdesk
-cd helpdesk
-mix ecto.create
-git init
-git add .
-git commit -m "initial phoenix commit"
-iex -S mix phx.server
-```
-
-Now we have a fully functional Phoenix site - with the new Phoenix Tailwind CSS design.
+Now we have a fully functional Phoenix site - with the new Phoenix 1.7 you should see:
 
 ![Phoenix 1.7 Start Page](phoenix_1_7_default.png)
 
