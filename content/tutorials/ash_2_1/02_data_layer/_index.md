@@ -1,13 +1,13 @@
 ---
 # Title, summary, and page position.
 linktitle: 02-Data-Layer
-summary: Ash's Data-Layer handles data Persistence within each resource.
+summary: Ash Data-Layer handles data Persistence within each resource.
 weight: 3
 icon: book-reader
 icon_pack: fas
 
 # Page metadata.
-title: Data-Layer
+title: 02-Data-Layer
 date: '2022-11-04T00:00:00Z'
 type: book # Do not modify.
 ---
