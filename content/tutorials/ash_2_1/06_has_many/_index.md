@@ -1,13 +1,13 @@
 ---
 # Title, summary, and page position.
-linktitle: '04-HasMany'
+linktitle: '06-HasMany'
 summary: Relationships with one to many
-weight: 5
+weight: 7
 icon: book-reader
 icon_pack: fas
 
 # Page metadata.
-title: '04-HasMany'
+title: '06-HasMany'
 date: '2022-11-02T00:00:00Z'
 type: book # Do not modify.
 draft: false

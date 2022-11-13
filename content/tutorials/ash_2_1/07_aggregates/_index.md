@@ -1,13 +1,13 @@
 ---
 # Title, summary, and page position.
-linktitle: '05-Aggregates'
+linktitle: '07-Aggregates'
 summary: Ash Belongs To relationships
-weight: 6
+weight: 8
 icon: book-reader
 icon_pack: fas
 
 # Page metadata.
-title: '05-Aggregates'
+title: '07-Aggregates'
 date: '2022-11-04T00:00:00Z'
 type: book # Do not modify.
 draft: false
