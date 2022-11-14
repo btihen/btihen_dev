@@ -1,13 +1,13 @@
 ---
 # Title, summary, and page position.
-linktitle: '05-Calculations'
+linktitle: '04-Calculations'
 summary: Ash Belongs To relationships
-weight: 6
+weight: 5
 icon: book-reader
 icon_pack: fas
 
 # Page metadata.
-title: '05-Calculations'
+title: '04-Calculations'
 date: '2022-11-04T00:00:00Z'
 type: book # Do not modify.
 ---
@@ -19,67 +19,31 @@ type: book # Do not modify.
 
 **NOTE:** A few points still need research and experimentation
 
-1) Medium Complex Resource calculations don't seem to recognize variables - I don't think I understand the DSL well:
+Before we get started, let's create some test data - with and without middle_names:
 
 ```elixir
-# lib/support/resources/user.ex
-calculations do
-  # this works:
-  calculate :full_name, :string, expr(first_name <> " " <> last_name)
-  # this doesn't work
-  calculate :joined_names, :string, expr([first_name, middle_name] |> Enum.join(" "))
-  # variable "first_name" does not exist and is being expanded to "first_name()",
-end
+iex -S mix phx.server
+
+# Create a Customer and a technician
+customer = (
+  Support.User
+  |> Ash.Changeset.for_create(
+      :new_customer, %{first_name: "Ratna", last_name: "Sönam", email: "ratna@example.com"}
+    )
+  |> Support.AshApi.create!()
+)
+technician = (
+  Support.User
+  |> Ash.Changeset.for_create(
+      :new_employee, %{first_name: "Nyima", middle_name: "Druk",
+                       last_name: "Sönam", email: "nyima@example.com",
+                       department_name: "Tech Support"}
+    )
+  |> Support.AshApi.create!()
+)
 ```
 
-2) I don't understand how to send a parameter to a Custom Resource Queries which take an argument:
-
-```elixir
-# lib/support/resources/user.ex
-  calculations do
-    calculate :last_separator_first_name, :string,
-              {Support.Calculation.FirstSeparatorRest, [keys: [:last_name, :first_name]]} do
-      # default separator is ", "
-      argument :separator, :string, constraints: [allow_empty?: true, trim?: false]
-    end
-  end
-```
-
-with a Query Calculation I can send whatever separator I would like - ie:
-
-```elixir
-Support.User
-|> Ash.Query.new()
-|> Ash.Query.calculate(:dash_name,
-                       { Support.Calculation.FirstSeparatorRest,
-                         keys: [:first_name, :last_name] },
-                      :string, %{separator: " - "})
-|> Support.AshApi.read!()
-```
-
-but how would I send a `-` instead of using the default ", " to `last_separator_first_name` calculation when it is a resource calculation? - I don't understand the `argument`
-
-```elixir
-Support.User
-|> Ash.Query.new()
-|> Ash.Query.load(:last_separator_first_name)
-|> Support.AshApi.read!()
-```
-
-3) How does one create on-the-fly Query Calculations?  I've tried many variations on:
-
-```elixir
-Support.User
-|> Ash.Query.new()
-|> Ash.Query.calculate(:both_names, :string, expr(first_name <> " " <> last_name))
-|> Ash.Query.calculate(:names_both, :string, concat([:first_name, :last_name], " "))
-|> Support.AshApi.read!()
-```
-
-Maybe this isn't so important, since creating custom stored calculations is resonably straightforward - but it seems it should be possible.
-
-4) using the `expression` to move the calculation into the data-layer.
-
+We will use these two accounts for testing in this section.
 
 ## Resource Calculations
 
@@ -123,10 +87,7 @@ We can also see from the Docs that there's a [built in calculation](https://hexd
   # ...
   calculations do
     # we can call a built-in calculation `concat`
-    calculate :full_name, :string, concat([:first_name, :last_name], " ")\
-    # we can do a little math
-    calculate :percent_open_assignments, :float,
-              expr(active_assigned_tickets / all_assigned_tickets)
+    calculate :full_name, :string, concat([:first_name, :last_name], " ")
   end
   # ...
 ```
@@ -173,6 +134,52 @@ Support.User
 
 The calculated attribute `full_name` should now be visible. We will cover the `calculations: %{}` field shortly.
 
+### Calculations with Conditionals
+
+If you build a calculation with a potential problem like:
+
+```elixir
+# lib/support/resources/user.ex
+  calculations do
+    calculate :percent_open_assignments, :float,
+              expr(active_assigned_tickets / all_assigned_tickets)
+  end
+```
+
+**Test** - should break with:
+
+```elixir
+recompile()
+
+Support.User
+|> Ash.Query.load(:percent_open)
+|> Support.AshApi.read!()
+```
+
+**Solution** to divide by Zero and return a default value: `0` (solution from Zach)
+
+```elixir
+# lib/support/resources/user.ex
+  calculations do
+    calculate :percent_open_assignments, :float,
+              expr(if all_assigned_tickets == 0, do:
+                    0,
+                    else: active_assigned_tickets / all_assigned_tickets)
+  end
+```
+
+**Test** - protected now!
+
+```elixir
+recompile()
+
+Support.User
+|> Ash.Query.load(:all_reported_tickets)
+|> Ash.Query.load(:percent_open_assignments)
+|> Support.AshApi.read!()
+```
+
+
 ### Calculations used within Queries
 
 Calculated results once loaded can be used within the query - for example we can sort with it:
@@ -193,15 +200,6 @@ Support.User
 |> Support.AshApi.read!()
 ```
 
-If you build a calculation with a potential problem like:
-
-```elixir
-# lib/support/resources/user.ex
-  calculations do
-    calculate :percent_open_assignments, :float,
-              expr(active_assigned_tickets / all_assigned_tickets)
-  end
-```
 
 The be sure to filter it with:
 
@@ -409,52 +407,169 @@ now we can update our User Resource with:
     # custom calculations can be called with options
     calculate :last_comma_first_name, :string,
               {Support.Calculation.FirstSeparatorRest, [keys: [:last_name, :first_name]]}
-    calculate :last_first_middle_names, :string,
+    calculate :last_separator_all_names, :string,
               {Support.Calculation.FirstSeparatorRest,
                [keys: [:last_name, :first_name, :middle_name]]} do
       # not sure how to use this in a resource calculation
-      # argument :separator, :string, constraints: [allow_empty?: true, trim?: false]
+      argument :separator, :string, constraints: [allow_empty?: true, trim?: false]
     end
   end
 ```
 
-**TEST**
+To send the `separator` parameter - our load would look like:
 
 ```elixir
-recompile()
-
 Support.User
 |> Ash.Query.new()
-|> Ash.Query.load(:last_comma_first_name)
+|> Ash.Query.load(:last_separator_all_names, %{separator: " ~ "})
+|> Support.AshApi.read!()
+```
+
+To use the custom calculation as a query call it looks like (notice we can now order the keys in whatever order we want and submit our own separator):
+
+```elixir
+Support.User
+|> Ash.Query.new()
+|> Ash.Query.calculate(:with_middle_name,
+                       {Support.Calculation.FirstSeparatorRest,
+                         keys: [:first_name, :middle_name, :last_name]},
+                       :string, %{separator: ": "})
+|> Support.AshApi.read!()
+```
+
+**TEST**
+
+So lets create some
+
+Now that we have some users (with and without middle_names):
+```elixir
+Support.User
+|> Ash.Query.new()
+|> Ash.Query.load([:last_comma_first_name, :last_separator_names])
+|> Ash.Query.load(:last_separator_all_names, %{separator: " ~ "})
 |> Ash.Query.calculate(:dash_name,
                        {Support.Calculation.FirstSeparatorRest, keys: [:first_name, :last_name]},
                       :string, %{separator: " - "})
 |> Ash.Query.calculate(:with_middle_name,
-                       {Support.Calculation.FirstSeparatorRest, keys: [:first_name, :last_name]},
-                      :string, %{separator: ": "})
+                       {Support.Calculation.FirstSeparatorRest, keys: [:last_name, :first_name, :middle_name]},
+                      :string, %{separator: " -- "})
 |> Support.AshApi.read!()
 
 # now we should get something like:
 # [
 #   #Support.User<
-#     last_first_middle_names: "Customer, Friendly5",
-#     last_comma_first_name: "Customer, Friendly5",
-#     formal_name: "Customer, Friendly5",
-#     percent_open_assignments: #Ash.NotLoaded<:calculation>,
+#     last_separator_names: "Sönam, Nyima Druk",
+#     last_comma_first_name: "Sönam, Nyima",
 #     ...
-#     id: "d949be4e-dd0f-484c-8bf2-e81e1b462b57",
-#     email: "friendly5@customer.com",
+#     id: "424ef4aa-0bbc-4427-ad59-07a4032b5c8e",
+#     email: "nyima@example.com",
+#     first_name: "Nyima",
+#     middle_name: "Druk",
+#     last_name: "Sönam",
 #     ...
 #     aggregates: %{},
 #     calculations: %{
-#       dash_name: "Friendly5 - Customer",
-#       with_middle_name: "Friendly5: Customer"
+#       dash_name: "Nyima - Sönam",
+#       with_middle_name: "Sönam -- Nyima Druk"
 #     },
-#     __order__: nil,
 #     ...
 #   >
 # ]
 ```
+
+## Questions
+
+1) Medium Complex Resource calculations don't seem to recognize variables - I don't think I understand the DSL well:
+
+```elixir
+# lib/support/resources/user.ex
+calculations do
+  # this works:
+  calculate :full_name, :string, expr(first_name <> " " <> last_name)
+  # this doesn't work
+  calculate :joined_names, :string, expr([first_name, middle_name] |> Enum.join(" "))
+  # variable "first_name" does not exist and is being expanded to "first_name()",
+end
+```
+**For #1**,  the biggest thing here: expr accepts a very specific subset of Elixir. Its not just an elixir expression.
+<https://ash-hq.org/docs/guides/ash/latest/topics/expressions>
+If you're working with the postgres data layer, for example, you have fragment() available, just like in ecto, to do whatever expression you need. However, the goal is to continue building the available expressions in Ash expressions.
+
+3) How does one create on-the-fly Query Calculations?  I've tried many variations on:
+
+```elixir
+Support.User
+|> Ash.Query.new()
+|> Ash.Query.calculate(:both_names, :string, expr(first_name <> " " <> last_name))
+|> Ash.Query.calculate(:names_both, :string, concat([:first_name, :last_name], " "))
+|> Support.AshApi.read!()
+```
+
+**For #3**, do those not work? Just remember that on the fly calculations are placed in record.calculations
+
+REMEMBER: expr accepts a very specific subset of Elixir. Its not just an elixir expression.
+<https://ash-hq.org/docs/guides/ash/latest/topics/expressions>
+If you're working with the postgres data layer, for example, you have fragment() available, just like in ecto, to do whatever expression you need. However, the goal is to continue building the available expressions in Ash expressions.
+
+4) Oh one more question, how do I filter a query when something can happen for example:
+
+# lib/support/resources/user.ex
+
+  calculations do
+    calculate :percent_open_assignments, :float,
+              expr(active_assigned_tickets / all_assigned_tickets)
+  end
+
+I found I need to query with:
+```elixir
+require Ash.Query
+
+Support.User
+|> Ash.Query.load(:assigned_open_percent)
+|> Support.AshApi.read!()
+
+Support.User
+|> Ash.Query.filter(all_assigned_tickets > 0) # prevent divide by zero
+|> Ash.Query.load(:assigned_open_percent)
+|> Support.AshApi.read!()
+```
+to prevent divide by zero
+
+**For #4**, you have if available which could solve for that
+
+```elixir
+calculate :percent_open_assignments, :float,
+                  expr(if all_assigned_tickets == 0, do: 0, else: active_assigned_tickets / all_assigned_tickets)
+```
+
+```elixir
+require Ash.Query
+Support.User
+|> Ash.Query.load(:percent_open_assignments)
+|> Support.AshApi.read!()
+
+
+require Ash.Query
+Support.User
+|> Ash.Query.filter(all_assigned_tickets > 0) # prevent divide by zero
+|> Ash.Query.load(:percent_open_assignments)
+|> Support.AshApi.read!()
+
+```
+
+could also have used if `do ... end` style above
+an example using fragment (if you can find a way without fragment, that is ideal, because then we can compute the value directly in Elixir)
+
+`expr(active_assigned_tickets / fragment("NULLIF(?, 0)", all_assigned_tickets))`
+
+5) using the `expression` to move the calculation into the data-layer.
+
+
+**ANSWERS**
+
+Zach Daniel — 13.11.2022 at 10:23 PM
+
+
 
 ## Query Calculations
 

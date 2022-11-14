@@ -1,13 +1,13 @@
 ---
 # Title, summary, and page position.
-linktitle: '04-BelongsTo'
+linktitle: '05-BelongsTo'
 summary: Ash Belongs To relationships
-weight: 5
+weight: 6
 icon: book-reader
 icon_pack: fas
 
 # Page metadata.
-title: '04-BelongsTo'
+title: '05-BelongsTo'
 date: '2022-11-04T00:00:00Z'
 type: book # Do not modify.
 draft: false
@@ -130,7 +130,8 @@ customer = (
 technician = (
   Support.User
   |> Ash.Changeset.for_create(
-      :new_employee, %{first_name: "Nyima", last_name: "Sönam", email: "nyima@example.com",
+      :new_employee, %{first_name: "Nyima", middle_name: "Druk",
+                       last_name: "Sönam", email: "nyima@example.com",
                        department_name: "Tech Support"}
     )
   |> Support.AshApi.create!()
