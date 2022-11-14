@@ -274,7 +274,38 @@ Support.User
 
 ## Query Calculation (submitting in-line expressions)
 
-Work in progress
+**BROKEN - DO NOT USE THIS SECTION!**
+This section needs work!
+
+We can do [Query Calculations](https://www.ash-hq.org/docs/module/ash/2.4.2/ash-query-calculation#module-docs) too:
+
+on the fly Query calculations - don't work, I must be overlooking something
+
+```elixir
+Support.User
+|> Ash.Query.new()
+|> Ash.Query.calculate(:both_names, :string, expr(first_name <> " " <> last_name))
+|> Ash.Query.calculate(:names_both, :string, concat([:first_name, :last_name], " "))
+|> Ash.Query.load([:full_name])
+|> Support.AshApi.read!()
+```
+
+```elixir
+
+Support.User
+|> Ash.Query.new()
+|> Ash.Query.calculate(:username, :string, name <> "-")
+|> Ash.Query.load([:full_name])
+|> Support.AshApi.read!()
+
+# or mixed
+Support.User
+|> Ash.Query.new()
+|> Ash.Query.calculate(:both_names, concat([:first_name, :last_name], " "))
+|> Ash.Query.calculate(:names_both, :string, concat([:first_name, :last_name], " "))
+|> Ash.Query.load([:full_name])
+|> Support.AshApi.read!()
+```
 
 ## Query Calculation (accessing Custom Calculator)
 
