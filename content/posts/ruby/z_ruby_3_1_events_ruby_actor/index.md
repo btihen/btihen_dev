@@ -1,12 +1,12 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Rails 7.0 Using Events"
-subtitle: "Using Events for simple Controllers and Loose coupling"
-summary: ""
+title: "Ruby Actor (Ractor)"
+subtitle: "Safe parallel ruby computing"
+summary: "Ractors allow safe parallel computing, worker pools and supervision trees"
 authors: ['btihen']
-tags: ['Ruby', 'Packwerk', 'Architecture', 'Design']
-categories: ["Code", "Ruby Language", "Rails Framework"]
+tags: ['Ruby', 'Ractor', 'Architecture', 'Design', 'Actor Model', Supervision']
+categories: ["Code", "Ruby Language", 'Parallel Computing']
 date: 2022-04-23T01:20:00+02:00
 lastmod: 2022-04-23T01:20:00+02:00
 featured: true

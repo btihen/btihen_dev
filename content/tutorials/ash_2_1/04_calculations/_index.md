@@ -204,6 +204,40 @@ Support.User
 # ** (CompileError) lib/support/resources/user.ex:86: undefined function first_name/0 (there is no such import)
 ```
 
+**Second Try**
+
+We need to carefully study [Ash Expressions](https://ash-hq.org/docs/guides/ash/latest/topics/expressions) - which isn't as flexible as elixir - as it is designed to work on multiple Data Layers.
+
+```elixir
+# lib/support/resources/user.ex
+  # ...
+  calculations do
+    calculate :with_middle_name, :string,
+              expr(if exists(middle_name),
+                      do: first_name <> " " <> middle_name <> " " <> last_name,
+                      else: first_name <> " " <> last_name
+                  )
+    end
+  end
+  # ...
+```
+
+when try to call these we get errors such as:
+
+```elixir
+recompile()
+
+require Ash.Query
+
+Support.User
+|> Ash.Query.new()
+|> Ash.Query.load(:with_middle_name)
+|> Support.AshApi.read!()
+
+# Ash.Query.load([:with_middle_name])
+# warning: the following fields are unknown when raising Ash.Error.Query.NoSuchFunction: [resource: Support.User]. Please make sure to only give known fields when raising or redefine Ash.Error.Query.NoSuchFunction.exception/1 to discard unknown fields. Future Elixir versions will raise on unknown fields given to raise/2
+```
+
 ## Custom Calculation Extensions
 
 A good approach to complex calculations is to write a custom calculation!
