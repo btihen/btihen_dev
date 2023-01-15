@@ -5,7 +5,7 @@ title: "Ruby Ractors"
 subtitle: "Ruby Parallel Computing"
 summary: "String inputs that strip away leading, trailing and double spaces using typed virtual attributes"
 authors: ["btihen"]
-tags: ['Ruby', "Parallel, "Ractor"]
+tags: ["Ruby", "Parallel", "Ractor"]
 categories: ["Code", "Ruby Language"]
 date: 2023-01-15T01:11:22+02:00
 lastmod: 2023-01-15T01:11:22+02:00
