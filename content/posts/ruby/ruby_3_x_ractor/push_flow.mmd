@@ -1,0 +1,19 @@
+flowchart TD
+    external("Ractor1.send(object)") -->|send message to Ractor1 inbox| inbox
+    inbox --> |message initiates code| code_block
+    code_block -.-> |fectches objects| object
+    object -.-> code_block
+    code_block --> |result to outbox when block finishes| outbox
+    objekt --> |copy object to Ractor1| object
+    outbox --> |RactorMain waits for Ractor1 outbox| Ractor1.take
+    subgraph MainThread
+    objekt
+    external
+    Ractor1.take
+    end
+    subgraph Ractor1
+    inbox
+    object
+    code_block
+    outbox
+    end

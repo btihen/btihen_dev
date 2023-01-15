@@ -1,0 +1,17 @@
+flowchart TB
+    outqueue --> |r2 pulls message from r1| inbox
+    objekt -->|r2 copies object from r1| object
+    inbox --> code_block
+    code_block --> |result placed in outbox| outbox
+    code_block -.-> |accesses its objects| object
+    object -.-> code_block
+    subgraph Ractor2: r2
+    inbox[inbox <br> r1.take]
+    object
+    code_block
+    outbox
+    end
+    subgraph Ractor1: r1
+    objekt
+    outqueue[outbox <br> Ractor.yield object]
+    end

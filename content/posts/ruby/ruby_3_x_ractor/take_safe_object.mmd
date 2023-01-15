@@ -1,0 +1,13 @@
+graph TB
+    outqueue --> |r2 pulls message from r1| inbox
+    objekt -->|copy object from r1 to r2| object
+    subgraph Ractor2: r2
+    inbox[inbox <br> r1.take]
+    object
+    code_block
+    outbox
+    end
+    subgraph Ractor1: r1
+    objekt
+    outqueue[outbox <br> Ractor.yield object]
+    end
