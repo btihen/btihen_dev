@@ -28,6 +28,99 @@ image:
 projects: []
 ---
 
+
+### Fibonacci Pool with Supervisor
+
+[Supervision Docs](https://docs.ruby-lang.org/en/3.0/ractor_md.html#label-Supervise)
+
+The Fibonacci Calculator used to demonstrate parallelism was a very simple pool with workers in the pipeline.  Let's extend it to include exception supervision.
+
+
+```ruby
+def fibonacci(n)
+  ans = recursion(n)
+  result = "#{n} - #{ans}"
+  puts result # its nice to see the results as you go
+  result
+end
+
+def recursion(n)
+  n <= 1 ? n : recursion( n - 1 ) + recursion( n - 2 )
+end
+
+pool_size = 4
+
+good_list = [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+
+good_results = []
+
+def create_worker(listener)
+  Ractor.new(listener) do |listen|
+    loop { Ractor.yield(fibonacci(listen.take)) }
+  end
+end
+
+# generate a Ractor that will act as a worker pool
+listener = Ractor.new do
+  loop { Ractor.yield(Ractor.receive) }
+end
+
+# generate Workers that will do the work
+workers = (1..pool_size).map do |i|
+  create_worker(listener)
+end
+
+good_list.each do |i|
+  listener.send(i)
+end
+
+good_list.count.times {
+  answer = Ractor.select(*workers)
+  good_results << answer.last # .last because we only want the result
+}
+
+pp good_results
+
+
+bad_results = []
+
+bad_list= [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, "30", 31, 32, 33, 34, 35, 36, 37, 38, 39]
+
+# generate a Ractor that will act as a worker pool
+listener = Ractor.new do
+  loop { Ractor.yield(Ractor.receive) }
+end
+
+# generate Workers that will do the work
+workers = (1..pool_size).map do |i|
+  create_worker(listener)
+end
+
+bad_list.each do |i|
+  listener.send(i)
+rescue Ractor::ClosedError => e
+  puts "oops - bad input - did we loose the inbox too?"
+  workers << create_worker(listener)
+end
+
+workers.inspect
+
+bad_list.count.times do
+  answer = Ractor.select(*workers)
+  bad_results << answer
+rescue Ractor::RemoteError
+  puts "oops - we loose the inbox too - so we don't get all our answers!"
+  p workers.inspect
+  workers << create_worker(listener)
+rescue Ractor::ClosedError => e
+  puts "do nothing?"
+end
+
+workers.inspect
+
+pp bad_results
+```
+
 ## Thread Pool
 
 https://rossta.net/blog/a-ruby-antihero-thread-pool.html

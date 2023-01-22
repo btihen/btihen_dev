@@ -1,0 +1,32 @@
+graph LR
+  code_start --> inport_pool
+  outport_pool --> inport_worker1
+  outport_pool --> inport_worker2
+
+  outport_worker1 --> code_collect
+  outport_worker2 --> code_collect
+
+  subgraph RactorMain
+    code_start -.-> code_collect
+    code_start("Code Start <br>pool.send(request)")
+    code_collect("Code colleect<br>response = Ractor.select(worker1, worker2).value")
+  end
+
+  subgraph RactorPool
+    inport_pool -.-> code_pool
+    code_pool("Code <br>loop { pool.receive(Ractor.yield(Ractor.recieve)) }") -.-> outport_pool
+    outport_pool
+  end
+
+  subgraph RactorWorkers
+    subgraph RactorWorker1
+      inport_worker1 -.-> code_worker1
+      code_worker1("Code <br>loop do <br>  Ractor.yield( <br>    Ractor.recieve)<br>end") -.-> outport_worker1
+      outport_worker1
+    end
+    subgraph RactorWorker2
+      inport_worker2 -.-> code_worker2
+      code_worker2("Code <br>loop do <br>  Ractor.yield( <br>    Ractor.recieve)<br>end") -.-> outport_worker2
+      outport_worker2
+    end
+  end

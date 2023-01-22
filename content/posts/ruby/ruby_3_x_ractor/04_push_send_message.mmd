@@ -1,0 +1,23 @@
+graph TD
+    code1 -.->|execute code <br> in parallel with other Ractors| code2
+    code1 -.-> memory_main
+    code1 -->|send message to Ractor1 inbox| inport
+    memory_main -.->|copy / transfer immutable| memory_r1
+    inport --> inbox
+    inbox -->|code block waits for messages| code_block
+    code_block -->|message ready RactorMain| outbox
+    outbox -->|result returned sent to RactorMain| code2
+
+    subgraph Ractor1
+    inport
+    inbox
+    memory_r1("memory")
+    code_block
+    outbox
+    end
+
+    subgraph RactorMain
+    code1("code block 1<br>RactorMain.send(object)")
+    code2("code waits/blocks for r2<br>Ractor1.take")
+    memory_main("memory")
+    end

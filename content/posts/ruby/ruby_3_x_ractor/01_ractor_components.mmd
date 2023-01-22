@@ -1,0 +1,11 @@
+graph LR
+    inport --> inbox
+    inbox --> code_block
+    code_block --> outport
+    subgraph Ractor1
+    inport
+    inbox
+    data(isolated memory)
+    code_block
+    outport
+    end

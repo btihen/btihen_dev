@@ -1,0 +1,26 @@
+graph TD
+    inport_r1 -.-> inbox_r1
+    inbox_r1 -.-> codeblock_r1
+    codeblock_r1 --> |r1 yields object| outport_r1
+    outport_r1--> |r2 pulls message from r1| codeblock_r2
+    memory_r1 -->|r2 copies object from r1| memory_r2
+
+    inport_r2 -.-> inbox_r2
+    inbox_r2 -.-> codeblock_r2
+    codeblock_r2 --> outport_r2
+
+    subgraph Ractor2: r2
+    memory_r2
+    inport_r2
+    inbox_r2[inbox <br> r1.take]
+    codeblock_r2
+    outport_r2
+    end
+
+    subgraph Ractor1: r1
+    memory_r1
+    inport_r1
+    inbox_r1
+    codeblock_r1[code block <br>Ractor.yield object <br> blocks until result taken]
+    outport_r1
+    end
