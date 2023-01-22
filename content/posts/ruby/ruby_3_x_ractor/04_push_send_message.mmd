@@ -1,14 +1,14 @@
 graph TD
     code1 -.->|execute code <br> in parallel with other Ractors| code2
     code1 -.-> memory_main
-    code1 -->|send message to Ractor1 inbox| inport
+    code1 -->|push `send` message to r1 inbox| inport
     memory_main -.->|copy / transfer immutable| memory_r1
     inport --> inbox
     inbox -->|code block waits for messages| code_block
     code_block -->|message ready RactorMain| outbox
-    outbox -->|result returned sent to RactorMain| code2
+    outbox -->|pull `take` result from r1 outport| code2
 
-    subgraph Ractor1
+    subgraph Ractor1: r1
     inport
     inbox
     memory_r1("memory")
