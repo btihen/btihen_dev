@@ -29,6 +29,46 @@ projects: []
 ---
 
 
+### Combine a Queue with Pipeline
+
+One important aspect of a pipeline can be combined with a queue as the first step for a time consuming process and second fast step could follow.  For example what if we wanted to computed fibonacci numbers doubled.  The first time consuming step could be the fibonacci calculation the second step could double the result.
+
+
+```ruby
+max_fib = 39
+
+def fib(n) = n < 2 ? 1 : fib(n-2) + fib(n-1)
+def double(n) = 2 * n
+
+# we create an Array of Ractors to do the work needed.
+fib_queue = (1..max_fib).map do |i|
+  Ractor.new(i) { |i| [i, fib(i)] }
+end
+
+doubler = Ractor.new(fib_queue) do |queue|
+  loop do
+    dead_ractor, fib_value = Ractor.select(*queue)
+    fib_input = fib_value.first
+    doubled_fib = double(fib_value.last)
+    Ractor.yield([dead_ractor, fib_input, doubled_fib])
+  end
+end
+
+t1 = Time.now
+
+# we wait here in this loop for our queued work to finish (using `select`)
+until fib_queue.empty?
+  # 'select' returns both the Ractor and the value
+  remove_ractor, answer = doubler.take
+  # the Ractor is now terminated - so we remove it from our work queue
+  fib_queue.delete remove_ractor
+  p answer: answer
+end
+
+puts "Parallel Ractors - full cpu usage - duration #{Time.now - t1}"
+```
+
+
 ### Fibonacci Pool with Supervisor
 
 [Supervision Docs](https://docs.ruby-lang.org/en/3.0/ractor_md.html#label-Supervise)

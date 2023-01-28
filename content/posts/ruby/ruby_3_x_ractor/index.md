@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Ruby", "Parallel", "Ractor"]
 categories: ["Code", "Ruby Language"]
 date: 2023-01-15T01:11:22+02:00
-lastmod: 2023-01-22T01:11:22+02:00
+lastmod: 2023-01-28T01:11:22+02:00
 featured: true
 draft: false
 
@@ -379,6 +379,35 @@ The output looks something like:
 Four Parallel Ractors - pool size: 4 - duration 7.912549
 ```
 
+### Ruby Consume Pool (Full CPU usage)
+
+```ruby
+def fib n
+  if n < 2
+    1
+  else
+    fib(n-2) + fib(n-1)
+  end
+end
+
+max = 39
+rs = max.downto(1).map { |i| i }.map do |i|
+  Ractor.new i do |i|
+    [i, fib(i)]
+  end
+end
+
+t1 = Time.now
+until rs.empty?
+  r, v = Ractor.select(*rs)
+  rs.delete r
+  p answer: v
+end
+puts "Parallel Ractors - full cpu usage - duration #{Time.now - t1}"
+```
+
+Only 1 second faster, but releases / consumes the Ractors as the job progresses.
+Returns the answers in the order submitted
 
 ## Ractor Communication
 
@@ -398,8 +427,7 @@ Push Communication is as it sounds - we are pushing `send`ing data to another Ra
 
 #### Push Code & Flow
 
-To `recieve` messages in the incoming port and mailbox we must invoke: `Ractor.receive` within our Ractor. Let's see what this looks like in code.
-
+To `receive` messages in the incoming port and mailbox we must invoke: `Ractor.receive` within our Ractor. Let's see what this looks like in code.
 
 First, we will demonstrate that this 'copies' the object - we will check the passed object's id and see that they differ.
 
@@ -500,20 +528,61 @@ r1.take
 
 **NOTES:**
 * final results of a Ractor block and placed in the outgoing port via `Ractor.yield` have a queue size of ONE value.  Unlike the incoming port which has a infinite queue.
-* once the outgoing port has a value the ractor is 'blocked' waiting for the result to be `take`n.  Thus if we aren't careful we can create deadlock by expecting to take a result in our main thread when the Ractor has no value to offer.
+* once the outgoing port has a value the Ractor is 'blocked' waiting for the result to be `take`n.  Thus if we aren't careful we can create deadlock by expecting to take a result in our main thread when the Ractor has no value to offer.
 * Once the Ractor has closed its outgoing port (given all its values away) and the incoming port is also closed (not accepting any new inputs), then the Ractor is 'terminated'.  Using closed incoming or outgoing Ractor ports will result in an exception.
 
 ## Ractor Usage - Practical Design Fundamentals
 
-The 3 basic design ideas are:
+The basic design ideas are:
 
-* pools
+* queue consumption
 * pipelines
-* exceptions & supervision
+* pools
+* exceptions
+* supervision
 
 With these we can create Robust parallel computing structures.
 
+### Consume Queue
+
+Often we might have a big job to do and then we are done.
+The drawback is that this system uses as many CPUs as available.
+The benefit is that it is a temporary construction.
+When the work is completed the Ractors are deleted.
+
+To queue lots of work and retrieve those that are completed,
+we use a new method `select`. This waits for completed Ractors to
+open their outgoing port to collect the results.
+
+```ruby
+max_fib = 39
+
+def fib(n) = n < 2 ? 1 : fib(n-2) + fib(n-1)
+
+# we create an Array of Ractors to do the work needed.
+work_queue = (1..max_fib).map do |i|
+  Ractor.new(i) { |i| [i, fib(i)] }
+end
+
+t1 = Time.now
+
+# we wait here in this loop for our queued work to finish (using `select`)
+until work_queue.empty?
+  # 'select' returns both the Ractor and the value
+  terminated_ractor, computed_value = Ractor.select(*work_queue)
+  # the Ractor is now terminated - so we remove it from our work queue
+  work_queue.delete terminated_ractor
+  p answer: computed_value
+end
+puts "Parallel Ractors - full cpu usage - duration #{Time.now - t1}"
+```
+
+This is a great way to accomplish a lot of work that can be parallelized.
+
+
 ### Pipeline
+
+This is helpful when there are multiple steps to accomplish in a task.
 
 ![Pipeline Flow Diagram](06_pipeline_design.png)
 
@@ -550,7 +619,7 @@ Pooling builds upon pipelines.
 
 To use a pooling we:
 * push (`send`) our inputs into the pool (supervisor), which queues up messages in the worker's inboxes
-* pull results from workers which have data waiting in the outport to do this we use a new command `Ractor.select(*workers)` instead of `take` which requires defining which Ractor to pull from and blocks.
+* to wait for multiple Ractors `Ractor.select(*workers)` or `Ractor.select(r1, r2)` instead of `r1.take` which only waits for one specific Ractor *r1).
 
 ![Load Balancing Flow Diagram](07_pool_design.png)
 
@@ -585,12 +654,14 @@ end
 results = []
 
 # send 8 Requests
-10.times { |i| pool.send(i) }
+40.times { |i| pool.send(i) }
 # notice the first 4 values are computed immediately, and then it stops since the outports are full (queue of 1)
 
-# collect our Results
-10.times { results << Ractor.select(*workers) }
+# collect our Results - wait for multiple
+40.times { results << Ractor.select(*workers) }
 # now that we collect the results the inboxes will be processed
+
+# if we are uncertain how
 
 # notice select returns the Ractor that did the processing and the result
 pp results
@@ -598,6 +669,12 @@ pp results
 # collect just the results and sort them since they are processed in any random order
 pp results.map { |r| r.last }.sort
 ```
+
+This is a great technique for log running services (although supervision - covered next will make it even more robust).  Shown later.
+
+This is also great since when we create a pool - we control how many resources (CPUs) we will use.
+
+One disadvantage of this approach is that if the Ractor experiences an exception, the all the queued messages sent into the pool are quickly queued into the worker inboxes and that queue worked is then lost.
 
 ### Exceptions and Supervision
 
@@ -680,7 +757,7 @@ r1.send('c')
 r2.take # <internal:ractor>:698:in `take': thrown by remote Ractor. (Ractor::RemoteError)
 ```
 
-#### Supervision (Exception Recovery)
+#### Supervision (Exception Recovery) - single ractor
 
 HMM needs work! Not yet fully understood.
 [Supervise Docs](https://docs.ruby-lang.org/en/3.0/ractor_md.html#label-Supervise)
@@ -692,36 +769,123 @@ def r1_init = Ractor.new(name: 'r1') { loop { Ractor.yield task(Ractor.receive) 
 
 r1 = r1_init
 
-# r1 = Ractor.new(name: 'r1') { loop { Ractor.yield task(Ractor.receive) } }
-
 r1.send('1')
 r1.take # => '12'
 
+input = 1
 begin
-  r1.send(1)
+  r1.send(input)
   p r1.take #<Thread:0x0000000103feca28 run> terminated with exception (report_on_exception is true):
 rescue Ractor::RemoteError => e
-  r1 = r1_init   # => #<Ractor:#6 r1 (irb):27 blocking>
-  p 'r1 restored'
+  pp e.cause
+  pp e.ractor
+  pp e.ractor.name
+
+  # restart ractor
+  r1 = r1_init
+
+  # retry with string coercion
+  input = input.to_s
+  retry
+end
+# #<TypeError: String can't be coerced into Integer>
+#<Ractor:#2 r1 (irb):21 terminated>
+# "r1"
+# "12"
+
+p r1
+#<Ractor:#3 r1 (irb):21 blocking>
+```
+
+#### Supervision (Exception Recovery) - worker in a pool
+
+```ruby
+def fibonacci(n)
+  ans = (0..n).inject([1,0]) { |(a,b), _| [b, a+b] }[0]
+  result = "#{n} - #{ans}"
+  puts result
+  result
 end
 
-r1.send('2')
-r1.take  # => '22'
+def make_pool = Ractor.new { loop { Ractor.yield(Ractor.receive) } }
+def make_worker(pool, name)
+  Ractor.new(pool, name: name.to_s) do |p|
+    loop { Ractor.yield(fibonacci(p.take)) }
+  end
+end
+def make_workers(pool, count)
+  (1..count).map do |i|
+    name = "r#{i}"
+    make_worker(pool, name)
+  end
+end
+def send_work(input, pool)
+  Array(input).each do |i|
+    pool.send(i)
+  end
+end
+def collect_results(input, pool, workers)
+  results = []
+  input.count.times do
+    begin
+      worker, answer = Ractor.select(*workers)
+      results << answer
+    rescue Ractor::RemoteError => e
+      worker = e.ractor
+      name = "#{e.ractor.name}_new"
+      pp worker
+      workers.delete(worker)
+      # restore worker
+      workers << make_worker(pool, name)
+    end
+  end
+  results
+end
+
+input_list = [39, 38, 37, 36, 35, 34, 33, 32]
+pool = make_pool
+workers =  make_workers(pool, 4)
+send_work(input_list, pool)
+answers = collect_results(input_list, pool, workers)
+pp answers.count
+pp answers
+pp workers
+
+
+input_list = [39, 38, 37, 36, 35, 34, '33', 32]
+pool = make_pool
+workers =  make_workers(pool, 4)
+send_work(input_list, pool)
+answers = collect_results(input_list, pool, workers)
+pp answers.count
+pp answers
+pp workers
+
+
+input_list = [39, '38', 37, 36, 35, 34, 33, '32', 31, 30, 29, 28, 27, 26, 25]
+pool = make_pool
+workers =  make_workers(pool, 4)
+send_work(input_list, pool)
+answers = collect_results(input_list, pool, workers)
+pp input_list.count
+pp answers.count
+pp answers
+pp workers
 ```
+
 
 ## Practical Usage
 
 In the comparison toward the beginning we a pipeline with a supervisor and a pool.
 
-### Example Web Server Pool (without supervision)
+### Example Web Server Pool (with supervision)
 
-Source from: https://kirshatrov.com/posts/ractor-web-server-part-two/
+Source mostly from: https://kirshatrov.com/posts/ractor-web-server-part-two/
 
 NOTE: `Ractor.receive(pipe, move: true)` moves (transfers the ownership of the object) instead of the default copying the object
 
 ```ruby
 # source: https://kirshatrov.com/posts/ractor-web-server-part-two/
-
 require 'webrick'
 
 def respond(c, req)
@@ -762,23 +926,24 @@ Ractor.make_shareable(WEBrick::CRLF)
 Ractor.make_shareable(WEBrick::HTTPRequest::BODY_CONTAINABLE_METHODS)
 Ractor.make_shareable(WEBrick::HTTPStatus::StatusMessage)
 
-pipe = Ractor.new do
-  loop do
-    Ractor.yield(Ractor.receive, move: true)
+def make_pipe
+  Ractor.new do
+    loop do
+      Ractor.yield(Ractor.receive, move: true)
+    end
   end
 end
 
-# Actual Ractor Code
-####################
-CPU_COUNT = 4
-workers = CPU_COUNT.times.map do
-  Ractor.new(pipe) do |pipe|
+def make_worker(pipe_line)
+  Ractor.new(pipe_line) do |pipe|
     loop do
       # capture input
       s = pipe.take
 
       # process input
-      req = WEBrick::HTTPRequest.new(WEBrick::Config::HTTP.merge(RequestTimeout: nil))
+      req = WEBrick::HTTPRequest.new(
+              WEBrick::Config::HTTP.merge(RequestTimeout: nil)
+            )
       req.parse(s)
 
       respond(s, req)
@@ -788,19 +953,56 @@ workers = CPU_COUNT.times.map do
   end
 end
 
-listener = Ractor.new(pipe) do |pipe|
-  server = TCPServer.new(8080)
-  loop do
-    conn, _ = server.accept
-    pipe.send(conn, move: true)
+def make_workers(pipe, cpu_count)
+  cpu_count.times.map { make_worker(pipe) }
+end
+
+def make_listener(pipe_line)
+  Ractor.new(pipe_line) do |pipe|
+    server = TCPServer.new(8080)
+    loop do
+      conn, _ = server.accept
+      pipe.send(conn, move: true)
+    end
   end
 end
 
+
+CPU_COUNT = 4.freeze
+pipe = make_pipe
+workers = make_workers(pipe, CPU_COUNT)
+listener = make_listener(pipe)
+
 loop do
-  Ractor.select(listener, *workers)
+  begin
+    Ractor.select(listener, *workers)
+  # Worker Supervision
+  rescue Ractor::RemoteError => e
+    # identify crashed worker
+    worker = e.ractor
+    # remove crashed worker
+    workers.delete(worker)
+    # restore a new worker
+    workers << make_worker(pipe_line)
+  end
 end
 ```
 
+if we go to `http://localhost:8080/` - we should see:
+```
+Hello world
+Your path: /
+
+# along with all the session info
+```
+
+If we go to `http://localhost:8080/hoi?name=bill` - we should see:
+```
+Hello bill
+Your path: /hoi
+
+# along with all the session info
+```
 
 ## Resources
 
