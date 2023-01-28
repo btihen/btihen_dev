@@ -28,15 +28,13 @@ image:
 projects: []
 ---
 
-PS - the supervision section needs work - I don't fully understand and have code working as I expect.
-
 ## Intro
 
 Ruby has threads, but fundamentally they offer only concurrency and share all objects (which requires a lot of care).  Adding Mutex helps with safety, but you are still limited to concurrency.
 
 Ractors (Ruby Actors) provide object safety and allow full parallel computing.
 
-**NOTE:** Ractors are still considered experimental - as of Ruby 3.2 - so use at your own risk in production environments.
+**NOTE:** Ractors are still considered experimental - as of Ruby 3.2 - so use at your own risk in production environments. BUT I HAVEN'T FOUND ANY PROBLEMS!
 
 ## Ractor Overview
 
