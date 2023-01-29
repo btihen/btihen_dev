@@ -30,11 +30,18 @@ projects: []
 
 ## Intro
 
-Ruby has threads, but fundamentally they offer only concurrency and share all objects (which requires a lot of care).  Adding Mutex helps with safety, but you are still limited to concurrency.
+Ractors (Ruby Actors) provide object safety and allow full parallel computing (uses as many CPUs as desired).  This is very helpful with heavy CPU tasks that can be split into sensible independent tasks.
 
-Ractors (Ruby Actors) provide object safety and allow full parallel computing.
+Ruby Core has threads, but fundamentally they offer only concurrency and are dangerous since they share objects (which requires a lot of care).  Adding Mutex helps with safety, but you are still limited to concurrency and fundamentally will take as long as a single thread (but adds to responsiveness).
 
-**NOTE:** Ractors are still considered experimental - as of Ruby 3.2 - so use at your own risk in production environments. BUT I HAVEN'T FOUND ANY PROBLEMS!
+Other approaches can be found using:
+* [Async](https://github.com/socketry/async)
+* [Ruby Threads](https://ruby-doc.org/core-2.5.0/Thread.html)
+* [Concurrent Ruby](https://github.com/ruby-concurrency/concurrent-ruby)
+
+However, I believe they are all fundamentally most effective for heavy IO tasks and not CPU tasks - and otherwise concurrent and restricted by Ruby's Global Lock.
+
+**NOTE:** Ractors are still considered experimental - as of Ruby 3.2 - so use at your own risk in production environments. BUT I HAVEN'T FOUND ANY PROBLEMS!  BUT I have not used it in production.
 
 ## Ractor Overview
 
