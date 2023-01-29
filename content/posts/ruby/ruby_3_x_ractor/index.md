@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Ruby", "Parallel", "Ractor"]
 categories: ["Code", "Ruby Language"]
 date: 2023-01-15T01:11:22+02:00
-lastmod: 2023-01-28T01:11:22+02:00
+lastmod: 2023-01-29T01:11:22+02:00
 featured: true
 draft: false
 
@@ -695,8 +695,14 @@ p r1.take # => '12'
 begin
   r1.send('2')
 rescue Ractor::ClosedError => e
-  p e # => #<Ractor::ClosedError: The incoming-port is already closed>
+  p e
+  p e.cause
+  p e.ractor
 end
+# => #<Ractor::ClosedError: The incoming-port is already closed>
+
+p r1
+#<Ractor:#2 r1 (irb):3 terminated>
 ```
 
 **On Take** - we throw RemoteError and we can gather a little more info.
@@ -715,7 +721,8 @@ rescue Ractor::RemoteError => e
   p e.ractor #<Ractor:#22 r1 (irb):236 terminated>
 end
 
-r1.send('2') # => #<Ractor::ClosedError: The incoming-port is already closed>
+r1.send('2')
+# => #<Ractor::ClosedError: The incoming-port is already closed>
 ```
 
 #### Exception Propagation
@@ -755,10 +762,9 @@ r1.send('c')
 r2.take # <internal:ractor>:698:in `take': thrown by remote Ractor. (Ractor::RemoteError)
 ```
 
-#### Supervision (Exception Recovery) - single ractor
+#### Supervision (Retry)
 
-HMM needs work! Not yet fully understood.
-[Supervise Docs](https://docs.ruby-lang.org/en/3.0/ractor_md.html#label-Supervise)
+If we crash on a send - then we may be able to retry and continue if we know whats wrong with the data and can fix it.
 
 ```ruby
 def task(char) = char + '2'
@@ -782,20 +788,23 @@ rescue Ractor::RemoteError => e
   # restart ractor
   r1 = r1_init
 
-  # retry with string coercion
+  # retry 'sending' & 'taking' after input coercion
   input = input.to_s
   retry
 end
 # #<TypeError: String can't be coerced into Integer>
 #<Ractor:#2 r1 (irb):21 terminated>
-# "r1"
 # "12"
 
 p r1
 #<Ractor:#3 r1 (irb):21 blocking>
 ```
 
-#### Supervision (Exception Recovery) - worker in a pool
+#### Supervision (Remove & Recreate)
+
+When a worker in a pool dies when we execute while `select` - then we may need to remove the dead worker and create a new worker.
+
+Note: retry doesn't help us when the `send` and `take` are not paired together.
 
 ```ruby
 def fibonacci(n)
@@ -846,31 +855,49 @@ workers =  make_workers(pool, 4)
 send_work(input_list, pool)
 answers = collect_results(input_list, pool, workers)
 pp answers.count
+# 8
 pp answers
+# ["39 - 63245986",
+#  "38 - 39088169",
+#  "37 - 24157817",
+#  "36 - 14930352",
+#  "35 - 9227465",
+#  "34 - 5702887",
+#  "32 - 2178309",
+#  "33 - 3524578"]
 pp workers
-
-
-input_list = [39, 38, 37, 36, 35, 34, '33', 32]
-pool = make_pool
-workers =  make_workers(pool, 4)
-send_work(input_list, pool)
-answers = collect_results(input_list, pool, workers)
-pp answers.count
-pp answers
-pp workers
-
-
-input_list = [39, '38', 37, 36, 35, 34, 33, '32', 31, 30, 29, 28, 27, 26, 25]
-pool = make_pool
-workers =  make_workers(pool, 4)
-send_work(input_list, pool)
-answers = collect_results(input_list, pool, workers)
-pp input_list.count
-pp answers.count
-pp answers
-pp workers
+# [#<Ractor:#5 r1 (irb):37 blocking>,
+#  #<Ractor:#6 r2 (irb):37 blocking>,
+#  #<Ractor:#7 r3 (irb):37 blocking>,
+#  #<Ractor:#8 r4 (irb):37 blocking>]
 ```
 
+We get all the results and all the Ractors are blocking 'wainting' for input.
+
+Let's see what happens if we enter 2 valid entries and a series of invalid data:
+```ruby
+input_list = [39, 38, '37', '36', '35', '34', 33, 32]
+pool = make_pool
+workers =  make_workers(pool, 4)
+send_work(input_list, pool)
+answers = collect_results(input_list, pool, workers)
+pp answers.count
+# 4
+pp answers
+# ["39 - 63245986",
+#  "38 - 39088169",
+#  "33 - 3524578",
+#  "32 - 2178309"]
+pp workers
+# [#<Ractor:#20 r3_new (irb):37 blocking>,
+#  #<Ractor:#21 r1_new (irb):37 blocking>,
+#  #<Ractor:#22 r2_new (irb):37 blocking>,
+#  #<Ractor:#23 r4_new (irb):37 blocking>]
+```
+
+Notice we now get answers to all our valid inputs and all Ractors have been newly created & are blocking - waiting for work.
+
+**note**: I  experienced problems recreating Ractors with the same name as the crashed one).
 
 ## Practical Usage
 
@@ -985,6 +1012,8 @@ loop do
   end
 end
 ```
+
+if we run this code in IRB - we see we have a very simple web-server with 4 parallel workers
 
 if we go to `http://localhost:8080/` - we should see:
 ```
