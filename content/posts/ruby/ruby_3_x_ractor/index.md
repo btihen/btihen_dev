@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Ruby", "Parallel", "Ractor"]
 categories: ["Code", "Ruby Language"]
 date: 2023-01-15T01:11:22+02:00
-lastmod: 2023-01-29T01:11:22+02:00
+lastmod: 2023-03-05T01:11:22+02:00
 featured: true
 draft: false
 
@@ -140,16 +140,16 @@ Ractors 'die' if they experience an exception
 
 ```ruby
 integer = 'a'
+
 # automatically queues a message in the inbox
-ir1 = Ractor.new(integer) { |i| i + 2 }
-#<Thread:0x00000001139c20c0 run> terminated with exception (report_on_exception is true):
-# => "#<Ractor:#9 r1 (irb):58 blocking>"
+r1 = Ractor.new(integer, name: 'doomed') { |i| i + 2 }
+#<Thread:0x0000000104373ae8 run> terminated with exception (report_on_exception is true):
+# (irb):16:in `+': no implicit conversion of Integer into String (TypeError) from (irb):16:in `block in <top (required)>'
+# => #<Ractor:#4 doomed (irb):16 running>
 
-# we can see / capture the error with `cause`
-# (helpful for Supervision - automatically restarting dead Ractors)
-r1.cause
-# `<main>': undefined method `cause' for #<Ractor:#9 r1 (irb):58 terminated> (NoMethodError)
-
+# because the Ractor was build and immediately tried to process
+# the return messages are in an odd order.
+# actually checking the status confirms it died
 r1.inspect
 # => "#<Ractor:#9 r1 (irb):58 terminated>"
 ```
@@ -814,23 +814,22 @@ When a worker in a pool dies when we execute while `select` - then we may need t
 Note: retry doesn't help us when the `send` and `take` are not paired together.
 
 ```ruby
-def fibonacci(n)
-  ans = (0..n).inject([1,0]) { |(a,b), _| [b, a+b] }[0]
-  result = "#{n} - #{ans}"
-  puts result
-  result
-end
-
+MAX_CPUS = 4.freeze; MAX_FIB_NUM = 39.freeze
+def fib(n) = n < 2 ? 1 : fib(n-2) + fib(n-1)
 def make_pool = Ractor.new { loop { Ractor.yield(Ractor.receive) } }
-def make_worker(pool, name)
-  Ractor.new(pool, name: name.to_s) do |p|
-    loop { Ractor.yield(fibonacci(p.take)) }
+def make_worker(pool)
+  Ractor.new(pool) do |p|
+    loop {
+      input = p.take
+      fib_num = fib(input)
+      result = [input, fib_num]
+      Ractor.yield(result)
+    }
   end
 end
 def make_workers(pool, count)
   (1..count).map do |i|
-    name = "r#{i}"
-    make_worker(pool, name)
+    make_worker(pool)
   end
 end
 def send_work(input, pool)
@@ -846,60 +845,42 @@ def collect_results(input, pool, workers)
       results << answer
     rescue Ractor::RemoteError => e
       worker = e.ractor
-      name = "#{e.ractor.name}_new"
       pp worker
       workers.delete(worker)
       # restore worker
-      workers << make_worker(pool, name)
+      workers << make_worker(pool)
     end
   end
   results
 end
 
-input_list = [39, 38, 37, 36, 35, 34, 33, 32]
+def run_fib(input, pool, workers)
+  send_work(input, pool)
+  collect_results(input, pool, workers)
+end
+
 pool = make_pool
 workers =  make_workers(pool, 4)
-send_work(input_list, pool)
-answers = collect_results(input_list, pool, workers)
-pp answers.count
-# 8
-pp answers
-# ["39 - 63245986",
-#  "38 - 39088169",
-#  "37 - 24157817",
-#  "36 - 14930352",
-#  "35 - 9227465",
-#  "34 - 5702887",
-#  "32 - 2178309",
-#  "33 - 3524578"]
 pp workers
-# [#<Ractor:#5 r1 (irb):37 blocking>,
-#  #<Ractor:#6 r2 (irb):37 blocking>,
-#  #<Ractor:#7 r3 (irb):37 blocking>,
-#  #<Ractor:#8 r4 (irb):37 blocking>]
-```
 
-We get all the results and all the Ractors are blocking 'wainting' for input.
-
-Let's see what happens if we enter 2 valid entries and a series of invalid data:
-```ruby
-input_list = [39, 38, '37', '36', '35', '34', 33, 32]
-pool = make_pool
-workers =  make_workers(pool, 4)
-send_work(input_list, pool)
-answers = collect_results(input_list, pool, workers)
+input_list = [29, 28, 27, 26, 25]
+answers = run_fib(input_list, pool, workers)
 pp answers.count
-# 4
 pp answers
-# ["39 - 63245986",
-#  "38 - 39088169",
-#  "33 - 3524578",
-#  "32 - 2178309"]
-pp workers
-# [#<Ractor:#20 r3_new (irb):37 blocking>,
-#  #<Ractor:#21 r1_new (irb):37 blocking>,
-#  #<Ractor:#22 r2_new (irb):37 blocking>,
-#  #<Ractor:#23 r4_new (irb):37 blocking>]
+pp workers # workers are the same as above
+
+input_list = [24, 23, '21', '22', 20]
+answers = run_fib(input_list, pool, workers)
+pp answers.count
+pp answers
+pp workers # 2 workers now have higher numbers
+
+# We can keep using our pool even after some crashed
+input_list = [34, 33, 32, 31, 30]
+answers = run_fib(input_list, pool, workers)
+pp answers.count
+pp answers
+pp workers # workers are the same as above
 ```
 
 Notice we now get answers to all our valid inputs and all Ractors have been newly created & are blocking - waiting for work.
