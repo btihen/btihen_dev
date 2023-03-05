@@ -1,7 +1,6 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-
 title: "Ruby Ractors"
 subtitle: "Ruby Parallel Computing"
 summary: "String inputs that strip away leading, trailing and double spaces using typed virtual attributes"
@@ -1029,7 +1028,7 @@ https://www.puzzle.ch/de/blog/articles/2023/02/22/tech-kafi-ruby-ruby-memory-opt
 
 * [RubyKafi](https://github.com/btihen/ruby_kafi_ractor_talk) - https://github.com/btihen/ruby_kafi_ractor_talk
 
-### Questions and Answers (from Ractor Author emails)
+### Questions and Answers (from Ractor Author - Koichi Sasada)
 
 
 1. Road Map - (Dec 2023 - Ruby 3.3?) Ideally
@@ -1076,9 +1075,11 @@ If you have more questions - I’ll gladly forward the otherwise here is his ema
 ## Ractor Presentations
 
 * [RubyKafi @ Puzzle](https://github.com/btihen/ruby_kafi_ractor_talk) - https://github.com/btihen/ruby_kafi_ractor_talk
-* https://www.youtube.com/watch?v=0kM7yFM6Dao
+* [Ractor Demonstration - Koichi Sasada](https://www.youtube.com/watch?v=0kM7yFM6Dao) - https://www.youtube.com/watch?v=0kM7yFM6Dao
 * https://www.youtube.com/watch?v=40t8EPpnujg
-* https://www.youtube.com/watch?v=_O3NBm_C3rM
+* [RubyConf 2021 - Learning Ractor with Raft by Micah Gates](https://www.youtube.com/watch?v=_O3NBm_C3rM) - https://www.youtube.com/watch?v=_O3NBm_C3rM
+* [RubyConf 2021 - Parallel testing with Ractors - Putting CPU's to work by Vinicius Stock](https://www.youtube.com/watch?v=wI7NgPJO7Zg) - https://www.youtube.com/watch?v=wI7NgPJO7Zg
+* [Ruby, Ractor, QUIC / Yusuke Nakamura @unasuke](https://www.youtube.com/watch?v=9da7QccHXV4) - https://www.youtube.com/watch?v=9da7QccHXV4
 
 ## Resources
 
