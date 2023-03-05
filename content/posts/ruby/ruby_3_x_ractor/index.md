@@ -1,6 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
+
 title: "Ruby Ractors"
 subtitle: "Ruby Parallel Computing"
 summary: "String inputs that strip away leading, trailing and double spaces using typed virtual attributes"
@@ -1019,15 +1020,72 @@ Your path: /hoi
 # along with all the session info
 ```
 
+## Tech (Ruby) Kafi Presentation
+
+https://www.puzzle.ch/de/blog/articles/2023/02/22/tech-kafi-ruby-ruby-memory-optimierung
+
+
+### Slides
+
+* [RubyKafi](https://github.com/btihen/ruby_kafi_ractor_talk) - https://github.com/btihen/ruby_kafi_ractor_talk
+
+### Questions and Answers (from Ractor Author emails)
+
+
+1. Road Map - (Dec 2023 - Ruby 3.3?) Ideally
+
+The following are needed:
+
+  a. Stabilize API - especially for the select command (he’s looking for feedback) a new API Ractor::Selector. If you have a comment, it is great. https://github.com/ruby/ruby/pull/7371 I'm especially thinking about whether "auto removing" is good or not (or should be options). https://github.com/ruby/ruby/pull/7371files#diff-2be07f7941fed81f90e2947cdd9a91a5775d0c94335e8332b4805d264380b255R446
+
+  b. MaNy Project (using the M:N algorithm - he has a talk in Japanese) - ractors should scale to multiple thousands and still run (be scheduled) efficiently (currently effective scheduling is limited to about 300)
+
+  c. Efficient memory usage - at scale - especially for long running Ractors - He isn’t promising Dec 2023 release - but its his goal.
+
+
+2. regarding Data Copying - I didn’t fully understand - but here is his answer (hopefully I got the question correct) - it can be slow, but no martialing is used
+
+Some objects (object tree structures for example) takes long time to make them shareable. If objects are immutable (sharable), you don't need to make marshal data.
+Copying complex objects is slow:
+For example, `Node.new(Node.new(Node.new(....))))` it makes tree structure objects and even if they are frozen, to check they are all frozen, it needs to traverse the tree.
+For example, `Node.new(.... in deep ..., Node.new("str") ...)` creates almost frozen, but 1 mutable (unshareable) string object. The tree is not a shareable object(s).
+Unfortunately, ‘moving’ objects is also slow when complex - especially when deeply nested.
+
+
+
+3. Garbage collection of Ractors - there is no way to explore unreferenced Ractors, but the will be garbage collected when they finish running.
+
+  (1) no references to the ractor
+  AND
+  (2) the ractor is already terminated
+
+
+
+4. Back-pressure controlling message flows at high volume - forcing senders to slow down. (I don’t have Rafael’s email - can someone forward this to him)
+
+He is interested, but not familiar with it an will consider it if I can send him enough information to consider a plan)
+
+I think it will be difficult since OTP has 2 ways to send messages - send with reply and without reply - and if you require reply and slowly answer the reply that signals to the client they need to slowdown,  Currently, factors only have send w/o reply.
+
+If someone knows / has an design link for OTP backpressuree Ill send it along.
+
+I’ll add these answers to the talk and the blog.
+
+If you have more questions - I’ll gladly forward the otherwise here is his email if you want to ask directly - sasada@gmail.com
+
+## Ractor Presentations
+
+* [RubyKafi @ Puzzle](https://github.com/btihen/ruby_kafi_ractor_talk) - https://github.com/btihen/ruby_kafi_ractor_talk
+* https://www.youtube.com/watch?v=0kM7yFM6Dao
+* https://www.youtube.com/watch?v=40t8EPpnujg
+* https://www.youtube.com/watch?v=_O3NBm_C3rM
+
 ## Resources
 
 * https://www.youtube.com/watch?v=0kM7yFM6Dao
 
 * https://scoutapm.com/blog/ruby-ractor
 * https://lbarasti.com/post/ruby_ractor/
-* https://www.youtube.com/watch?v=0kM7yFM6Dao
-* https://www.youtube.com/watch?v=40t8EPpnujg
-* https://www.youtube.com/watch?v=_O3NBm_C3rM
 * https://kirshatrov.com/posts/ruby-ractor-web-server/
 * https://kirshatrov.com/posts/ractor-web-server-part-two/
 * https://blog.kiprosh.com/ruby-3-introduction-to-ractors/
