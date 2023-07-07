@@ -30,9 +30,9 @@ projects: []
 
 Rails with Strong Boundaries between the Modules
 
-This experiment was inspired from an internal Tech Talk at Garaio REM by [Severin Raz](https://www.linkedin.com/in/severin-r%C3%A4z-567ab81b1/?originalSubdomain=ch) - where he suggested that we could be using `private_constant` to enforce boundaries, create public APIs for 'black-box modules - in order to control coupling.
+This experiment was inspired from an internal Tech Talk at [Garaio REM](https://www.garaio-rem.ch) by a colleague. He suggested that we could be using namespaces and `private_constant` to enforce API boundaries and organizing our code around modules.  In this way we can minimize/control coupling and increase cohesion.
 
-His example was similar to the following:
+The example given was similar to the following:
 
 Typical Rails Code has permissive APIs.
 ```
@@ -40,33 +40,37 @@ module Taxes
   class TaxA
     def self.tax(amount) = amount * 0.1
   end
+
   class TaxB
     def self.tax(amount) = amount * 0.2
   end
+
   class API
     def self.total(amount) = amount + tax(amount)
     def self.tax(amount) = [TaxA, TaxB].sum { |klass| klass.tax(amount) }
   end
 end
 
-# all of this works - its not clear what the API should be
+# all of this works and is accessible, thus its not clear what the API should, nor is the API enforced!
 amount = 100
 Taxes::API.total(amount)
 amount + Taxes::API.tax(amount)
 amount + Taxes::TaxA.new.tax(amount) + Taxes::TaxB.tax(amount)
 ```
 
-Ruby Code with a clear API and boundaries to enforce the API:
+If we rewrite the code with a clear API and boundaries it might look like:
 ```
 module Taxes
   class TaxA
     def self.tax(amount) = amount * 0.1
   end
   private_constant :TaxA
+
   class TaxB
     def self.tax(amount) = amount * 0.2
   end
   private_constant :TaxB
+
   class API
     class << self
       def total(amount) = amount + tax(amount)
@@ -77,11 +81,11 @@ module Taxes
   end
 end
 
-# Now the public API is ONLY:
+# Now the public API is clearly defined, and ONLY the Public API is available - all the internals are now protected:
 
 Taxes::API.total(amount)
 
-# Everything else errors:
+# Everything else produces errors:
 
 amount + Taxes::API.tax(amount)
 # private method `tax' called for class Taxes::API (NoMethodError)
