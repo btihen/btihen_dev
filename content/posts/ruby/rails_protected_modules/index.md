@@ -104,7 +104,20 @@ One could even go one step further and dependency inversion.
 
 In this quick example we will demonstrate using modules with strong boundaries and an enforced public API.
 
-PS - I've read about companies using Modules and API to create a 'citadel' architecture to simply collaboration between groups, such that groups only need to negotiate the public APIs and otherwise groups can work independently without worrying about breaking each others code.
+To facilitate the 'citadel' approach some teams re-organize the code so that all module code is together instead of Rails approach of scattered across the app (some modular proponents like to encourage the rails code to be its own module and not mixed with 'our' code) - this article will show how to do this fully in this style:
+
+```
+app
+├── assets
+├── javascript
+└── modules
+    ├── api
+    ├── authors
+    ├── landing
+    └── rails
+```
+
+Of course you need not reorganize rails (and in an existing code base, its probably better not to), but I would probably at least recommend new 'modules' be isolated in their own 'modules' folder - especially if Strict Privacy boundaries are being used!
 
 ## Getting Started
 
@@ -164,9 +177,44 @@ class ApplicationController < ActionController::Base
 end
 ```
 
-## Create a 'Rails' Module
+## Move 'Rails' in a Module
 
-Let's create a module for our Rails code.  In this way we can keep our code separate from Rails itself.
+Let's create a module for our Rails code.
+
+So our project would look like:
+
+
+
+```
+app
+├── assets
+├── javascript
+└── modules
+    └── rails
+        ├── controllers
+        │   ├── application_controller.rb
+        │   └── concerns
+        ├── channels
+        │   └── application_cable
+        │       ├── channel.rb
+        │       └── connection.rb
+        ├── helpers
+        │   └── application_helper.rb
+        ├── jobs
+        │   └── application_job.rb
+        ├── mailers
+        │   └── application_mailer.rb
+        ├── models
+        │   ├── application_record.rb
+        │   └── concerns
+        └── views
+            └── layouts
+                ├── application.html.erb
+                ├── mailer.html.erb
+                └── mailer.text.erb
+```
+
+In this way we can keep our code separate from Rails itself.
 
 ```
 mkdir app/modules/rails
@@ -174,6 +222,7 @@ mkdir app/modules/rails
 mv app/views app/modules/rails/.
 mv app/models app/modules/rails/.
 mv app/helpers app/modules/rails/.
+mv app/channels app/modules/rails/.
 mv app/controllers app/modules/rails/.
 ```
 
@@ -223,6 +272,24 @@ update git
 ```
 git add .
 git commit -m "add landing page module"
+```
+
+Now the structure looks like:
+
+```
+app
+├── assets
+├── javascript
+└── modules
+    ├── landing
+    │   ├── controllers
+    │   │   └── landing
+    │   │       └── home_controller.rb
+    │   └── views
+    │       └── landing
+    │           └── home
+    │               └── index.html.erb
+    └── rails
 ```
 
 ## Lets create an Author's module
@@ -276,6 +343,31 @@ update git
 ```
 git add .
 git commit -m "add authors module"
+```
+
+Now the project looks like:
+
+```
+app
+├── assets
+├── javascript
+└── modules
+    ├── authors
+    │   ├── controllers
+    │   │   └── authors
+    │   │       ├── articles_controller.rb
+    │   │       └── users_controller.rb
+    │   ├── models
+    │   │   ├── authors
+    │   │   │   ├── article.rb
+    │   │   │   └── user.rb
+    │   │   └── authors.rb
+    │   └── views
+    │       └── authors
+    │           ├── articles
+    │           └── users
+    ├── landing
+    └── rails
 ```
 
 ## Protected Modules
@@ -619,6 +711,24 @@ git add .
 git commit -m "protected module with public API"
 ```
 
+Now our code looks like:
+```
+app
+├── assets
+├── javascript
+└── modules
+    ├── authors
+    │   ├── controllers
+    │   ├── models
+    │   ├── public
+    │   │   └── authors
+    │   │       ├── article_entity.rb
+    │   │       └── user_entity.rb
+    │   └── views
+    ├── landing
+    └── rails
+```
+
 
 ## JSON API
 
@@ -690,9 +800,66 @@ git add .
 git commit -m 'json api for the Authors Module'
 ```
 
+Now the structure looks like:
+
+
+```
+app
+├── assets
+├── javascript
+└── modules
+    ├── api
+    │   └── controllers
+    │       └── api
+    │           └── v1
+    │               ├── articles_controller.rb
+    │               └── users_controller.rb
+    ├── authors
+    ├── landing
+    └── rails
+```
+
+
 ## Testing
 
 I didn't cover testing, but of course, you will probably want to arraign tests similar to the code.  This Modular Architecture will probably also focus on testing the public API and not the 'black-box' implementation.
+
+## Wrap-up
+
+I personally like this structure:
+
+```
+app
+├── assets
+├── javascript
+└── modules
+    ├── api
+    ├── authors
+    ├── landing
+    └── rails
+```
+
+But Modularization can be done without reorganization.  However, I would find it confusing to have protected modules mixed into the normal rails structure, thus I would minimally prefer protected modules to be separated. In this case the structure might look like:
+```
+app
+├── api
+│   └── controllers
+├── assets
+├── channels
+├── controllers
+├── helpers
+├── javascript
+├── jobs
+├── mailers
+├── models
+└── modules
+│   └── authors
+│       ├── controllers
+│       ├── models
+│       ├── public
+│       └── views
+└── views
+```
 
 ## Resources
 
