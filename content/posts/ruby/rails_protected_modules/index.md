@@ -30,11 +30,11 @@ projects: []
 
 Rails with Strong Boundaries between the Modules
 
-This experiment was inspired from an internal Tech Talk at [Garaio REM](https://www.garaio-rem.ch) by a colleague. He suggested that we could be using namespaces and `private_constant` to enforce API boundaries and organizing our code around modules.  In this way we can minimize/control coupling and increase cohesion.
+This experiment was inspired from an internal Tech Talk at [Garaio REM](https://www.garaio-rem.ch) by a colleague. He suggested that we could be using `module` to create namespaces (to organize our code with high cohesion) and `private_constant` to enforce API boundaries (enforce low coupling).
 
 The example given was similar to the following:
 
-Typical Rails Code has permissive APIs.
+Typical Ruby Code is very permissive:
 ```
 module Taxes
   class TaxA
@@ -58,7 +58,7 @@ amount + Taxes::API.tax(amount)
 amount + Taxes::TaxA.new.tax(amount) + Taxes::TaxB.tax(amount)
 ```
 
-If we rewrite the code with a clear API and boundaries it might look like:
+If we rewrite the code with boundaries within the namespace, then it might look like:
 ```
 module Taxes
   class TaxA
