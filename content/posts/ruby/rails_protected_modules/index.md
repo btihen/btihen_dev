@@ -30,6 +30,70 @@ projects: []
 
 Rails with Strong Boundaries between the Modules
 
+This experiment was inspired from an internal Tech Talk at Garaio REM by [Severin Raz](https://www.linkedin.com/in/severin-r%C3%A4z-567ab81b1/?originalSubdomain=ch) - where he suggested that we could be using `private_constant` to enforce boundaries, create public APIs for 'black-box modules - in order to control coupling.
+
+His example was similar to the following:
+
+Typical Rails Code has permissive APIs.
+```
+module Taxes
+  class TaxA
+    def self.tax(amount) = amount * 0.1
+  end
+  class TaxB
+    def self.tax(amount) = amount * 0.2
+  end
+  class API
+    def self.total(amount) = amount + tax(amount)
+    def self.tax(amount) = [TaxA, TaxB].sum { |klass| klass.tax(amount) }
+  end
+end
+
+# all of this works - its not clear what the API should be
+amount = 100
+Taxes::API.total(amount)
+amount + Taxes::API.tax(amount)
+amount + Taxes::TaxA.new.tax(amount) + Taxes::TaxB.tax(amount)
+```
+
+Ruby Code with a clear API and boundaries to enforce the API:
+```
+module Taxes
+  class TaxA
+    def self.tax(amount) = amount * 0.1
+  end
+  private_constant :TaxA
+  class TaxB
+    def self.tax(amount) = amount * 0.2
+  end
+  private_constant :TaxB
+  class API
+    class << self
+      def total(amount) = amount + tax(amount)
+
+      private
+      def tax(amount) = [TaxA, TaxB].sum { |klass| klass.tax(amount) }
+    end
+  end
+end
+
+# Now the public API is ONLY:
+
+Taxes::API.total(amount)
+
+# Everything else errors:
+
+amount + Taxes::API.tax(amount)
+# private method `tax' called for class Taxes::API (NoMethodError)
+
+amount + Taxes::TaxA.new.tax(amount) + Taxes::TaxB.tax(amount)
+# private constant Taxes::TaxA referenced (NameError)
+```
+
+I decided to experiment with idea within the context of a Rails app.
+
+That is this article resulting from the experiment.
+
 ## Introduction
 
 While writing Rails applications it is very easy to create highly coupled classes.  And possibly low cohesion within features.
@@ -46,7 +110,9 @@ PS - I've read about companies using Modules and API to create a 'citadel' archi
 
 We will build a VERY simple blog - just to show the concepts.  Obviously, this app is way to simple to benefit from Modules.  However, this keeps it simple enough show how it could be implemented.
 
-Just for fun we will use the newest Rails and Ruby versions.
+The code for this experiment can be found at: https://github.com/btihen/protected_rails_modules
+
+Just for fun we will use the newest Rails and Ruby versions, but these techniques should work on any version of Rails.
 
 ```
 # just for fun
@@ -71,12 +137,13 @@ instead of the current:
 
 ## Config for Modules
 
-make a directory for the modules
+First let's start by allowing us to configure Rails to allow for organization by Modules instead of grouping our code all together.
+
 ```
 mkdir app/modules
 ```
 
-config Rails to find the modules
+Allow Rails to find the modules.
 ```
 # config/application.rb
 module RailsPack
@@ -88,7 +155,7 @@ module RailsPack
 end
 ```
 
-Finally, let the controllers know how to find the views within packages `app/controllers/application_controller.rb` to:
+Let the controllers know how to find the `views` within modules by updating the views path in: `app/controllers/application_controller.rb` to:
 ```
 # app/controllers/application_controller.rb
 class ApplicationController < ActionController::Base
@@ -97,8 +164,10 @@ class ApplicationController < ActionController::Base
 end
 ```
 
+## Create a 'Rails' Module
 
-core compontents in module
+Let's create a module for our Rails code.  In this way we can keep our code separate from Rails itself.
+
 ```
 mkdir app/modules/rails
 
@@ -108,7 +177,7 @@ mv app/helpers app/modules/rails/.
 mv app/controllers app/modules/rails/.
 ```
 
-be sure rails still works  (restart rails if already running)
+be sure rails still works (best to restart rails if already running)
 ```
 bin/rails s
 ```
@@ -116,11 +185,12 @@ bin/rails s
 update git
 ```
 git add .
-git commit -m "modularize rails"
+git commit -m "rails as a module"
 ```
 
+## Create a Module - landing page
 
-## landing page
+Let's add a landing page.  Each new module we create will be within a namespace (module) otherwise we cannot enforce privacy!  In the case of a landing page it is unnecessary, but it allows us to create a more complicated module in the future without a major code refactor.  So we will just use a namespace for all modules.
 
 ```
 bin/rails g controller landing/home index --no-helper
@@ -155,7 +225,9 @@ git add .
 git commit -m "add landing page module"
 ```
 
-## lets create an authors module
+## Lets create an Author's module
+
+Granted this is just an arbitrary module for demo purposes - but it is separate logically from the landing page and thus has it's own module.
 
 ```
 bin/rails g scaffold authors/user full_name email --no-helper
@@ -172,7 +244,7 @@ mv app/models app/modules/authors/.
 mv app/controllers app/modules/authors/.
 ```
 
-rails overlooks namespace relations so we need to change:
+Rails overlooks namespace relations (when it sees `authors_users` it assumes a classname of `AuthorsUsers` but with namespaces it is actually `Authors::Users`) so we need be sure our relationships are properly adjusted.
 ```
 # app/modules/authors/models/authors/article.rb
 class Authors::Article < ApplicationRecord
@@ -180,7 +252,7 @@ class Authors::Article < ApplicationRecord
 end
 ```
 
-for convience you probably also want to update users to be:
+you will probably also want to update users to find all of a user's articles:
 ```
 # app/modules/authors/models/authors/user.rb
 class Authors::User < ApplicationRecord
@@ -208,9 +280,20 @@ git commit -m "add authors module"
 
 ## Protected Modules
 
-protect the models using:
-`private_constant :Article`
-allowing us only access to the models within the `Authors` module - this will require multiple changes.
+In Ruby 1.9.3 `private_constant` was introduced to help enforce privacy of Constants `private` only enforces privacy of methods.  Often we think of Constants as predefined information i.e.:
+```
+ARTICLE_STATUS = %i[draft inreview published].freeze
+```
+If we don't want to share these states outside our Class then we can can write:
+```
+ARTICLE_STATUS = %i[draft inreview published].freeze
+private_constant :ARTICLE_STATUS
+```
+Now this is only usable within our class.
+
+However our Classes are also Constants.  So within a module (namespace) we can protect / hide our classes and only allow access to our module via a public API.
+
+Let's try that out using `private_constant` on our Models within the `Authors` namespace.
 
 ```
 # app/modules/authors/models/authors/article.rb
@@ -223,6 +306,7 @@ module Authors
 end
 ```
 
+and
 
 ```
 # app/modules/authors/models/authors/user.rb
@@ -235,42 +319,65 @@ module Authors
 end
 ```
 
-Now we need to adjust our `controllers` to avoid
+Now if we try to access our our Rails Authors controllers
+```
+https://localhost:3000/authors/users
+# or
+https://localhost:3000/authors/articles
+```
+we throw lots of Privacy errors.
 
+To fix this we need refactor our controllers.
+
+We need to explicitly use our namespace as a module - thus:
+```
+class Authors::ArticlesController < ApplicationController
+```
+
+becomes:
+```
+module Authors
+  class ArticlesController < ApplicationController
+```
+
+We also need to change all our class reference from:
+```
+@authors_articles = Authors::Article.all
+```
+to:
+```
+@authors_articles = Article.all
+```
+
+Which works since we have now explicitly defined our namespace as a module.  Within our namespace we have full access to our classes - **outside the namespace - we have no access!**
+
+Thus our controllers will now need to look like:
 ```
 # app/modules/authors/controllers/authors/articles_controller.rb
+# an explicit module for namespace
 module Authors
   class ArticlesController < ApplicationController
     before_action :set_authors_article, only: %i[ show edit update destroy ]
 
-    # GET /authors/articles or /authors/articles.json
     def index
+      # must now be called directly from within the name space
       @authors_articles = Article.all
+      # the following explicit full call is no longer allowed!
       # @authors_articles = Authors::Article.all
     end
 
-    # GET /authors/articles/1 or /authors/articles/1.json
     def show
     end
 
-    # GET /authors/articles/new
     def new
       @authors_article = Article.new
-      # @authors_article = Authors::Article.new
     end
 
-    # GET /authors/articles/1/edit
     def edit
     end
 
-    # POST /authors/articles or /authors/articles.json
     def create
-      # binding.irb
-      # author = Authors::User.find authors_article_params[:authors_user_id]
-      # article_params = authors_article_params.except(:authors_user_id).merge(authors_user: author)
-      # @authors_article = Authors::Article.new(article_params)
       @authors_article = Article.new(authors_article_params)
-      # @authors_article = Authors::Article.new(authors_article_params)
 
       respond_to do |format|
         if @authors_article.save
@@ -283,7 +390,6 @@ module Authors
       end
     end
 
-    # PATCH/PUT /authors/articles/1 or /authors/articles/1.json
     def update
       respond_to do |format|
         if @authors_article.update(authors_article_params)
@@ -296,7 +402,6 @@ module Authors
       end
     end
 
-    # DELETE /authors/articles/1 or /authors/articles/1.json
     def destroy
       @authors_article.destroy!
 
@@ -310,7 +415,6 @@ module Authors
       # Use callbacks to share common setup or constraints between actions.
       def set_authors_article
         @authors_article = Article.find(params[:id])
-        # @authors_article = Authors::Article.find(params[:id])
       end
 
       # Only allow a list of trusted parameters through.
@@ -320,6 +424,7 @@ module Authors
   end
 end
 ```
+and
 
 ```
 # app/modules/authors/controllers/authors/users_controller.rb
@@ -327,30 +432,23 @@ module Authors
   class UsersController < ApplicationController
     before_action :set_authors_user, only: %i[ show edit update destroy ]
 
-    # GET /authors/users or /authors/users.json
     def index
       @authors_users = User.all
       # @authors_users = Authors::User.all
     end
 
-    # GET /authors/users/1 or /authors/users/1.json
     def show
     end
 
-    # GET /authors/users/new
     def new
       @authors_user = User.new
-      # @authors_user = Authors::User.new
     end
 
-    # GET /authors/users/1/edit
     def edit
     end
 
-    # POST /authors/users or /authors/users.json
     def create
       @authors_user = User.new(authors_user_params)
-      # @authors_user = Authors::User.new(authors_user_params)
 
       respond_to do |format|
         if @authors_user.save
@@ -363,7 +461,6 @@ module Authors
       end
     end
 
-    # PATCH/PUT /authors/users/1 or /authors/users/1.json
     def update
       respond_to do |format|
         if @authors_user.update(authors_user_params)
@@ -376,7 +473,6 @@ module Authors
       end
     end
 
-    # DELETE /authors/users/1 or /authors/users/1.json
     def destroy
       @authors_user.destroy!
 
@@ -390,7 +486,6 @@ module Authors
       # Use callbacks to share common setup or constraints between actions.
       def set_authors_user
         @authors_user = User.find(params[:id])
-        # @authors_user = Authors::User.find(params[:id])
       end
 
       # Only allow a list of trusted parameters through.
@@ -410,7 +505,18 @@ touch app/modules/authors/public/authors/article_entity.rb
 touch app/modules/authors/public/authors/user_entity.rb
 ```
 
-now create the API files
+
+update git
+```
+git add .
+git commit -m "authors is now a protected module"
+```
+
+## Public API for Authors Module
+
+Generally our code must cooperate with other code.  Thus each protected module will need a public API.  The API should be carefully considered and generally (probably with a minimalistic approach).
+
+In this case, I allow full CRUD access to each model (just for demo purposes).
 
 ```
 # app/modules/authors/public/authors/article_entity.rb
@@ -453,6 +559,7 @@ module Authors
   end
 end
 ```
+and
 
 ```
 # app/modules/authors/public/authors/user_entity.rb
@@ -495,7 +602,6 @@ module Authors
 end
 ```
 
-
 now we cat test:
 
 be sure we can still create new users and articles in our controllers and that we have access outside with the new public entities
@@ -507,17 +613,17 @@ Authors::UserEntity.find(1)
 # etc
 ```
 
-
 update repo
 ```
 git add .
-git commit -m "protected module"
+git commit -m "protected module with public API"
 ```
 
 
 ## JSON API
 
-cgreate the api module
+Let's use the Ruby API to create a JSON API to collaborate to say a JS frontend.
+
 ```
 mkdir -p app/modules/api/controllers/api/v1
 touch app/modules/api/controllers/api/v1/articles_controller.rb
@@ -538,9 +644,8 @@ module Api
     end
   end
 end
-
 ```
-
+and
 
 ```
 # app/modules/api/controllers/api/v1/users_controller.rb
@@ -558,7 +663,7 @@ module Api
 end
 ```
 
-update te route add:
+update the route with:
 ```
 # config/routes.rb
 Rails.application.routes.draw do
@@ -578,3 +683,49 @@ and
 `http://localhost:3000/api/v1/users`
 
 we should get the expected results
+
+let's update git:
+```
+git add .
+git commit -m 'json api for the Authors Module'
+```
+
+## Testing
+
+I didn't cover testing, but of course, you will probably want to arraign tests similar to the code.  This Modular Architecture will probably also focus on testing the public API and not the 'black-box' implementation.
+
+## Resources
+
+**Modularity / Citadel Design**
+
+* https://cbra.info (depricated but informative)
+* https://www.modularrails.com
+* https://gradualmodularization.com
+* https://devblast.com/c/modular-rails
+* https://stephanhagemann.com/books/gradual-modularization/ (also recommends dependency injection)
+* https://shopify.engineering/enforcing-modularity-rails-apps-packwerk
+* https://patrickkarsh.medium.com/the-importance-of-modular-code-in-ruby-on-rails-a-deep-dive-f83b6addc7fc
+* https://robertfaldo.medium.com/improving-rails-scalability-using-the-modular-monolith-approach-with-enforced-boundaries-f8cea89e85b9
+* https://blog.appsignal.com/2020/04/08/the-citadel-architecture-at-appsignal.html
+* https://www.modularrails.com
+
+
+**Packwerk** - gradual modularization - helpful for existing code bases that want to migrate to a modular approach
+
+* https://github.com/Shopify/packwerk
+* https://www.globalapptesting.com/engineering/implementing-packwerk-to-delimit-bounded-contexts
+* https://www.youtube.com/watch?v=NwqlyBAxVpQ
+* https://thecodest.co/blog/ruby-on-rails-modularization-with-packwerk-episode-i/
+https://thecodest.co/blog/ruby-on-rails-modularization-with-packwerk-episode-ii/
+https://engineering.gusto.com/a-how-to-guide-to-ruby-packs-gustos-gem-ecosystem-for-modularizing-ruby-applications/
+
+
+**Private Constant**
+
+* https://www.geeksforgeeks.org/private-classes-in-ruby/
+* https://www.rubypigeon.com/posts/private-is-for-humans/
+* https://blog.toshima.ru/2020/02/22/ruby-private-constant.html
+* https://aaronlasseigne.com/2016/10/26/know-ruby-private_constant/
+* https://medium.com/@blazejkosmowski/ruby-opinions-using-private-constant-592553ec49d2
+* https://stackoverflow.com/questions/54889436/why-would-you-private-encapsulate-a-private-constant
+* https://stackoverflow.com/questions/12944616/what-does-module-private-constant-do-is-there-a-way-to-list-only-private-consta/12944864
