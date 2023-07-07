@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Ruby', 'install', 'initialize']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-03-04T01:20:00+02:00
-lastmod: 2023-03-05T10:20:00+02:00
+lastmod: 2023-07-05T01:20:00+02:00
 featured: true
 draft: false
 
@@ -67,8 +67,10 @@ rails new rails71 --main
 
 ## Favorite switches for rails new:
 
+`--skip-test` - since I like using `rspec` ;)
+
 ```
-rails new rails71 --database=postgresql --skip-bootsnap --skip-test --javascript=esbuild --css=tailwind
+rails new rails71 --javascript=esbuild --css=tailwind --database=postgresql --skip-bootsnap --skip-test
 
 # see all options with:
 

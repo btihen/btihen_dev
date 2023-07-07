@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Ruby", "Parallel", "Ractor"]
 categories: ["Code", "Ruby Language"]
 date: 2023-01-15T01:11:22+02:00
-lastmod: 2023-03-05T01:11:22+02:00
+lastmod: 2023-07-06T01:11:22+02:00
 featured: true
 draft: false
 
@@ -251,6 +251,29 @@ Single thread - duration 17.414451
 ```
 
 ### Simple Multi-Threaded Ruby
+
+**Simple Thread Pool Implmentation**
+http://www.java2s.com/Code/Ruby/Threads/Getthevaluereturnedfromathread.htm
+
+```ruby
+t1 = Time.now; threads = []
+results = [37].cycle(10).map { |i| Thread.new { [i, fib(i)] }.value }
+puts "10 Ruby Threads Sequential - duration #{Time.now - t1}" # duration 24.546575
+```
+
+https://stackoverflow.com/questions/1383390/how-can-i-return-a-value-from-a-thread-in-ruby
+
+```ruby
+# 10 Threads
+t1 = Time.now; threads = []
+[37].cycle(10).each { |i| threads << Thread.new { Thread.current[:results] = [i, fib(i)] } }
+results = threads.map { |t| t.join; t[:results] }
+puts "10 Ruby Threads Sequential - duration #{Time.now - t1}" # duration 24.546575
+```
+
+**Object Oriented Thread Pool Implmentation**
+
+https://rossta.net/blog/a-ruby-antihero-thread-pool.html
 
 I decided to use a simple Naive Thread Pool - (this isn't an article about Thread Pools).  The following is the code entered into `irb`.
 
@@ -1119,3 +1142,4 @@ If you have more questions - I’ll gladly forward the otherwise here is his ema
 * https://www.rubyguides.com/2015/07/ruby-threads/
 * https://rossta.net/blog/a-ruby-antihero-thread-pool.html
 * https://stackoverflow.com/questions/32593289/ruby-thread-pooling-what-am-i-doing-wrong
+* https://stackoverflow.com/questions/1383390/how-can-i-return-a-value-from-a-thread-in-ruby
