@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Ruby', 'Rails', 'Modules', 'Isolation']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-07-06T01:20:00+02:00
-lastmod: 2023-07-07T01:20:00+02:00
+lastmod: 2023-07-09T01:20:00+02:00
 featured: true
 draft: false
 
@@ -111,14 +111,25 @@ In this quick example we will demonstrate using modules with strong boundaries a
 To facilitate the 'citadel' approach some teams re-organize the code so that all module code is together instead of Rails approach of scattered across the app (some modular proponents like to encourage the rails code to be its own module and not mixed with 'our' code) - this article will show how to do this fully in this style:
 
 ```
-app
-├── assets
-├── javascript
-└── modules
-    ├── api
-    ├── authors
-    ├── landing
-    └── rails
+├── app
+│   ├── assets
+│   └── javascript
+├── bin
+├── config
+├── db
+├── lib
+├── log
+├── modules
+│   ├── api
+│   ├── authors
+│   ├── landing
+│   └── rails
+├── node_modules
+├── public
+├── storage
+├── test
+├── tmp
+└── vendor
 ```
 
 Of course you need not reorganize rails (and in an existing code base, its probably better not to), but I would probably at least recommend new 'modules' be isolated in their own 'modules' folder - especially if Strict Privacy boundaries are being used!
@@ -167,7 +178,7 @@ module RailsPack
   class Application < Rails::Application
     ...
     # find the code in our modules
-    config.paths.add 'app/modules', glob: '*/{*,*/concerns}', eager_load: true
+    config.paths.add 'modules', glob: '*/{*,*/concerns}', eager_load: true
   end
 end
 ```
@@ -177,7 +188,7 @@ Let the controllers know how to find the `views` within modules by updating the 
 # app/controllers/application_controller.rb
 class ApplicationController < ActionController::Base
   # find views within our modules
-  append_view_path(Dir.glob(Rails.root.join('app/modules/*/views')))
+  append_view_path(Dir.glob(Rails.root.join('modules/*/views')))
 end
 ```
 
@@ -190,9 +201,10 @@ So our project would look like:
 
 
 ```
-app
-├── assets
-├── javascript
+├── app
+│   ├── assets
+│   └── javascript
+│
 └── modules
     └── rails
         ├── controllers
@@ -221,13 +233,13 @@ app
 In this way we can keep our code separate from Rails itself.
 
 ```
-mkdir app/modules/rails
+mkdir modules/rails
 
-mv app/views app/modules/rails/.
-mv app/models app/modules/rails/.
-mv app/helpers app/modules/rails/.
-mv app/channels app/modules/rails/.
-mv app/controllers app/modules/rails/.
+mv app/views modules/rails/.
+mv app/models modules/rails/.
+mv app/helpers modules/rails/.
+mv app/channels modules/rails/.
+mv app/controllers modules/rails/.
 ```
 
 be sure rails still works (best to restart rails if already running)
@@ -248,10 +260,10 @@ Let's add a landing page.  Each new module we create will be within a namespace 
 ```
 bin/rails g controller landing/home index --no-helper
 
-mkdir app/modules/landing
+mkdir modules/landing
 
-mv app/views app/modules/landing/.
-mv app/controllers app/modules/landing/.
+mv app/views modules/landing/.
+mv app/controllers modules/landing/.
 ```
 
 
@@ -281,9 +293,10 @@ git commit -m "add landing page module"
 Now the structure looks like:
 
 ```
-app
-├── assets
-├── javascript
+├── app
+│   ├── assets
+│   └── javascript
+│
 └── modules
     ├── landing
     │   ├── controllers
@@ -308,16 +321,16 @@ bin/rails db:migrate
 
 Let's build into an isolated module
 ```
-mkdir app/modules/authors
+mkdir modules/authors
 
-mv app/views app/modules/authors/.
-mv app/models app/modules/authors/.
-mv app/controllers app/modules/authors/.
+mv app/views modules/authors/.
+mv app/models modules/authors/.
+mv app/controllers modules/authors/.
 ```
 
 Rails overlooks namespace relations (when it sees `authors_users` it assumes a classname of `AuthorsUsers` but with namespaces it is actually `Authors::Users`) so we need be sure our relationships are properly adjusted.
 ```
-# app/modules/authors/models/authors/article.rb
+# modules/authors/models/authors/article.rb
 class Authors::Article < ApplicationRecord
   belongs_to :authors_user, class_name: 'Authors::User'
 end
@@ -325,7 +338,7 @@ end
 
 you will probably also want to update users to find all of a user's articles:
 ```
-# app/modules/authors/models/authors/user.rb
+# modules/authors/models/authors/user.rb
 class Authors::User < ApplicationRecord
   has_many :authors_articles, class_name: 'Authors::Article', foreign_key: 'authors_user_id', dependent: :destroy
 end
@@ -352,9 +365,10 @@ git commit -m "add authors module"
 Now the project looks like:
 
 ```
-app
-├── assets
-├── javascript
+├── app
+│   ├── assets
+│   └── javascript
+│
 └── modules
     ├── authors
     │   ├── controllers
@@ -392,7 +406,7 @@ However our Classes are also Constants.  So within a module (namespace) we can p
 Let's try that out using `private_constant` on our Models within the `Authors` namespace.
 
 ```
-# app/modules/authors/models/authors/article.rb
+# modules/authors/models/authors/article.rb
 module Authors
   class Article < ApplicationRecord
     # class_name: 'Authors::User' is needed otherwise Rails assumes the class AuthorsUser
@@ -405,7 +419,7 @@ end
 and
 
 ```
-# app/modules/authors/models/authors/user.rb
+# modules/authors/models/authors/user.rb
 module Authors
   class User < ApplicationRecord
   # class_name: 'Authors::Article' is needed otherwise Rails assumes the class AuthorsArticle
@@ -449,7 +463,7 @@ Which works since we have now explicitly defined our namespace as a module.  Wit
 
 Thus our controllers will now need to look like:
 ```
-# app/modules/authors/controllers/authors/articles_controller.rb
+# modules/authors/controllers/authors/articles_controller.rb
 # an explicit module for namespace
 module Authors
   class ArticlesController < ApplicationController
@@ -523,7 +537,7 @@ end
 and
 
 ```
-# app/modules/authors/controllers/authors/users_controller.rb
+# modules/authors/controllers/authors/users_controller.rb
 module Authors
   class UsersController < ApplicationController
     before_action :set_authors_user, only: %i[ show edit update destroy ]
@@ -596,9 +610,9 @@ Now lets create an API for other aspects of our APP.
 
 create public directory for it
 ```
-mkdir app/modules/authors/public/authors
-touch app/modules/authors/public/authors/article_entity.rb
-touch app/modules/authors/public/authors/user_entity.rb
+mkdir modules/authors/public/authors
+touch modules/authors/public/authors/article_entity.rb
+touch modules/authors/public/authors/user_entity.rb
 ```
 
 
@@ -615,7 +629,7 @@ Generally our code must cooperate with other code.  Thus each protected module w
 In this case, I allow full CRUD access to each model (just for demo purposes).
 
 ```
-# app/modules/authors/public/authors/article_entity.rb
+# modules/authors/public/authors/article_entity.rb
 module Authors
   class ArticleEntity
     include ActiveModel::Model
@@ -658,7 +672,7 @@ end
 and
 
 ```
-# app/modules/authors/public/authors/user_entity.rb
+# modules/authors/public/authors/user_entity.rb
 module Authors
   class UserEntity
     include ActiveModel::Model
@@ -717,9 +731,10 @@ git commit -m "protected module with public API"
 
 Now our code looks like:
 ```
-app
-├── assets
-├── javascript
+├── app
+│   ├── assets
+│   └── javascript
+│
 └── modules
     ├── authors
     │   ├── controllers
@@ -739,13 +754,13 @@ app
 Let's use the Ruby API to create a JSON API to collaborate to say a JS frontend.
 
 ```
-mkdir -p app/modules/api/controllers/api/v1
-touch app/modules/api/controllers/api/v1/articles_controller.rb
-touch app/modules/api/controllers/api/v1/users_controller.rb
+mkdir -p modules/api/controllers/api/v1
+touch modules/api/controllers/api/v1/articles_controller.rb
+touch modules/api/controllers/api/v1/users_controller.rb
 ```
 
 ```
-# app/modules/api/controllers/api/v1/articles_controller.rb
+# modules/api/controllers/api/v1/articles_controller.rb
 module Api
   module V1
     class ArticlesController < ApplicationController
@@ -762,7 +777,7 @@ end
 and
 
 ```
-# app/modules/api/controllers/api/v1/users_controller.rb
+# modules/api/controllers/api/v1/users_controller.rb
 module Api
   module V1
     class UsersController < ApplicationController
@@ -808,9 +823,10 @@ Now the structure looks like:
 
 
 ```
-app
-├── assets
-├── javascript
+├── app
+│   ├── assets
+│   └── javascript
+│
 └── modules
     ├── api
     │   └── controllers
@@ -823,6 +839,119 @@ app
     └── rails
 ```
 
+## Dependency Graphs & CI Integration
+
+If you would like to enforce this design generally then there is the `packwerk` (for checking dependency violations & privacy violations) as well as `graphwerk` to help you visualize you structure.
+
+Packwerk is a linter - so it will just help enforce and visual your code - it doesn't require a rewrite - existing code bases and 'gradually' migrate to a modular format.
+
+In the gem file add:
+```
+# Gemfile
+...
+# Packwerk (modular Rails) - dependency tooling and mapping
+gem "packwerk", "~> 2.2"
+gem 'graphwerk', group: %i[development test]
+```
+
+Setup packwerk with:
+```
+# add the new gems to the codebase
+bundle install
+
+# make it easy to
+bundle binstub packwerk
+
+# create intial packwerk config files
+bin/packwerk init
+```
+
+### Add packwerk.yml files
+
+Descripe your dependencies and public APIs
+
+Now you describe you dependencies in the `packwerk.yml` file for each module:
+
+the rails shim:
+```
+# module/rails/packwerk.yml
+
+enforce_dependencies: true
+enforce_privacy: true
+
+# # define the folder with public APIs
+# public_path: public/
+
+# # A list of this package's dependencies '.' (the root application)
+# dependencies:
+# - '.'
+```
+
+the landing page depends on Rails:
+```
+# module/landing/packwerk.yml
+
+enforce_dependencies: true
+enforce_privacy: true
+
+# # define the folder with public APIs
+# public_path: public/
+
+# # A list of this package's dependencies '.' (the root application)
+dependencies:
+- 'modules/rails'
+```
+
+The authors module depends on rails:
+```
+# module/authors/packwerk.yml
+
+enforce_dependencies: true
+enforce_privacy: true
+
+# # define the folder with public APIs
+public_path: public/
+
+# # A list of this package's dependencies '.' (the root application)
+dependencies:
+- 'modules/rails'
+```
+
+the Json API requires both rails and the authors modules
+```
+# module/api/packwerk.yml
+
+enforce_dependencies: true
+enforce_privacy: true
+
+# # define the folder with public APIs
+# public_path: api/
+
+# # A list of this package's dependencies - '.' (the root application)
+dependencies:
+  - 'modules/rails'
+  - 'modules/authors'
+
+```
+
+### Check your work
+
+You can now visualize your structure with:
+```
+bin/rails graphwerk:update
+```
+
+now we should find the file `packwerk.png` and we can visualize the dependencies:
+![modules structure](packwerk.png)
+
+and you check for privacy and dependency violations (that you overlooked) with:
+```
+bin/packwerk check
+```
+### Gems for CI, CD & Code Review Alerts
+
+https://github.com/rubyatscale/danger-packwerk
+https://github.com/bigrails/package_protections
 
 ## Testing
 
@@ -833,9 +962,9 @@ I didn't cover testing, but of course, you will probably want to arraign tests s
 I personally like this structure:
 
 ```
-app
-├── assets
-├── javascript
+├── app
+│   ├── assets
+│   ├── javascript
 └── modules
     ├── api
     ├── authors
@@ -845,24 +974,24 @@ app
 
 But Modularization can be done without reorganization.  However, I would find it confusing to have protected modules mixed into the normal rails structure, thus I would minimally prefer protected modules to be separated. In this case the structure might look like:
 ```
-app
-├── api
-│   └── controllers
-├── assets
-├── channels
-├── controllers
-├── helpers
-├── javascript
-├── jobs
-├── mailers
-├── models
+├── app
+│   └── api
+│   │   └── controllers
+│   ├── assets
+│   ├── channels
+│   ├── controllers
+│   ├── helpers
+│   ├── javascript
+│   ├── jobs
+│   ├── mailers
+│   ├── models
+│   └── views
 └── modules
-│   └── authors
-│       ├── controllers
-│       ├── models
-│       ├── public
-│       └── views
-└── views
+    └── authors
+        ├── controllers
+        ├── models
+        ├── public
+        └── views
 ```
 
 ## Resources
@@ -884,8 +1013,9 @@ app
 **Packwerk** - gradual modularization - helpful for existing code bases that want to migrate to a modular approach
 
 * https://github.com/Shopify/packwerk
-* https://www.globalapptesting.com/engineering/implementing-packwerk-to-delimit-bounded-contexts
 * https://www.youtube.com/watch?v=NwqlyBAxVpQ
+* https://shopify.engineering/enforcing-modularity-rails-apps-packwerk
+* https://www.globalapptesting.com/engineering/implementing-packwerk-to-delimit-bounded-contexts
 * https://thecodest.co/blog/ruby-on-rails-modularization-with-packwerk-episode-i/
 https://thecodest.co/blog/ruby-on-rails-modularization-with-packwerk-episode-ii/
 https://engineering.gusto.com/a-how-to-guide-to-ruby-packs-gustos-gem-ecosystem-for-modularizing-ruby-applications/
