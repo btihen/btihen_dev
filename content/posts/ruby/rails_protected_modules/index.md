@@ -862,6 +862,29 @@ Now the structure looks like:
     └── rails
 ```
 
+## Tests (Rspec) with Protected Modules
+
+Tests / Rspecs will need to be slightly different when using protected modules - the tests need to be within the `module` so they will need to look like:
+```
+require 'spec_helper'
+
+module Authors
+  describe User do
+    # the tests
+  end
+end
+```
+
+instead of:
+```
+require 'spec_helper'
+
+describe Authors::User do
+  # the tests
+end
+```
+
+
 ## Dependency Graphs & CI Integration
 
 If you have chosen to re-organize your rails environment to create 'packages, modules orcomponents' (whatever you like to call them), you can use the `packwerk` linter to checking dependency & privacy violations.  You can also use `graphwerk` to help you visualize the application structure.
