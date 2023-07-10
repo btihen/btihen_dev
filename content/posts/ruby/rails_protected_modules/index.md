@@ -30,7 +30,7 @@ projects: []
 
 Rails with Strong Boundaries between the Modules
 
-This experiment was inspired from an internal Tech Talk at [Garaio REM](https://www.garaio-rem.ch) by a colleague. He suggested that we could be using `module` to create namespaces (to organize our code with high cohesion) and `private_constant` to enforce API boundaries (enforce low coupling).
+This experiment was inspired from an internal Tech Talk at [Garaio REM](https://www.garaio-rem.ch) by a colleague [Severin Räz](https://www.linkedin.com/in/severin-r%C3%A4z-567ab81b1/?originalSubdomain=ch). He suggested that we could be using `module` to create namespaces (to organize our code with high cohesion) and `private_constant` to enforce API boundaries (enforce low coupling).
 
 The example given was similar to the following:
 
@@ -108,7 +108,7 @@ One could even go one step further and dependency inversion.
 
 In this quick example we will demonstrate using modules with strong boundaries and an enforced public API.
 
-To facilitate the 'citadel' approach some teams re-organize the code so that all module code is together instead of Rails approach of scattered across the app (some modular proponents like to encourage the rails code to be its own module and not mixed with 'our' code) - this article will show how to do this fully in this style:
+To facilitate the 'citadel' approach some teams re-organize the code so that all module code is together instead of Rails approach of scattered across the app (some modular proponents like to encourage the rails code to be its own module and not mixed with 'our' code) - this article will show how to do this fully in this style (mini-inner-rails apps):
 
 ```
 ├── app
@@ -132,7 +132,30 @@ To facilitate the 'citadel' approach some teams re-organize the code so that all
 └── vendor
 ```
 
-Of course you need not reorganize rails (and in an existing code base, its probably better not to), but I would probably at least recommend new 'modules' be isolated in their own 'modules' folder - especially if Strict Privacy boundaries are being used!
+Other structures are also easy to create, the first version seen in the Repo was:
+```
+├── app
+│   ├── assets
+│   ├── javascript
+│   └── modules
+│       ├── api
+│       ├── authors
+│       ├── landing
+│       └── rails
+├── bin
+├── config
+├── db
+├── lib
+├── log
+├── node_modules
+├── public
+├── storage
+├── test
+├── tmp
+└── vendor
+```
+
+It's of course also possible to use 'private_constant' without reorganizing Rails.
 
 ## Getting Started
 
@@ -841,9 +864,9 @@ Now the structure looks like:
 
 ## Dependency Graphs & CI Integration
 
-If you would like to enforce this design generally then there is the `packwerk` (for checking dependency violations & privacy violations) as well as `graphwerk` to help you visualize you structure.
+If you have chosen to re-organize your rails environment to create 'packages, modules orcomponents' (whatever you like to call them), you can use the `packwerk` linter to checking dependency & privacy violations.  You can also use `graphwerk` to help you visualize the application structure.
 
-Packwerk is a linter - so it will just help enforce and visual your code - it doesn't require a rewrite - existing code bases and 'gradually' migrate to a modular format.
+Packwerk is a linter and like RuboCop you can also have it ignore older code that isn't yet using your new design.  There is also a 'danger-packwerk' to auto-comment PRs in a Continious Integration system.
 
 In the gem file add:
 ```
