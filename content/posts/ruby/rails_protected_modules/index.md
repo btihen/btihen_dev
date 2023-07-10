@@ -1005,7 +1005,7 @@ I didn't cover testing, but of course, you will probably want to arraign tests s
 
 ## Wrap-up
 
-I personally like this structure:
+I personally like this structure.  It mirrors the structure when using engines.
 
 ```
 ├── app
@@ -1018,11 +1018,22 @@ I personally like this structure:
     └── rails
 ```
 
-But Modularization can be done without reorganization.  However, I would find it confusing to have protected modules mixed into the normal rails structure, thus I would minimally prefer protected modules to be separated. In this case the structure might look like:
+This also works well and emphasizes that all sits within one App.
+
 ```
 ├── app
-│   └── api
-│   │   └── controllers
+    ├── assets
+    ├── javascript
+    └── modules
+        ├── api
+        ├── authors
+        ├── landing
+        └── rails
+```
+
+But Modularization can be done without reorganization.
+```
+├── app
 │   ├── assets
 │   ├── channels
 │   ├── controllers
@@ -1033,19 +1044,17 @@ But Modularization can be done without reorganization.  However, I would find it
 │   ├── models
 │   └── views
 └── modules
-    └── authors
-        ├── controllers
-        ├── models
-        ├── public
-        └── views
+    └── authors - just business POROs (plain old ruby objects)
 ```
+
+Another option is to build a Hexagonal structure.  [Hanami 2.0]() is being designed for a Hexagonal Structure with Dependency Inversion, Repository Pattern and Event Architechture built in as core features.  ["Hanami 2: New Framework, New You" - Tim Riley (RubyConf AU 2023)](https://www.youtube.com/watch?v=-B9AbFsQOKo)
 
 ## Resources
 
 **Modularity / Citadel Design**
 
-* https://cbra.info (depricated but informative)
 * https://www.modularrails.com
+* https://github.com/rubyatscale
 * https://gradualmodularization.com
 * https://devblast.com/c/modular-rails
 * https://stephanhagemann.com/books/gradual-modularization/ (also recommends dependency injection)
@@ -1054,6 +1063,9 @@ But Modularization can be done without reorganization.  However, I would find it
 * https://robertfaldo.medium.com/improving-rails-scalability-using-the-modular-monolith-approach-with-enforced-boundaries-f8cea89e85b9
 * https://blog.appsignal.com/2020/04/08/the-citadel-architecture-at-appsignal.html
 * https://www.modularrails.com
+* https://www.youtube.com/watch?v=P6IXPM3zFTw - RailsConf 2020 CE - Monoliths Between Microservices by Vladimir Dementyev
+* https://www.youtube.com/watch?v=J9S0qiGkAQY - RailsConf 2022 - Laying the Cultural and Technical Foundation for Big Rails by Alex Evanczuk
+* https://www.youtube.com/watch?v=StDoHXO8H6E -Ruby Austrailia 2023 - All you need is Rails (Engines): Compartmentalising your Monolith
 
 
 **Packwerk** - gradual modularization - helpful for existing code bases that want to migrate to a modular approach
@@ -1076,3 +1088,17 @@ https://engineering.gusto.com/a-how-to-guide-to-ruby-packs-gustos-gem-ecosystem-
 * https://medium.com/@blazejkosmowski/ruby-opinions-using-private-constant-592553ec49d2
 * https://stackoverflow.com/questions/54889436/why-would-you-private-encapsulate-a-private-constant
 * https://stackoverflow.com/questions/12944616/what-does-module-private-constant-do-is-there-a-way-to-list-only-private-consta/12944864
+
+
+**Hexagonal Rails**
+
+* https://www.youtube.com/watch?v=WpkDN78P884 - Ruby Midwest 2011 - Keynote: Architecture the Lost Years by Robert Martin
+* https://www.youtube.com/watch?v=CGN4RFkhH2M - GoRuCo 2012 Hexagonal Rails by Matt Wynne (ports and adapters)
+* https://www.youtube.com/watch?v=_rbF97T4480 - RailsConf 2014 - Domain Driven Design and Hexagonal Architecture with Rails
+* https://www.youtube.com/watch?v=tg5RFeSfBM4 - October CincyRb 2014 - Jim Weirich on Decoupling from Rails
+
+**Hanami 2.0**
+
+* https://hanamirb.org/ - Hanami 2.0 Framework
+* https://www.youtube.com/watch?v=-B9AbFsQOKo - "Hanami 2: New Framework, New You" - Tim Riley (RubyConf AU 2023)
+* https://discourse.hanamirb.org/t/hanami-2-0-app-structure/705
