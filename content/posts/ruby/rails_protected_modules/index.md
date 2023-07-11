@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Ruby', 'Rails', 'Modules', 'Isolation']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-07-06T01:20:00+02:00
-lastmod: 2023-07-09T01:20:00+02:00
+lastmod: 2023-07-11T01:20:00+02:00
 featured: true
 draft: false
 
@@ -634,8 +634,8 @@ Now lets create an API for other aspects of our APP.
 create public directory for it
 ```
 mkdir modules/authors/public/authors
-touch modules/authors/public/authors/article_entity.rb
-touch modules/authors/public/authors/user_entity.rb
+touch modules/authors/public/authors/article_data.rb
+touch modules/authors/public/authors/user_data.rb
 ```
 
 
@@ -652,9 +652,9 @@ Generally our code must cooperate with other code.  Thus each protected module w
 In this case, I allow full CRUD access to each model (just for demo purposes).
 
 ```
-# modules/authors/public/authors/article_entity.rb
+# modules/authors/public/authors/article_data.rb
 module Authors
-  class ArticleEntity
+  class ArticleData
     include ActiveModel::Model
     attr_accessor :id, :title, :body, :authors_user_id, :created_at, :updated_at
 
@@ -692,12 +692,13 @@ module Authors
   end
 end
 ```
+
 and
 
 ```
-# modules/authors/public/authors/user_entity.rb
+# modules/authors/public/authors/user_data.rb
 module Authors
-  class UserEntity
+  class UserData
     include ActiveModel::Model
     attr_accessor :id, :full_name, :email, :created_at, :updated_at
 
@@ -735,14 +736,16 @@ module Authors
 end
 ```
 
+PS - you may not want to include `include ActiveModel::Model` in the UserData/ArticleData class.
+
 now we cat test:
 
 be sure we can still create new users and articles in our controllers and that we have access outside with the new public entities
 ```
 bin/rails c
 
-Authors::ArticleEntity.find(1)
-Authors::UserEntity.find(1)
+Authors::ArticleData.find(1)
+Authors::UserData.find(1)
 # etc
 ```
 
@@ -764,8 +767,8 @@ Now our code looks like:
     │   ├── models
     │   ├── public
     │   │   └── authors
-    │   │       ├── article_entity.rb
-    │   │       └── user_entity.rb
+    │   │       ├── article_data.rb
+    │   │       └── user_data.rb
     │   └── views
     ├── landing
     └── rails
@@ -788,7 +791,7 @@ module Api
   module V1
     class ArticlesController < ApplicationController
       def index
-        articles = Authors::ArticleEntity.all
+        articles = Authors::ArticleData.all
         render json: { status: 'SUCCESS', message: 'Loaded articles', data: articles }, status: :ok
       end
 
@@ -805,7 +808,7 @@ module Api
   module V1
     class UsersController < ApplicationController
       def index
-        users = Authors::UserEntity.all
+        users = Authors::UserData.all
         render json: { status: 'SUCCESS', message: 'Loaded users', data: users }, status: :ok
       end
 
@@ -908,7 +911,7 @@ bundle install
 # make it easy to
 bundle binstub packwerk
 
-# create intial packwerk config files
+# create initial packwerk config files
 bin/packwerk init
 ```
 
