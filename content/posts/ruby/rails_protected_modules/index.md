@@ -914,7 +914,7 @@ bin/packwerk init
 
 ### Add packwerk.yml files
 
-Descripe your dependencies and public APIs
+Describe your dependencies and public APIs
 
 Now you describe you dependencies in the `packwerk.yml` file for each module:
 
@@ -1065,7 +1065,7 @@ Another option is to build a Hexagonal structure.  [Hanami 2.0]() is being desig
 * https://www.modularrails.com
 * https://www.youtube.com/watch?v=P6IXPM3zFTw - RailsConf 2020 CE - Monoliths Between Microservices by Vladimir Dementyev
 * https://www.youtube.com/watch?v=J9S0qiGkAQY - RailsConf 2022 - Laying the Cultural and Technical Foundation for Big Rails by Alex Evanczuk
-* https://www.youtube.com/watch?v=StDoHXO8H6E -Ruby Austrailia 2023 - All you need is Rails (Engines): Compartmentalising your Monolith
+* https://www.youtube.com/watch?v=StDoHXO8H6E - Ruby Australia 2023 - All you need is Rails (Engines): Compartmentalising your Monolith by Julián Pinzón
 
 
 **Packwerk** - gradual modularization - helpful for existing code bases that want to migrate to a modular approach
