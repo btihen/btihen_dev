@@ -1066,6 +1066,7 @@ Another option is to build a Hexagonal structure.  [Hanami 2.0]() is being desig
 * https://robertfaldo.medium.com/improving-rails-scalability-using-the-modular-monolith-approach-with-enforced-boundaries-f8cea89e85b9
 * https://blog.appsignal.com/2020/04/08/the-citadel-architecture-at-appsignal.html
 * https://www.modularrails.com
+* https://www.youtube.com/watch?v=EypRSLfKvak - Birmingham on Rails 2020 - Morning Keynote by Stephan Hagemann (Component Rails)
 * https://www.youtube.com/watch?v=P6IXPM3zFTw - RailsConf 2020 CE - Monoliths Between Microservices by Vladimir Dementyev
 * https://www.youtube.com/watch?v=J9S0qiGkAQY - RailsConf 2022 - Laying the Cultural and Technical Foundation for Big Rails by Alex Evanczuk
 * https://www.youtube.com/watch?v=StDoHXO8H6E - Ruby Australia 2023 - All you need is Rails (Engines): Compartmentalising your Monolith by Julián Pinzón
@@ -1078,8 +1079,8 @@ Another option is to build a Hexagonal structure.  [Hanami 2.0]() is being desig
 * https://shopify.engineering/enforcing-modularity-rails-apps-packwerk
 * https://www.globalapptesting.com/engineering/implementing-packwerk-to-delimit-bounded-contexts
 * https://thecodest.co/blog/ruby-on-rails-modularization-with-packwerk-episode-i/
-https://thecodest.co/blog/ruby-on-rails-modularization-with-packwerk-episode-ii/
-https://engineering.gusto.com/a-how-to-guide-to-ruby-packs-gustos-gem-ecosystem-for-modularizing-ruby-applications/
+* https://thecodest.co/blog/ruby-on-rails-modularization-with-packwerk-episode-ii/
+* https://engineering.gusto.com/a-how-to-guide-to-ruby-packs-gustos-gem-ecosystem-for-modularizing-ruby-applications/
 
 
 **Private Constant**
