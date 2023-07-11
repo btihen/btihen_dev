@@ -170,8 +170,8 @@ Just for fun we will use the newest Rails and Ruby versions, but these technique
 rbenv install 3.3.0-preview1
 rbenv local 3.3.0-preview1
 
-# `--main` uses the rails main branch instead of a released version
-rails new modules --main --javascript=esbuild --css=tailwind --database=postgresql
+# `--main` uses the rails main branch instead of a released version (--skip-test - I like rspec)
+rails new modules --main --javascript=esbuild --css=tailwind --database=postgresql --skip-test
 
 cd modules
 git init
