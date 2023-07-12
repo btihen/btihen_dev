@@ -36,6 +36,8 @@ Its widely known that Engines are a power way to create a full 'sub-rails applic
 
 I like calling these `mingines` - minimized engines.
 
+The code in this article available on [rails_mingine](https://github.com/btihen/rails_mingine).
+
 ## create a base rails project
 
 note: I like rspec so - I'll skip the tests
