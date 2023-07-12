@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Ruby', 'Rails', 'Engines', 'Organizations']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-07-11T01:20:00+02:00
-lastmod: 2023-07-11T01:20:00+02:00
+lastmod: 2023-07-12T01:20:00+02:00
 featured: true
 draft: false
 
@@ -391,5 +391,17 @@ now we commit
 git add .
 git commit -m "add the blogs mingine"
 ```
+
+## using JS within an mingine
+
+## using rspec within an mingine
+
+## using factories within an mingine
+
+## protected APIs within an mingine
+
+## using packwerk within an mingine
+
+## Further Ideas
 
 For further improvements (protected namespaces, using packwerk to provide feedback and a list of design ideas from many others) see [Rails with Protected Modules](https://btihen.dev/posts/ruby/rails_protected_modules/)
