@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Ruby', 'Rails', 'Modules', 'Isolation', 'Injection']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-08-12T01:20:00+02:00
-lastmod: 2023-08-12T01:20:00+02:00
+lastmod: 2023-09-02T01:20:00+02:00
 featured: true
 draft: true
 
@@ -79,55 +79,154 @@ bin/rails db:create
 
 Later when Rails 7.1 is released we can set the version in the Gemfile with: gem 'rails', '~> 7.1' instead of the current: gem "rails", github: "rails/rails", branch: "main"
 
-# Create Documents
+## Configure for Modules / Packages
 
-Let's make an Article model within the Author's namespace (article content will use Action Text so we can capture the person's writing) which we can then display as an HTML page or save as a PDF file.
+Let's start by create a modular structure for our app as described in [Rails with Protected Modules](https://btihen.dev/posts/ruby/rails_protected_modules/) - although this is not required.
+
+I generally put everything in either `app/packages`, `app/modules`, `packages` or `modules` - but you can choose your preference. (I tend to use 'packages; when using packwerk).
+
+Configure Rails to find our modules:
+
+```ruby
+# config/application.rb
+require_relative "boot"
+# ...
+module ModulesDesign
+  class Application < Rails::Application
+    # Initialize configuration defaults for originally generated Rails version.
+    config.load_defaults 7.1
+
+    # add packages PATH BEFORE autoload config!
+    # otherwise it will not find the modules with the error:
+    # ActionController::RoutingError (uninitialized constant Landing)
+    config.paths.add 'app/packages', glob: '*/{*,*/concerns}', eager_load: true
+
+    config.autoload_lib(ignore: %w(assets tasks))
+    # ...
+    # Don't generate system test files.
+    config.generators.system_tests = nil
+  end
+end
+```
+
+Configure Rails to find our module views:
+
+```ruby
+# app/controllers/application_controller.rb
+class ApplicationController < ActionController::Base
+  # find views within our modules
+  append_view_path(Dir.glob(Rails.root.join('app/packages/*/views')))
+end
+```
+
+Move the Rails code into its own directory (in this case `app/packages/rails_shim` but you can choose your preference):
+
+```bash
+mkdir -p app/packages/rails_shim
+
+# move the rails code into the rails module
+mv app/* app/packages/rails_shim/.
+
+# we need to return assets and javascript to the app directory
+mv app/packages/rails_shim/assets app/assets
+mv app/packages/rails_shim/javascript app/javascript
+```
+
+Test with `bin/dev` that it all still works and then commit:
+
+```bash
+git add .
+git commit -m "move rails code into packages"
+```
+
+## Landing Page
+
+Let's create a simple landing page to show that our app is working.
+
+```bash
+bin/rails g controller landing/home index --no-helper
+```
+
+move into a package
+```bash
+mkdir app/packages/landing
+mv app/views app/packages/landing/.
+mv app/controllers app/packages/landing/.
+```
+configre the homepage route
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  namespace :landing do
+    get 'home/index'
+  end
+
+  # Defines the root path route ("/")
+  root 'landing/home#index'
+end
+```
+
+add to repo now that we have the basics working & tested:
+```bash
+git add .
+git commit -m "add landing page package"
+```
+
+## Create Blog Articles
+
+Now that we have a modularized app working, let's add a simple article (blog post) feature.
+
+Let's make an Article model within the **Articles** namespace (article content will use Action Text so we can capture the person's writing) which we can then display as an HTML page or save as a PDF file.
 
 first we will install the required tools:
 
 ```bash
 bin/rails action_text:install
 bin/rails db:migrate
-# prawn needs to be added to load the the matrix gem (for some reason pawn-html does not load it)
-bundle add 'matrix'
-bundle add 'prawn-html'
-# for some reason I had to run this to fix a bundler conflict:
-bundle install --gemfile Gemfile
-# the error was:
-# `You specified: image_processing (~> 1.2) and image_processing (>= 0). Gem already added. Bundler cannot continue.`
+
+# move the active storage code into the rails module
+mv app/views/active_storage app/packages/rails_shim/views/.
+mv app/views/layouts/action_text app/packages/rails_shim/views/layouts/.
 ```
 
-Let's generate the Article scaffold (with a namespace to keep this separate from other features):
+Let's generate the Articles scaffold (with a namespace to keep this separate from other features):
 
 ```bash
 # content will use Action Text so we can format the writing
-bin/rails g scaffold Blog::Article author:string title:string
+bin/rails g scaffold Articles::Post author:string title:string --no-helper
+bin/rails db:migrate
 ```
 
-Now we need to add the Action Text field to the Article model:
+move the new code into its module:
+
+```bash
+mkdir -p app/packages/articles
+mv app/views app/packages/articles/.
+mv app/models app/packages/articles/
+mv app/controllers app/packages/articles/.
+```
+
+Now we need to add the ActionText field to the Article model:
 
 ```ruby
-# app/models/blog/article.rb
-class Article < ApplicationRecord
-  has_rich_text :content
+# app/packages/articles/models/articles/post.rb
+module Articles
+  class Post < ApplicationRecord
+    has_rich_text :content
+  end
 end
 ```
 
 We need to update our controller to permit the new `content` field:
 
 ```ruby
-# app/controllers/blog/articles_controller.rb
+# app/packages/articles/controllers/articles/posts_controller.rb
   ...
   private
-
-  # Use callbacks to share common setup or constraints between actions.
-  def set_blog_article
-    @blog_article = Blog::Article.find(params[:id])
-  end
-
+  ...
   # Only allow a list of trusted parameters through.
-  def blog_article_params
-    params.require(:blog_article).permit(:author, :title, :content)
+  def articles_post_params
+    params.require(:articles_post).permit(:author, :title, :content)
   end
 end
 ```
@@ -135,13 +234,8 @@ end
 We will also need to add `<%= form.rich_text_area :content %>` to the Article form :
 
 ```erb
-# app/views/blog/articles/_form.html.erb
+# app/packages/articles/views/articles/posts/_form.html.erb
   ...
-  <div>
-    <%= form.label :author, style: "display: block" %>
-    <%= form.text_field :author %>
-  </div>
-
   <div>
     <%= form.label :title, style: "display: block" %>
     <%= form.text_field :title %>
@@ -161,22 +255,18 @@ We will also need to add `<%= form.rich_text_area :content %>` to the Article fo
 We also need to update our view to display the content with `<%= article.content %>`:
 
 ```erb
-# app/views/blog/articles/_article.html.erb
-<div id="<%= dom_id article %>">
-  <p>
-    <strong>Author:</strong>
-    <%= article.author %>
-  </p>
+# app/packages/articles/views/articles/posts/_post.html.erb
+  ...
 
   <p>
     <strong>Title:</strong>
-    <%= article.title %>
+    <%= post.title %>
   </p>
 
+  <!-- use div since rich text can generate html beyond a p tag-->
   <div>
-    <%= article.content %>
+    <%= post.content %>
   </div>
-
 </div>
 ```
 
@@ -187,14 +277,126 @@ Now let's test by going to:
 bin/dev
 
 # open our browser and add a new article with some formatting:
-open http://localhost:3000/blog/articles
+open http://localhost:3000/articles/posts/new
 ```
 
-cool - let's add this feature to our repo:
+cool - let's test and add this to our repo:
 
 ```bash
 git add .
-git commit -m "add Blog::Article with ActionText"
+git commit -m "add Article::Post with ActionText"
+```
+
+## Simple PDF Generation
+
+Let's start by installing the necessary tooling:
+
+```bash
+# `matrix` was part of ruby, but now its a separate gem (and pawn-html does not load it automatcally)
+bundle add 'matrix'
+bundle add 'prawn-html'
+# for some reason I had to run this to fix a bundler conflict:
+bundle install --gemfile Gemfile
+# the error was:
+# `You specified: image_processing (~> 1.2) and image_processing (>= 0). Gem already added.`
+```
+
+we need to extend our Post model to allow for a PDF file to be attached:
+
+```ruby
+module Articles
+  class Post < ApplicationRecord
+    has_rich_text :content
+  end
+end
+```
+
+let's create a simple PDF generator:
+
+```ruby
+# app/packages/articles/services/articles/pdf_generator.rb
+require 'prawn'
+require 'prawn-html'
+
+module Articles
+  class PdfGenerator
+    def self.generate(model)
+      pdf = Prawn::Document.new
+
+      # Add title to the PDF
+      pdf.text model.title, size: 24, style: :bold
+
+      # Add author to the PDF
+      pdf.text "by: #{model.author}", size: 16, style: :italic
+
+      # Add model content to the PDF using PrawnHtml
+      PrawnHtml.append_html(pdf, model.content.to_s)
+
+      # Return the generated PDF
+      pdf.render
+    end
+  end
+end
+```
+
+Lets add a route to generate the PDF:
+
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  # ...
+  namespace :articles do
+    resources :posts do
+      get :download_pdf, on: :member
+    end
+  end
+  # ... other routes
+end
+```
+
+Lets add the action to the controller (lets also nest PostController under Articles namespace):
+
+```ruby
+# app/packages/articles/controllers/articles/posts_controller.rb
+module Articles
+  class PostsController < ApplicationController
+    before_action :set_articles_post, only: %i[show edit update destroy generate_pdf download_pdf]
+
+    def download_pdf
+      rendered_pdf = PdfGenerator.generate(@articles_post)
+
+      if rendered_pdf
+        formated_time = DateTime.now.strftime('%Y%m%d_%H%M%S')
+        filename = "post_#{@articles_post.id}_#{formated_time}.pdf"
+        type = 'application/pdf'
+
+        send_data(rendered_pdf, filename:, type:)
+      else
+        redirect_to articles_post_url(@articles_post), alert: 'OOPS - NO PDF was generation.'
+      end
+    end
+    # ... (other actions and methods)
+  end
+end
+```
+
+Now add the generate PDF link to the show view with:
+`<%= link_to 'Generate PDF', generate_pdf_articles_post_path(@articles_post), method: :get %>`
+
+```erb
+# app/packages/articles/views/articles/posts/show.html.erb
+<p style="color: green"><%= notice %></p>
+
+<%= render @articles_post %>
+
+<div>
+  <br>
+  <%= link_to 'Download as PDF', download_pdf_articles_post_path(@articles_post), method: :get %>
+  <br>
+  <%= link_to "Edit this post", edit_articles_post_path(@articles_post) %> |
+  <%= link_to "Back to posts", articles_posts_path %>
+  <%= button_to "Destroy this post", @articles_post, method: :delete %>
+</div>
 ```
 
 ## Build Module and API

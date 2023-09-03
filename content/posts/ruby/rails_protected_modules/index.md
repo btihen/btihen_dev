@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Ruby', 'Rails', 'Modules', 'Isolation']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-07-06T01:20:00+02:00
-lastmod: 2023-07-11T01:20:00+02:00
+lastmod: 2023-09-02T01:20:00+02:00
 featured: true
 draft: false
 
@@ -191,7 +191,7 @@ instead of the current:
 First let's start by allowing us to configure Rails to allow for organization by Modules instead of grouping our code all together.
 
 ```
-mkdir app/modules
+mkdir modules
 ```
 
 Allow Rails to find the modules.
