@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Ruby', 'Rails', 'Engines', 'Organizations']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-07-11T01:20:00+02:00
-lastmod: 2023-07-12T01:20:00+02:00
+lastmod: 2023-10-20T01:20:00+02:00
 featured: true
 draft: false
 
@@ -393,6 +393,14 @@ now we commit
 git add .
 git commit -m "add the blogs mingine"
 ```
+
+
+## Experience - Standard vs Modular
+
+My colleague [Jörg Jenni](https://www.linkedin.com/in/jorgjenni/) - created a little app [messy vs modular](https://github.com/Enceradeira/messy_app) - that need needs new features.  It has 2 base Apps `messy` and `modulariyed`.  Its a great way to experience the benefits of modular design.
+
+My solution can be seen at: https://github.com/btihen/coupled_vs_modular
+
 
 ## using JS within an mingine
 

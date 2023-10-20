@@ -8,9 +8,9 @@ authors: ['btihen']
 tags: ['Ruby', 'Rails', 'Modules', 'Isolation', 'Injection']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-08-12T01:20:00+02:00
-lastmod: 2023-09-02T01:20:00+02:00
+lastmod: 2023-10-20T01:20:00+02:00
 featured: true
-draft: true
+draft: false
 
 # Featured image
 # To use, add an image named `featured.jpg/png` to your page's folder.
@@ -399,11 +399,207 @@ Now add the generate PDF link to the show view with:
 </div>
 ```
 
-## Build Module and API
+## Create an Archive Package
+
+Let's start by creating a new its folder structure:
+
+```bash
+mkdir -p app/packages/archive
+```
+
+### Define Wrapper Needs
+
+Probably the module should handle construction _(this allows us to use multiple adapters - perhaps each author is responsbile for their own archive service)_.
+And the Adapter wrapper should handle the all other aspects of the API _(the interactions with the remote service)_.
+
+What we need the API to do:
+
+1. **constructor** (we want to be able to use multiple remote archive services)
+2. **initialize** (desired Adapter from config & authenticate with remote archive service)
+3. **archive_file** (on success report needed information, on error report nil)
+4. **retrieve_file** (on success report file location/path, on error report nil)
+5. **errors** (report any errors)
+
+### Define Configuration
+
+Before we look at the Constructor, let's consider what configuration would look like.
+
+So if we want to start with a simple mock adapter (good for testing and perhaps a service we can show to unpaid users to see what it might be like), we could do something like the following since we don't need to authenticate, nor any other particular infomation, just the configuration name and the adapter class name:
 
 ```
-touch
+mkdir -p app/packages/archive/config
+touch app/packages/archive/config/archive.yml
+vim app/packages/archive/config/archive.yml
 ```
+
+
+```yaml
+---
+archive_service:
+- adapter_config: Tester
+  adapter_klass: TestAdapter
+```
+
+Reviewing the [TeedyAPI Docs](https://demo.teedy.io/apidoc/) and with a little experience, we can see that we need to provide the following information:
+
+```yaml
+- adapter_config: DemoAuthor
+  adapter_klass: TeedyAdapter
+  url: http://localhost:8080
+  archive_path: /archive
+  username: demo
+  password: password
+
+- adapter_config: AdminAuthor
+  adapter_klass: TeedyAdapter
+  url: http://localhost:8080
+  archive_path: /archive
+  username: admin
+  password: admin
+```
+
+### Module Constructor
+
+Let's see if we can define the API for the module constructor.
+
+1. we need to find a configuration that matches the name provided
+2. we need to find the adapter class that matches the name provided
+3. we need to instantiate the adapter class with the configuration provided
+4. if needed we need to authenticate with the remote service (& fetch any necessay configs / tokens, etc)
+5. we need to return the adapter instance (or nil if there was an error)?
+
+```bash
+touch app/packages/archive/archive.rb
+```
+
+```ruby
+# app/packages/archive/archive.rb
+require 'yaml'
+
+module Archive
+  def self.adapter_for(config_name, config_file = 'app/packages/archive/config/archive.yml')
+    config_file_path = Rails.root.join(config_file)
+    adapter_configs = YAML.load_file(config_file_path)['archive']
+    vendor_config = adapter_configs.find { |config| config['adapter_config'] == config_name }
+    vendor_klass = adapter_config[:adapter_klass].constantize
+    vendor_adapter = vendor_klass.new(vendor_config)
+    Adapter.new(vendor_adapter)
+  end
+end
+```
+
+### Define Adapter
+
+Let's start by creating a simple mock adapter wrapper:
+
+```bash
+mkdir app/packages/archive/adapters
+touch app/packages/archive/adapters/adapter.rb
+touch app/packages/archive/adapters/test_adapter.rb
+```
+
+```ruby
+# app/packages/archive/adapters/adapter.rb
+module Archive
+  module Adapters
+    class AdapterError < StandardError; end
+
+    class Adapter
+      attr_reader :vendor_adapter
+      private     :vendor_adapter
+
+      # we could delegate all the methods to the vendor_adapter - with:
+      # `delegate :archive_file, :retrieve_file, :errors, :errors? to: :remote_adapter`
+      # but I like to explicity force the API to be the same for all adapters and have
+      # one location to trap and handle errors consistently for all adapters
+
+      def initialize(vendor_adapter)
+        @vendor_adapter = vendor_adapter
+
+        raise AdapterError, vendor_adapter.errors if vendor_adapter.errors?
+      end
+
+      # most document services have need the file_path, mime_type, and some type of metadata to describe the file conext and contents
+      def archive_file(model, file_path, mime_type, options: {})
+        metadata = {
+          model: model.class.name,
+          model_id: model.id,
+          created_at: model.created_at,
+          updated_at: model.updated_at
+        }
+        response = vendor_adapter.archive_file(file_path, mime_type, metadata)
+        ArchiveSend.create!(model:, options:, metadata:,
+                            remote_key: response[:remote_key],
+                            container_key: response[:container_key])
+        return response if response && !response.errors?
+
+        raise AdapterError, remote_adapter.errors
+      end
+
+      # most document services have some type of 'container' concept (Teedy calls this a document)
+      # to track multiple versions of a given file
+      def retrieve_file(file_key, container_key = nil)
+        response = vendor_adapter.retrieve_file(remote_keys, container_key)
+        return response.to_s if response
+
+        raise AdapterError, vendor_adapter.errors
+      end
+    end
+
+    private_constant :Adapter
+  end
+end
+```
+
+### Define Mock Adapter
+
+```ruby
+# app/packages/archive/adapters/test_adapter.rb
+require 'prawn-html'
+
+module Archive
+  module Adapters
+    class TestAdapter
+      attr_reader :errors
+      private     :errors
+
+      def initialize(_config)
+        @errors = []
+      end
+
+      def archive_file(file_path, mime_type, metadata)
+        metadata
+      end
+
+      def retrieve_file(remote_keys, container_key)
+        file_path = Rails.root.join('tmp', 'test.pdf')
+        pdf = Prawn::Document.new(page_size: 'A4')
+        PrawnHtml.append_html(pdf, '<h1 style="text-align: center">Just a test</h1>')
+        pdf.render_file(rails.root.join('tmp', 'test.pdf')
+        file_path
+      end
+
+      def errors? = errors.any?
+    end
+  end
+end
+```
+
+
+### REAL Implimentations
+
+Now you can make any adapter that implement `archive_file(model, file_path, mime_type, options: {})`,  `retrieve_file(remote_keys, container_key)`, `.errors?` and `errors`
+
+You now have a blox module with a consistent and clearly defined API & error handling and the rest of your app accesses it via the module methods!
+
+More upfront work, but prrevents coupling and makes it easy to add new adapters and enforces consistency.
+
+## Experience - Standard vs Modular
+
+My colleague [Jörg Jenni](https://www.linkedin.com/in/jorgjenni/) - created a little app [messy vs modular](https://github.com/Enceradeira/messy_app) - that need needs new features.  It has 2 base Apps `messy` and `modulariyed`.  Its a great way to experience the benefits of modular design.
+
+My solution can be seen at: https://github.com/btihen/coupled_vs_modular
+
 
 ## Resources
 

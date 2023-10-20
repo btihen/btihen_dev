@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Ruby', 'Rails', 'Modules', 'Isolation']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-07-06T01:20:00+02:00
-lastmod: 2023-09-02T01:20:00+02:00
+lastmod: 2023-10-20T01:20:00+02:00
 featured: true
 draft: false
 
@@ -1051,6 +1051,12 @@ But Modularization can be done without reorganization.
 ```
 
 Another option is to build a Hexagonal structure.  [Hanami 2.0]() is being designed for a Hexagonal Structure with Dependency Inversion, Repository Pattern and Event Architechture built in as core features.  ["Hanami 2: New Framework, New You" - Tim Riley (RubyConf AU 2023)](https://www.youtube.com/watch?v=-B9AbFsQOKo)
+
+## Experience - Standard vs Modular
+
+My colleague [Jörg Jenni](https://www.linkedin.com/in/jorgjenni/) - created a little app [messy vs modular](https://github.com/Enceradeira/messy_app) - that need needs new features.  It has 2 base Apps `messy` and `modulariyed`.  Its a great way to experience the benefits of modular design.
+
+My solution can be seen at: https://github.com/btihen/coupled_vs_modular
 
 ## Resources
 
