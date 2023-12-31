@@ -410,7 +410,7 @@ to the index page:
 
 Thus now the index heex page should look like: `lib/taskboard_web/live/admin/project_live/index.html.heex`:
 
-```
+```heex
 <.header>
   Listing Projects
   <:actions>
@@ -465,7 +465,7 @@ to the `<.list>` in the show heex page.
 
 Thus `lib/taskboard_web/live/admin/project_live/show.html.heex` should now look like:
 
-```elixir
+```heex
 <.header>
   Project <%= @project.id %>
   <:subtitle>This is a project record from your database.</:subtitle>
