@@ -907,6 +907,7 @@ Now the navbar `root.html.heex` looks like:
 </html>
 ```
 
+### make navbar a component
 
 ## add attributes to the user
 
@@ -936,7 +937,13 @@ end
 
 ### add user and new attributes to the admin page
 
-### only allow is_admin access to the admin page
+### Add name to the settings page
+
+### add name to the signup page
+
+### add migration backfill to user name?
+
+## restrict Admin page to the is_admin users
 
 Resources:
 * https://www.youtube.com/watch?v=6TlcVk-1Tpc
@@ -948,6 +955,18 @@ Resources:
 * https://stackoverflow.com/questions/26055501/how-to-restrict-access-to-certain-routes-in-phoenix
 * https://blog.appsignal.com/2021/11/02/authorization-and-policy-scopes-for-phoenix-apps.html
 
-### add edit profile to the owner area
+## add the project owner area
 
-### add projects to the owner area
+### add collaborators to projects
+
+### Add Epics to projects
+
+### Add Tasks to projects with status
+
+## Add a collaboration (task update) area for non-owners
+
+### add drag and drop to tasks to update status
+
+### add a todo list for a task?
+
+## fly.io deployment
