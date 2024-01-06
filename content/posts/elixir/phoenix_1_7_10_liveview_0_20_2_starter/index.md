@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "LiveView"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "LiveView"]
 date: 2023-12-31T01:01:53+02:00
-lastmod: 2024-01-02T01:01:53+02:00
+lastmod: 2024-01-06T01:01:53+02:00
 featured: true
 draft: false
 
@@ -43,6 +43,28 @@ git add .
 git commit -m "initial commit"
 
 iex -S mix phx.server
+```
+
+## Binary IDs
+
+if you prefer UUID keys to serial IDs then you can easily do that with the following changes.  _This can be very helpful if you need to sync with external frontend or other external apps_
+
+update `config/config.ex` from:
+```elixir
+config :taskboard,
+  ecto_repos: [Taskboard.Repo],
+  generators: [timestamp_type: :utc_datetime]
+```
+
+to:
+
+```elixir
+config :taskboard,
+  ecto_repos: [Taskboard.Repo],
+  generators: [
+    timestamp_type: :utc_datetime,
+    binary_id: true
+  ]
 ```
 
 ## using phx.gen.auth
@@ -94,6 +116,14 @@ iex -S mix phx.server
 git add .
 git commit -m "add user auth"
 ```
+
+## System Emails
+
+you can find (in Dev) any emails that would have been sent for user confirmation or password reminders, etc. at:
+
+`http://localhost:4000/dev/mailbox`
+
+Here you can read and test the messages - without them being sent to `real` people.
 
 
 ## add Projects / Projects
@@ -502,281 +532,153 @@ git add .
 git commit -m "admin panel for projects"
 ```
 
-## a reactive navbar
+### Empty Page Component
 
 **Resources**
+* https://hexdocs.pm/phoenix/components.html
 * https://pjullrich.gumroad.com/l/bmvp (valuable resource on many levels!)
+
+Let's say you want a reusable 'empty page' component with an interesting logo which will be displayed on ANY index page with nothing to show - we will start with our project page.
+
+Lets make a new file at: `lib/taskboard_web/components/empty_state.ex` with the contents:
+
+```elixir
+defmodule TaskboardWeb.Components.EmptyState do
+  use TaskboardWeb, :html
+
+  # this help heex know if the component is used properly
+  attr(:text, :string)
+  attr(:image, :string)
+  def empty_state(assigns) do
+    ~H"""
+    <div>
+      <h2 class="text-2xl font-semibold tracking-tight sm:text-center sm:text-4xl">
+        <%= @text %>
+      </h2>
+      <div class="mt-5 mx-auto w-full max-w-xs">
+        <img
+          alt={@text}
+          src={~p"/images/#{@image}"}
+          class="w-full max-w-none rounded-xl ring-1 ring-gray-400/10 md:-ml-4 lg:-ml-0"
+        />
+      </div>
+    </div>
+    """
+  end
+end
+```
+
+These two line:
+```elixir
+  attr(:text, :string)
+  attr(:image, :string)
+```
+will let HEEX enforce that they are included in the call (or provide an error)
+
+### usage
+
+Now we can change: `` with the content:
+```html
+
+<%= if Enum.count(@streams.projects) == 0 do %>
+  <div class="mt-20">
+    <.empty_state show text="no Projects yet" image="task.png"/>
+    <%!-- <TaskboardWeb.Components.EmptyState.empty_state text="no Projects yet" image="task.png"/> --%>
+  </div>
+<% else %>
+  <.table
+    id="projects"
+    rows={@streams.projects}
+    row_click={fn {_id, project} -> JS.navigate(~p"/admin/projects/#{project}") end}
+  >
+    <:col :let={{_id, project}} label="Title"><%= project.title %></:col>
+    <:col :let={{_id, project}} label="Description"><%= project.description %></:col>
+    <:col :let={{_id, project}} label="Owner"><%= project.owner.email %></:col>
+    <:action :let={{_id, project}}>
+      <div class="sr-only">
+        <.link navigate={~p"/admin/projects/#{project}"}>Show</.link>
+      </div>
+      <.link patch={~p"/admin/projects/#{project}/edit"}>Edit</.link>
+    </:action>
+    <:action :let={{id, project}}>
+      <.link
+        phx-click={JS.push("delete", value: %{id: project.id}) |> hide("##{id}")}
+        data-confirm="Are you sure?"
+      >
+        Delete
+      </.link>
+    </:action>
+  </.table>
+<% end %>
+```
+Now we only show the table when there are items to show.
+
+### Simplify Usage
+
+We can actually simplify the line:
+`<TaskboardWeb.Components.EmptyState.empty_state text="no Projects yet" image="task.png"/>`
+to
+`<.empty_state show text="no Projects yet" image="task.png"/>`
+by importing our Component with:
+`import TaskboardWeb.Components.EmptyState, only: [empty_state: 1]`
+into `lib/taskboard_web/live/admin/project_live/index.ex`
+
+So now the beginning of this file should look like:
+```elixir
+defmodule TaskboardWeb.Admin.ProjectLive.Index do
+  use TaskboardWeb, :live_view
+
+  alias Taskboard.Core.Programs
+  alias Taskboard.Core.Programs.Project
+  import TaskboardWeb.Components.EmptyState, only: [empty_state: 1]
+
+  ...
+end
+```
+
+Thus now we can use:
+```html
+
+<%= if Enum.count(@streams.projects) == 0 do %>
+  <div class="mt-20">
+    <.empty_state show text="no Projects yet" image="task.png"/>
+
+  </div>
+<% else %>
+  ...
+<% end %>
+```
+
+## Create a Reactive navbar
+
+Since Navbar is a lot of messy code lets make a Navbar component.
+
+To make it reactive we will need to inject some 'JS' that Phoenix provides (and avoids us needing to install our own JavaScript framework)
 
 Let's start making an landing page with a menu bar.  To do this we will start by updating: `lib/taskboard_web/controllers/page_html/root.html.heex`
 
 By putting the navbar in `root.html.heex` we won't be able to add user notifications into the menubar.  If this is desired they you will need to put the dynamic navbar in `app.html.heex` and the homepage static navbar in `home.html.heex` (There might be a better way, but I don't know it yet).
 
-Since we want our app to work with mobile and desktop we need to create a collapsable menubar.  We will do this by adding the following JS toggle `JS.toggle(to: "#mobile-menu"` snippets to the menu bar -- the outline is:
 
-```html
-<!-- Hamburger Button -->
-<button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700">
-  <!-- SVG for the icon -->
-</button>
+### Navbar Component
 
-<!-- Mobile Menu -->
-<div id="mobile-menu" class="lg:hidden" role="dialog" aria-modal="true">
-  <div class="flex items-center justify-between">
-    <!-- ... other content ... -->
-    <!-- Close Button -->
-    <button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 rounded-md p-2.5 text-gray-700">
-      <!-- SVG for the close icon -->
-    </button>
-  </div>
-  <!-- ... other content ... -->
-</div>
-```
+Create a new page at `lib/taskboard_web/components/navigation_bar.ex` and copy the following contents into it:
 
-we also want to add links to our **user** settings:
+```elixir
+defmodule TaskboardWeb.Components.NavigationBar do
+  use TaskboardWeb, :html
 
-```html
-      <!-- right justified links (login, etc) -->
-      <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
-        <%= if @current_user do %>
-          <.link
-            href={~p"/auth/users/settings"}
-            class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-          >
-            <%= @current_user.email %>
-          </.link>
-          <.link
-            href={~p"/auth/users/log_out"}
-            method="delete"
-            class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-          >
-            Log out
-          </.link>
-        <% else %>
-          <.link
-            href={~p"/auth/users/register"}
-            class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-          >
-            Register
-          </.link>
-          <.link
-            href={~p"/auth/users/log_in"}
-            class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-          >
-            Log in
-          </.link>
-        <% end %>
-      </div>
-```
-
-now the page might look something like:
-
-```html
-<!DOCTYPE html>
-<html lang="en" class="[scrollbar-gutter:stable]">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title suffix=" · Phoenix Framework">
-      <%= assigns[:page_title] || "Taskboard" %>
-    </.live_title>
-    <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
-    </script>
-  </head>
-  <body class="bg-white antialiased">
-    <header class="absolute inset-x-0 top-0 z-50">
+  def navigation_bar(assigns) do
+    ~H"""
+    <header class="absolute sticky inset-x-0 top-0 z-50 bg-slate-100">
       <nav class="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
         <div class="flex lg:flex-1">
-          <a href="#" class="-m-1.5 p-1.5">
-            <span class="sr-only">Taskboard</span>
-            <img class="h-8 w-auto" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600" alt="">
-          </a>
-        </div>
-        <!-- hamburger menu button -->
-        <div class="flex lg:hidden">
-          <button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700">
-            <span class="sr-only">Open main menu</span>
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
-        </div>
-        <div class="hidden lg:flex lg:gap-x-12">
-          <a href="#" class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
-            Admin
-          </a>
-          <a href="#" class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
-            Tasks
-          </a>
-          <a href="#" class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
-            Collaborate
-          </a>
-        </div>
-        <!-- right justified links (login, etc) -->
-        <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
-          <%= if @current_user do %>
-            <.link
-              href={~p"/auth/users/settings"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              <%= @current_user.email %>
-            </.link>
-            <.link
-              href={~p"/auth/users/log_out"}
-              method="delete"
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              Log out
-            </.link>
-          <% else %>
-            <.link
-              href={~p"/auth/users/register"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              Register
-            </.link>
-            <.link
-              href={~p"/auth/users/log_in"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              Log in
-            </.link>
-          <% end %>
-        </div>
-      </nav>
-
-      <!-- Mobile menu, show/hide based on menu open state. -->
-      <div id="mobile-menu" class="lg:hidden" role="dialog" aria-modal="true">
-        <!-- Background backdrop, show/hide based on slide-over state. -->
-        <div class="fixed inset-0 z-50"></div>
-        <div class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
-          <div class="flex items-center justify-between">
-            <a href="#" class="-m-1.5 p-1.5">
-              <span class="sr-only">Taskboard</span>
-              <img class="h-8 w-auto" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600" alt="">
-            </a>
-            <!-- Close button, show/hide based on slide-over state. -->
-            <button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 rounded-md p-2.5 text-gray-700">
-              <span class="sr-only">Close menu</span>
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div class="mt-6 flow-root">
-            <div class="-my-6 divide-y divide-gray-500/10">
-              <div class="space-y-2 py-6">
-                <a href="#" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700">
-                  Admin
-                </a>
-                <a href="#" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700">
-                  Tasks
-                </a>
-                <a href="#" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700">
-                  Collaborate
-                </a>
-              </div>
-              <div class="space-y-2 py-6">
-                <%= if @current_user do %>
-                  <.link
-                    href={~p"/auth/users/settings"}
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    <%= @current_user.email %>
-                  </.link>
-                  <.link
-                    href={~p"/auth/users/log_out"}
-                    method="delete"
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Log out
-                  </.link>
-                <% else %>
-                  <.link
-                    href={~p"/auth/users/register"}
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Register
-                  </.link>
-                  <.link
-                    href={~p"/auth/users/log_in"}
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Log in
-                  </.link>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <%= @inner_content %>
-
-  </body>
-</html>
-```
-
-When we look at a `dead` homepage: `http://localhost:4000/` and when we look at a `liveview` page: `http://localhost:4000/auth/users/settings` we will have our new reactive navbar!
-
-### Add links and images to the navbar
-
-Let's put a new custom icon in to the path: `priv/static/images/logo.png` - ideally an SVG, but for now I will just use a png.
-
-Now we can update our logo and the url links with:
-
-```html
-        <div class="flex lg:flex-1">
-          <.link href={~p"/"} class="-m-1.5 p-1.5" >
+          <.link href={~p"/"} class="-m-1.5 p-1.5">
             <span class="sr-only">TaskBoard</span>
+            <!-- Logo -->
             <img
               class="h-8 w-auto"
-              src={~p"/images/logo.png"}
-              alt="logo"
-            >
-          </.link>
-        </div>
-```
-
-This uses the internal route checking to ensure we are linking to our urls and images properly.
-
-we can also link our SiteAdmin link in the menubar with:
-```html
-<a
-    href={~p"/admin/projects"}
-    class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
-  SiteAdmin
-</a>
-```
-
-Now the navbar `root.html.heex` looks like:
-```html
-<!DOCTYPE html>
-<html lang="en" class="[scrollbar-gutter:stable]">
-
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title suffix=" · Phoenix Framework">
-      <%= assigns[:page_title] || "Taskboard" %>
-    </.live_title>
-    <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
-    </script>
-  </head>
-
-  <body class="bg-white antialiased">
-    <header class="absolute inset-x-0 top-0 z-50">
-      <nav class="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
-        <div class="flex lg:flex-1">
-          <.link href={~p"/"} class="-m-1.5 p-1.5" >
-            <span class="sr-only">TaskBoard</span>
-            <img
-              class="h-8 w-auto"
-              src={~p"/images/logo.png"}
+              src={~p"/images/task.png"}
               alt="logo"
             >
           </.link>
@@ -802,33 +704,52 @@ Now the navbar `root.html.heex` looks like:
           </a>
         </div>
         <!-- right justified links (login, etc) -->
-        <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
+        <div class="flex flex-1 items-center justify-end gap-x-6">
           <%= if @current_user do %>
-            <.link
-              href={~p"/auth/users/settings"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              <%= @current_user.email %>
-            </.link>
+            <div class="relative">
+              <%!-- <button type="button" class="flex items-center gap-x-1 text-sm font-semibold leading-6 text-gray-900" aria-expanded="false"> --%>
+              <button phx-click={JS.toggle(to: "#user-dropdown")} class="flex items-center gap-x-1 text-sm font-semibold leading-6 text-gray-900">
+                <%= @current_user.email %>
+                <svg class="h-5 w-5 flex-none text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                </svg>
+              </button>
+              <div id="user-dropdown" class="hidden absolute -left-8 top-full z-10 mt-3 w-56 rounded-xl bg-white p-2 shadow-lg ring-1 ring-gray-900/5">
+                <.link
+                  phx-click={JS.hide(to: "#user-dropdown")}
+                  href={~p"/auth/users/settings"}
+                  class="block rounded-lg px-3 py-2 text-sm font-semibold leading-6 text-gray-900 hover:bg-gray-50"
+                >
+                  Settings
+                </.link>
+                <.link
+                  phx-click={JS.hide(to: "#user-dropdown")}
+                  href={~p"/auth/users/log_out"}
+                  method="delete"
+                  class="block rounded-lg px-3 py-2 text-sm font-semibold leading-6 text-gray-900 hover:bg-gray-50"
+                >
+                  Log out
+                </.link>
+              </div>
+            </div>
             <.link
               href={~p"/auth/users/log_out"}
-              method="delete"
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
+              class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
             >
               Log out
             </.link>
           <% else %>
             <.link
-              href={~p"/auth/users/register"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              Register
-            </.link>
-            <.link
               href={~p"/auth/users/log_in"}
               class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
             >
               Log in
+            </.link>
+            <.link
+              href={~p"/auth/users/register"}
+              class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+              Register
             </.link>
           <% end %>
         </div>
@@ -840,10 +761,15 @@ Now the navbar `root.html.heex` looks like:
         <div class="fixed inset-0 z-50"></div>
         <div class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
           <div class="flex items-center justify-between">
-            <a href="#" class="-m-1.5 p-1.5">
-              <span class="sr-only">Taskboard</span>
-              <img class="h-8 w-auto" src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600" alt="">
-            </a>
+            <.link href={~p"/"} class="-m-1.5 p-1.5" >
+              <span class="sr-only">TaskBoard</span>
+              <!-- Logo -->
+              <img
+                class="h-8 w-auto"
+                src={~p"/images/task.png"}
+                alt="logo"
+              >
+            </.link>
             <!-- Close button, show/hide based on slide-over state. -->
             <button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 rounded-md p-2.5 text-gray-700">
               <span class="sr-only">Close menu</span>
@@ -854,7 +780,7 @@ Now the navbar `root.html.heex` looks like:
           </div>
           <div class="mt-6 flow-root">
             <div class="-my-6 divide-y divide-gray-500/10">
-              <div class="space-y-2 py-6">
+              <div class="space-y-2 py-3">
                 <a href={~p"/admin/projects"} class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700">
                   SiteAdmin
                 </a>
@@ -865,13 +791,14 @@ Now the navbar `root.html.heex` looks like:
                   Collaborate
                 </a>
               </div>
-              <div class="space-y-2 py-6">
+              <div class="space-y-2 py-3">
                 <%= if @current_user do %>
+                  <%= @current_user.email %>
                   <.link
                     href={~p"/auth/users/settings"}
                     class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
                   >
-                    <%= @current_user.email %>
+                    Settings
                   </.link>
                   <.link
                     href={~p"/auth/users/log_out"}
@@ -900,14 +827,104 @@ Now the navbar `root.html.heex` looks like:
         </div>
       </div>
     </header>
+    """
+  end
+end
+```
+
+### Using the Navbar
+
+now we can add our new component to the `root.html.heex`
+
+```html
+<!DOCTYPE html>
+<html lang="en" class="[scrollbar-gutter:stable]">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <.live_title suffix=" · Phoenix Framework">
+      <%= assigns[:page_title] || "Taskboard" %>
+    </.live_title>
+    <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
+    </script>
+  </head>
+
+  <body class="bg-white antialiased">
+
+    <TaskboardWeb.Components.NavigationBar.navigation_bar current_user={@current_user}/>
 
     <%= @inner_content %>
 
   </body>
 </html>
+
 ```
 
-### make email a responsive dropdown with settings
+(this will make it work everywhere - with the limitation that it can't do pop-up notifications).  For popup notifications we need to put it in: `app.html.heex`, but that has some complications with @current_user I haven't yet resolved.
+
+
+### Notes on Reactivity
+
+Since we want our app to work with mobile and desktop we need to create a collapsable menubar.  We will do this by adding the following JS toggle `JS.toggle(to: "#mobile-menu"` snippets to the menu bar -- the outline is:
+
+```html
+<!-- Hamburger Button -->
+<button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700">
+  <!-- SVG for the icon -->
+</button>
+
+<!-- Mobile Menu -->
+<div id="mobile-menu" class="lg:hidden" role="dialog" aria-modal="true">
+  <div class="flex items-center justify-between">
+    <!-- ... other content ... -->
+    <!-- Close Button -->
+    <button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 rounded-md p-2.5 text-gray-700">
+      <!-- SVG for the close icon -->
+    </button>
+  </div>
+  <!-- ... other content ... -->
+</div>
+```
+
+When we look at a `dead` homepage: `http://localhost:4000/` and when we look at a `liveview` page: `http://localhost:4000/auth/users/settings` we will have our new reactive navbar!
+
+### Add links and images to the navbar
+
+Let's put a new custom icon in to the path: `priv/static/images/logo.png` - ideally an SVG, but for now I will just use a png.
+
+Now we can update our logo and the url links with - note variables and information INSIDE an html tag must be places within `{}` and information we place in HTML will use `<% %?` or `<%= %>` formatting.
+
+```html
+        <div class="flex lg:flex-1">
+          <!-- link to homepage -->
+          <.link href={~p"/"} class="-m-1.5 p-1.5" >
+            <span class="sr-only">TaskBoard</span>
+            <!-- the site logo in the navbar -->
+            <img
+              class="h-8 w-auto"
+              src={~p"/images/logo.png"}
+              alt="logo"
+            >
+          </.link>
+        </div>
+```
+
+NOTE: `~p` within HEEX uses the internal route checking to ensure we are linking to our urls and images properly.
+
+we can also link our SiteAdmin link in the menubar with:
+```html
+<a
+    href={~p"/admin/projects"}
+    class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
+  SiteAdmin
+</a>
+```
+
+
+### Reactive Dropdown Menu
 
 Basic html with css classes (non-reactive)
 ```
@@ -943,228 +960,7 @@ now we add our reactive JS components - we want the dropdown hidden by default s
 </div>
 ```
 
-Now all togehter:
-```html
-          <%= if @current_user do %>
-            <div class="relative">
-              <%!-- <button type="button" class="flex items-center gap-x-1 text-sm font-semibold leading-6 text-gray-900" aria-expanded="false"> --%>
-              <button phx-click={JS.toggle(to: "#user-dropdown")} class="flex items-center gap-x-1 text-sm font-semibold leading-6 text-gray-900">
-                <%= @current_user.email %>
-                <svg class="h-5 w-5 flex-none text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                </svg>
-              </button>
-              <div id="user-dropdown" class="hidden absolute -left-8 top-full z-10 mt-3 w-56 rounded-xl bg-white p-2 shadow-lg ring-1 ring-gray-900/5">
-                <.link
-                  phx-click={JS.hide(to: "#user-dropdown")}
-                  href={~p"/auth/users/settings"}
-                  class="block rounded-lg px-3 py-2 text-sm font-semibold leading-6 text-gray-900 hover:bg-gray-50"
-                >
-                  Settings
-                </.link>
-                <.link
-                  phx-click={JS.hide(to: "#user-dropdown")}
-                  href={~p"/auth/users/log_out"}
-                  method="delete"
-                  class="block rounded-lg px-3 py-2 text-sm font-semibold leading-6 text-gray-900 hover:bg-gray-50"
-                >
-                  Log out
-                </.link>
-              </div>
-            </div>
-          <% else %>
-            <.link
-              href={~p"/auth/users/register"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              Register
-            </.link>
-            <.link
-              href={~p"/auth/users/log_in"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              Log in
-            </.link>
-          <% end %>
-```
-
-now the root.html.heex should look like:
-```html
-<!DOCTYPE html>
-<html lang="en" class="[scrollbar-gutter:stable]">
-
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title suffix=" · Phoenix Framework">
-      <%= assigns[:page_title] || "Taskboard" %>
-    </.live_title>
-    <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
-    </script>
-  </head>
-
-  <body class="bg-white antialiased">
-    <header class="absolute inset-x-0 top-0 z-50">
-      <nav class="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
-        <div class="flex lg:flex-1">
-          <!-- Logo -->
-          <.link href={~p"/"} class="-m-1.5 p-1.5" >
-            <span class="sr-only">TaskBoard</span>
-            <img
-              class="h-8 w-auto"
-              src={~p"/images/logo.png"}
-              alt="logo"
-            >
-          </.link>
-        </div>
-        <!-- hamburger menu button -->
-        <div class="flex lg:hidden">
-          <button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700">
-            <span class="sr-only">Open main menu</span>
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
-        </div>
-        <div class="hidden lg:flex lg:gap-x-12">
-          <a href={~p"/admin/projects"} class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
-            SiteAdmin
-          </a>
-          <a href="#" class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
-            ProjectOwner
-          </a>
-          <a href="#" class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
-            Collaborate
-          </a>
-        </div>
-        <!-- right justified links (login, etc) -->
-        <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
-          <%= if @current_user do %>
-            <div class="relative">
-              <%!-- <button type="button" class="flex items-center gap-x-1 text-sm font-semibold leading-6 text-gray-900" aria-expanded="false"> --%>
-              <button phx-click={JS.toggle(to: "#user-dropdown")} class="flex items-center gap-x-1 text-sm font-semibold leading-6 text-gray-900">
-                <%= @current_user.email %>
-                <svg class="h-5 w-5 flex-none text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                </svg>
-              </button>
-              <div id="user-dropdown" class="hidden absolute -left-8 top-full z-10 mt-3 w-56 rounded-xl bg-white p-2 shadow-lg ring-1 ring-gray-900/5">
-                <.link
-                  phx-click={JS.hide(to: "#user-dropdown")}
-                  href={~p"/auth/users/settings"}
-                  class="block rounded-lg px-3 py-2 text-sm font-semibold leading-6 text-gray-900 hover:bg-gray-50"
-                >
-                  Settings
-                </.link>
-                <.link
-                  phx-click={JS.hide(to: "#user-dropdown")}
-                  href={~p"/auth/users/log_out"}
-                  method="delete"
-                  class="block rounded-lg px-3 py-2 text-sm font-semibold leading-6 text-gray-900 hover:bg-gray-50"
-                >
-                  Log out
-                </.link>
-              </div>
-            </div>
-          <% else %>
-            <.link
-              href={~p"/auth/users/register"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              Register
-            </.link>
-            <.link
-              href={~p"/auth/users/log_in"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              Log in
-            </.link>
-          <% end %>
-        </div>
-      </nav>
-
-      <!-- Mobile menu, show/hide based on menu open state. -->
-      <div id="mobile-menu" class="lg:hidden" role="dialog" aria-modal="true">
-        <!-- Background backdrop, show/hide based on slide-over state. -->
-        <div class="fixed inset-0 z-50"></div>
-        <div class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
-          <div class="flex items-center justify-between">
-            <!-- Logo -->
-            <.link href={~p"/"} class="-m-1.5 p-1.5" >
-              <span class="sr-only">TaskBoard</span>
-              <img
-                class="h-8 w-auto"
-                src={~p"/images/logo.png"}
-                alt="logo"
-              >
-            </.link>
-            <!-- Close button, show/hide based on slide-over state. -->
-            <button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 rounded-md p-2.5 text-gray-700">
-              <span class="sr-only">Close menu</span>
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div class="mt-6 flow-root">
-            <div class="-my-6 divide-y divide-gray-500/10">
-              <div class="space-y-2 py-3">
-                <a href={~p"/admin/projects"} class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700">
-                  SiteAdmin
-                </a>
-                <a href="#" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700">
-                  ProjectOwner
-                </a>
-                <a href="#" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700">
-                  Collaborate
-                </a>
-              </div>
-              <div class="space-y-2 py-3">
-                <%= if @current_user do %>
-                  <%= @current_user.email %>
-                  <.link
-                    href={~p"/auth/users/settings"}
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Settings
-                  </.link>
-                  <.link
-                    href={~p"/auth/users/log_out"}
-                    method="delete"
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Log out
-                  </.link>
-                <% else %>
-                  <.link
-                    href={~p"/auth/users/register"}
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Register
-                  </.link>
-                  <.link
-                    href={~p"/auth/users/log_in"}
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Log in
-                  </.link>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <%= @inner_content %>
-
-  </body>
-</html>
-```
-
-### Sticky navbbar
+### Sticky Navbbar
 
 Resources:
 * https://stackoverflow.com/questions/60169463/tailwindcss-fixed-navbar
@@ -1177,190 +973,15 @@ but now transparent - lets add a background color
 
 ### Navbar color (non-transparent)
 
+Once the navbar is fixed, it will need a background color `bg-slate-100` to the navbar header (can be any color desired)
+
 https://tailwindcss.com/docs/background-color
 
 ```
-bg-slate-100
+<header class="absolute sticky inset-x-0 top-0 z-50 bg-slate-100">
 ```
 
-
-now Navbar (in `root.html.heex` should look like:
-```html
-<!DOCTYPE html>
-<html lang="en" class="[scrollbar-gutter:stable]">
-
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="csrf-token" content={get_csrf_token()} />
-    <.live_title suffix=" · Phoenix Framework">
-      <%= assigns[:page_title] || "Taskboard" %>
-    </.live_title>
-    <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-    <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
-    </script>
-  </head>
-
-  <body class="bg-white antialiased">
-    <header class="absolute sticky inset-x-0 top-0 z-50 bg-slate-100">
-      <nav class="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
-        <div class="flex lg:flex-1">
-          <!-- Logo -->
-          <.link href={~p"/"} class="-m-1.5 p-1.5" >
-            <span class="sr-only">TaskBoard</span>
-            <img
-              class="h-8 w-auto"
-              src={~p"/images/logo.png"}
-              alt="logo"
-            >
-          </.link>
-        </div>
-        <!-- hamburger menu button -->
-        <div class="flex lg:hidden">
-          <button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-gray-700">
-            <span class="sr-only">Open main menu</span>
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
-        </div>
-        <div class="hidden lg:flex lg:gap-x-12">
-          <a href={~p"/admin/projects"} class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
-            SiteAdmin
-          </a>
-          <a href="#" class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
-            ProjectOwner
-          </a>
-          <a href="#" class="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-700">
-            Collaborate
-          </a>
-        </div>
-        <!-- right justified links (login, etc) -->
-        <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
-          <%= if @current_user do %>
-            <div class="relative">
-              <%!-- <button type="button" class="flex items-center gap-x-1 text-sm font-semibold leading-6 text-gray-900" aria-expanded="false"> --%>
-              <button phx-click={JS.toggle(to: "#user-dropdown")} class="flex items-center gap-x-1 text-sm font-semibold leading-6 text-gray-900">
-                <%= @current_user.email %>
-                <svg class="h-5 w-5 flex-none text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                </svg>
-              </button>
-              <div id="user-dropdown" class="hidden absolute -left-8 top-full z-10 mt-3 w-56 rounded-xl bg-white p-2 shadow-lg ring-1 ring-gray-900/5">
-                <.link
-                  phx-click={JS.hide(to: "#user-dropdown")}
-                  href={~p"/auth/users/settings"}
-                  class="block rounded-lg px-3 py-2 text-sm font-semibold leading-6 text-gray-900 hover:bg-gray-50"
-                >
-                  Settings
-                </.link>
-                <.link
-                  phx-click={JS.hide(to: "#user-dropdown")}
-                  href={~p"/auth/users/log_out"}
-                  method="delete"
-                  class="block rounded-lg px-3 py-2 text-sm font-semibold leading-6 text-gray-900 hover:bg-gray-50"
-                >
-                  Log out
-                </.link>
-              </div>
-            </div>
-          <% else %>
-            <.link
-              href={~p"/auth/users/register"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              Register
-            </.link>
-            <.link
-              href={~p"/auth/users/log_in"}
-              class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700"
-            >
-              Log in
-            </.link>
-          <% end %>
-        </div>
-      </nav>
-
-      <!-- Mobile menu, show/hide based on menu open state. -->
-      <div id="mobile-menu" class="lg:hidden" role="dialog" aria-modal="true">
-        <!-- Background backdrop, show/hide based on slide-over state. -->
-        <div class="fixed inset-0 z-50"></div>
-        <div class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
-          <div class="flex items-center justify-between">
-            <!-- Logo -->
-            <.link href={~p"/"} class="-m-1.5 p-1.5" >
-              <span class="sr-only">TaskBoard</span>
-              <img
-                class="h-8 w-auto"
-                src={~p"/images/logo.png"}
-                alt="logo"
-              >
-            </.link>
-            <!-- Close button, show/hide based on slide-over state. -->
-            <button phx-click={JS.toggle(to: "#mobile-menu")} class="-m-2.5 rounded-md p-2.5 text-gray-700">
-              <span class="sr-only">Close menu</span>
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div class="mt-6 flow-root">
-            <div class="-my-6 divide-y divide-gray-500/10">
-              <div class="space-y-2 py-3">
-                <a href={~p"/admin/projects"} class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700">
-                  SiteAdmin
-                </a>
-                <a href="#" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700">
-                  ProjectOwner
-                </a>
-                <a href="#" class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700">
-                  Collaborate
-                </a>
-              </div>
-              <div class="space-y-2 py-3">
-                <%= if @current_user do %>
-                  <%= @current_user.email %>
-                  <.link
-                    href={~p"/auth/users/settings"}
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Settings
-                  </.link>
-                  <.link
-                    href={~p"/auth/users/log_out"}
-                    method="delete"
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Log out
-                  </.link>
-                <% else %>
-                  <.link
-                    href={~p"/auth/users/register"}
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Register
-                  </.link>
-                  <.link
-                    href={~p"/auth/users/log_in"}
-                    class="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 hover:text-blue-700"
-                  >
-                    Log in
-                  </.link>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <%= @inner_content %>
-
-  </body>
-</html>
-```
-
-### navbar as a component
+In this way you will no longer see both the navbar and the contents below it - which is quite confusing.
 
 ## add attributes to the user
 
@@ -1428,3 +1049,42 @@ Resources:
 * https://pjullrich.gumroad.com/l/bmvp
 * https://fly.io/docs/elixir/getting-started/existing/
 * https://supabase.com/blog/postgres-on-fly-by-supabase
+
+PS - Be aware that the 'Free' instances require adding a payment method.
+
+```bash
+# authenticate
+fly auth login
+
+# region can't be Germany for free account (creates Docker images)
+fly launch
+
+#
+flyctl deploy
+
+# add DB info
+fly secrets set DATABASE_URL="postgres://--------:*********@----.db.elephantsql.com/-------"
+
+fly deploy
+
+# tiny turtle only allows 5 connections and we need one for deployment migrations - thus "4"
+fly secrets set POOL_SIZE=4
+
+fly deploy
+
+# if you get the error: `The database does not exist`
+# and `To fix the first issue, run "mix ecto.create" for the desired MIX_ENV.``
+# then: open `rel/env.sh.eex` and disable: `export ECTO_IPV6="true"` so it looks like:
+
+#!/bin/sh
+
+# configure node for distributed erlang with IPV6 support
+export ERL_AFLAGS="-proto_dist inet6_tcp"
+# export ECTO_IPV6="true"
+export DNS_CLUSTER_QUERY="${FLY_APP_NAME}.internal"
+export RELEASE_DISTRIBUTION="name"
+export RELEASE_NODE="${FLY_APP_NAME}-${FLY_IMAGE_REF##*-}@${FLY_PRIVATE_IP}"
+
+
+fly deploy
+```
