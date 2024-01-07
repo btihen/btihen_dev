@@ -659,6 +659,7 @@ Let's start making an landing page with a menu bar.  To do this we will start by
 
 By putting the navbar in `root.html.heex` we won't be able to add user notifications into the menubar.  If this is desired they you will need to put the dynamic navbar in `app.html.heex` and the homepage static navbar in `home.html.heex` (There might be a better way, but I don't know it yet).
 
+Be sure to use `<.link navigate={~p"/some/route/here"}>` instead of `<.link patch={~p"/some/route/here"}` in `root.html.heex` because the patch navigation option is only available in LiveViews (LiveViews use both `root.html.heex` and `app.html.heex` - dead pages only use `eoot.html.heex`).
 
 ### Navbar Component
 
@@ -860,11 +861,9 @@ now we can add our new component to the `root.html.heex`
 
   </body>
 </html>
-
 ```
 
 (this will make it work everywhere - with the limitation that it can't do pop-up notifications).  For popup notifications we need to put it in: `app.html.heex`, but that has some complications with @current_user I haven't yet resolved.
-
 
 ### Notes on Reactivity
 
@@ -923,10 +922,9 @@ we can also link our SiteAdmin link in the menubar with:
 </a>
 ```
 
-
 ### Reactive Dropdown Menu
 
-Basic html with css classes (non-reactive)
+non-reactive dropdown css outline
 ```
 <div class="relative">
   <button type="button" class="flex items-center gap-x-1 text-sm font-semibold leading-6 text-gray-900" aria-expanded="false">
@@ -981,9 +979,148 @@ https://tailwindcss.com/docs/background-color
 <header class="absolute sticky inset-x-0 top-0 z-50 bg-slate-100">
 ```
 
+## Oft Repeated CSS classes
+
+we can use the tailwind `@apply` to define our own reusable 'easier to read' css class.  Go to `assets/css/app.css` and make it look like:
+```css
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* This file is for your main application CSS */
+.nav-link {
+  @apply text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-blue-700
+}
+```
+
+now it can be used withsome think like:
+```html
+<.link class="nav-link" html={~p"/"}>Home</.link>
+```
+
+
 In this way you will no longer see both the navbar and the contents below it - which is quite confusing.
 
-## add attributes to the user
+## optional Live Homepage
+
+to make a 'Live' /homehage we an do the following:
+
+```bash
+mkdir lib/taskboard_web/live/home_live
+touch lib/taskboard_web/live/home_live/index.ex
+touch lib/taskboard_web/live/home_live/index.html.heex
+```
+
+now lets populate the heex `lib/taskboard_web/live/home_live/index.html.heex` file with:
+```html
+<.flash_group flash={@flash} />
+
+<div class="bg-white">
+
+  <!-- page hero content -->
+  <div class="relative isolate overflow-hidden bg-gradient-to-b from-indigo-100/20 pt-14">
+    <div class="absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] bg-white shadow-xl shadow-indigo-600/10 ring-1 ring-indigo-50 sm:-mr-80 lg:-mr-96" aria-hidden="true"></div>
+    <div class="mx-auto max-w-7xl px-6 py-32 sm:py-40 lg:px-8">
+      <div class="mx-auto max-w-2xl lg:mx-0 lg:grid lg:max-w-none lg:grid-cols-2 lg:gap-x-16 lg:gap-y-6 xl:grid-cols-1 xl:grid-rows-1 xl:gap-x-8">
+        <h1 class="max-w-2xl text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl lg:col-span-2 xl:col-auto">
+          Changing Collaboration.
+        </h1>
+        <div class="mt-6 max-w-xl lg:mt-0 xl:col-end-1 xl:row-start-1">
+          <p class="text-lg leading-8 text-gray-600">
+            Share tasks, progress and collaborate with partners
+          </p>
+          <div class="mt-10 flex items-center gap-x-6">
+            <.link href={~p"/auth/users/register"}
+              class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+              Get started
+            </.link>
+          </div>
+        </div>
+        <img src={~p"/images/task.png"}
+          alt="" class="mt-10 aspect-[6/5] w-full max-w-lg rounded-2xl object-cover sm:mt-16 lg:mt-0 lg:max-w-none xl:row-span-2 xl:row-end-2 xl:mt-36">
+      </div>
+    </div>
+    <div class="absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-t from-white sm:h-32"></div>
+  </div>
+
+</div>
+```
+
+Now we can write a minimalistic liveview action `lib/taskboard_web/live/home_live/index.ex` page (without any DB model included):
+
+```elixir
+defmodule TaskboardWeb.HomeLive.Index do
+  use TaskboardWeb, :live_view
+
+  @impl true
+  def mount(_params, _session, socket) do
+    {:ok, socket}
+  end
+
+  @impl true
+  @spec handle_params(any(), any(), %{
+          :assigns => atom() | %{:live_action => :index, optional(any()) => any()},
+          optional(any()) => any()
+        }) :: {:noreply, map()}
+  def handle_params(params, _url, socket) do
+    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  end
+
+  defp apply_action(socket, :index, _params) do
+    socket
+    |> assign(:page_title, "Landing Page")
+  end
+end
+```
+
+now we can update the routes `lib/taskboard_web/router.ex` file.
+
+We need to change the default root route from:
+`get "/", PageController, :home`
+to:
+`live "/", HomeLive.Index, :index`
+
+now this part of the route should look like:
+```elixir
+defmodule TaskboardWeb.Router do
+  use TaskboardWeb, :router
+
+  import TaskboardWeb.Auth.UserAuth
+
+  pipeline :browser do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {TaskboardWeb.Layouts, :root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug :fetch_current_user
+  end
+
+  pipeline :api do
+    plug :accepts, ["json"]
+  end
+
+  scope "/", TaskboardWeb do
+    pipe_through :browser
+
+    # get "/", PageController, :home
+    live "/", HomeLive.Index, :index
+  end
+  ...
+end
+```
+
+now you can delete the unneeded files with:
+```bash
+rm lib/taskboard_web/controllers/page_controller.ex
+rm lib/taskboard_web/controllers/page_html.ex
+rm lib/taskboard_web/controllers/page_html/home.html.heex
+```
+
+and tou can if desired move the navbar into `app.html.heex` if user notifications are needed in the navbar.
+
+## add role to user
 
 * **is_admin** - role based access to the admin pages
 * **name** - backfill existing with the email and add name to the registration
@@ -991,6 +1128,8 @@ In this way you will no longer see both the navbar and the contents below it - w
 Resources:
 * https://devhints.io/phoenix-migrations
 * https://fly.io/phoenix-files/backfilling-data/#batching-deterministic-data
+
+### User Migration
 
 ```bash
 mix ecto.gen.migration add_user_attributes
@@ -1009,15 +1148,15 @@ defmodule Taskboard.Repo.Migrations.AddUserAttributes do
 end
 ```
 
-### add user and new attributes to the admin page
+### Update the admin page
 
-### Add name to the settings page
+### Update User settings page
 
-### add name to the signup page
+### Update Signup page
 
-### add migration backfill to user name?
+### backfill to user name?
 
-## restrict Admin page to the is_admin users
+## Role based Restrictions
 
 Resources:
 * https://www.youtube.com/watch?v=6TlcVk-1Tpc
@@ -1029,7 +1168,7 @@ Resources:
 * https://stackoverflow.com/questions/26055501/how-to-restrict-access-to-certain-routes-in-phoenix
 * https://blog.appsignal.com/2021/11/02/authorization-and-policy-scopes-for-phoenix-apps.html
 
-## add the project owner area
+## project owner area
 
 ### add collaborators to projects
 
