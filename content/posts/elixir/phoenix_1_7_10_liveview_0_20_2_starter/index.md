@@ -101,7 +101,7 @@ mkdir test/support/fixtures/core
 # move your lib code into the new area
 mv lib/taskboard/account* lib/taskboard/core/.
 # move the test and support code into 'core'
-mv test/taskboard/accounts*test/taskboard/core/.
+mv test/taskboard/accounts* test/taskboard/core/.
 mv test/support/fixtures/accounts* test/support/fixtures/core/.
 ```
 replace every `Taskboard.Accounts` with `Taskboard.Core.Accounts`
@@ -206,7 +206,7 @@ defmodule Taskboard.Core.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
 
-    # add the foreignkey here to ensure the custom association name works
+    # add the foreign_key here to ensure the custom association name works
     has_many :projects, Project, foreign_key: :owner_id
 
     timestamps(type: :utc_datetime)
@@ -314,7 +314,7 @@ now we need to create the list_users: in `lib/taskboard/core/accounts.ex`
 
 
 now we can add the user selection to the form `lib/taskboard_web/live/admin/project_live/form_component.ex` page:
-```html
+```h
         <.input
           field={@form[:owner_id]}
           type="select"
@@ -437,7 +437,7 @@ to the index page:
 
 Thus now the index heex page should look like: `lib/taskboard_web/live/admin/project_live/index.html.heex`:
 
-```html
+```h
 <.header>
   Listing Projects
   <:actions>
