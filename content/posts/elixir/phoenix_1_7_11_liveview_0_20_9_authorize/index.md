@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "LiveView", "Authorization"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "LiveView"]
 date: 2024-02-24T01:01:53+02:00
-lastmod: 2024-02-24T01:01:53+02:00
+lastmod: 2024-02-25T01:01:53+02:00
 featured: true
 draft: false
 
@@ -212,7 +212,7 @@ Accounts.get_user_by_email("nyima@example.com")
 #Authorize.Core.Accounts.User<
   __meta__: #Ecto.Schema.Metadata<:loaded, "users">,
   id: "1349f6b9-e3f1-4d7a-813b-d1f1aa49fbe3",
-  email: "btihen@gmail.com",
+  email: "c",
   confirmed_at: nil,
   inserted_at: ~U[2024-02-24 10:31:40Z],
   updated_at: ~U[2024-02-24 10:31:40Z],
@@ -288,7 +288,7 @@ user = Accounts.get_user_by_email("nyima@example.com")
 Authorize.Core.Accounts.User<
   __meta__: #Ecto.Schema.Metadata<:loaded, "users">,
   id: "1349f6b9-e3f1-4d7a-813b-d1f1aa49fbe3",
-  email: "btihen@gmail.com",
+  email: "nyima@example.com",
   confirmed_at: nil,
   roles: ["user"],
   inserted_at: ~U[2024-02-24 10:31:40Z],
@@ -308,6 +308,40 @@ Nice, now we have what is expected in our users.
 git add .
 git commit -m "add roles to Users"
 ```
+
+### Study the User Authentication routes
+
+Let's look to see how this is done for the login pages (## Authentication routes) see `lib/authorize_web/router.ex:64`:
+```elixir
+# lib/authorize_web/router.ex
+defmodule AuthorizeWeb.Router do
+  use AuthorizeWeb, :router
+  # ...
+  scope "/accounts", AuthorizeWeb.Access, as: :accounts do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :require_authenticated_user,
+      on_mount: [{AuthorizeWeb.Access.UserAuth, :ensure_authenticated}] do
+      live "/users/settings", UserSettingsLive, :edit
+      live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
+    end
+  end
+  # ...
+end
+```
+
+We can see that standard routes are protected using:
+`pipe_through [:browser, :require_authenticated_user]`
+adds the `require_authenticated_user` plug in `user_auth`
+
+Looking at the live session named: `require_authenticated_user`  uses
+```elixir
+live_session :require_authenticated_user,
+      on_mount: [{AuthorizeWeb.Access.UserAuth, :ensure_authenticated}] do
+```
+which adds an `on_mount` filter called `ensure_authenticated` in the `user_auth` file.
+
+Go find and look at the code `require_authenticated_user` and `ensure_authenticated` added by the `auth_generator` in the `user_auth` file.  These are the basis of the code we will write in the following section.
 
 ### Build a restricted Admin Panel (for logged in users)
 
@@ -453,7 +487,7 @@ def admin?(user), do: "admin" in user.roles || user.email == "nyima@example.com"
 end
 ```
 
-ok now we have an admin page that requires an Admin!
+Now we have an admin page that requires an Admin!
 
 ```bash
 git add .
@@ -463,7 +497,7 @@ git commit -m "added an admin page restricted to admins"
 ## add a grant_admin_changeset
 
 ```elixir
-# user.ex
+# lib/authorize/core/accounts/user.ex
   def admin_roles_changeset(user, attrs, _opts \\ []) do
     allowed_roles = ["admin", "user"] # allowed roles here
 
@@ -473,19 +507,86 @@ git commit -m "added an admin page restricted to admins"
     |> validate_roles(:roles, allowed_roles)
   end
 
-defp validate_roles(changeset, field, allowed_roles) do
-  roles = get_field(changeset, field)
+  defp validate_roles(changeset, field, allowed_roles) do
+    roles = get_field(changeset, field)
 
-  if Enum.all?(roles, fn role -> role in allowed_roles end) do
-    changeset
-  else
-    add_error(changeset, field, "has invalid roles")
+    if Enum.all?(roles, fn role -> role in allowed_roles end) do
+      changeset
+    else
+      add_error(changeset, field, "has invalid roles")
+    end
   end
-end
 ```
 
+Lets now try these changes out in iex (and figure out what we need for code to put into Accounts):
 ```elixir
-# accounts.ex
+import Ecto.Query
+alias Authorize.Repo
+alias Authorize.Core.Accounts
+alias Authorize.Core.Accounts.User
+
+# from Context file
+user = Accounts.get_user_by_email("nyima@example.com")
+#Authorize.Core.Accounts.User<
+  __meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+  id: "1349f6b9-e3f1-4d7a-813b-d1f1aa49fbe3",
+  email: "nyima@example.com",
+  confirmed_at: nil,
+  roles: ["user"],
+  inserted_at: ~U[2024-02-24 10:31:40Z],
+  updated_at: ~U[2024-02-24 10:31:40Z],
+  ...
+>
+
+# now that we have a user lets add "admin" to the roles
+new_roles = ["admin" | user.roles]
+["admin", "user"]
+
+# feed our user and our new roles into the changeset and see if we get a valid or error changeset back;
+changeset = User.admin_roles_changeset(user, %{roles: new_roles})
+#Ecto.Changeset<
+  action: nil,
+  changes: %{roles: ["admin", "user"]},
+  errors: [],
+  data: #Authorize.Core.Accounts.User<>,
+  valid?: true
+>
+
+# looks good lets save / update our user
+{:ok, user} =
+  user |> User.admin_roles_changeset(%{roles: new_roles}) |> Repo.update()
+
+user
+#Authorize.Core.Accounts.User<
+  __meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+  id: "1349f6b9-e3f1-4d7a-813b-d1f1aa49fbe3",
+  email: "nyima@example.com",
+  confirmed_at: nil,
+  roles: ["admin", "user"],
+  inserted_at: ~U[2024-02-24 10:31:40Z],
+  updated_at: ~U[2024-02-25 14:26:32Z],
+  ...
+>
+
+# let's also be sure we can't add other groups 'boss'
+new_roles = ["boss" | user.roles]
+["boss", "admin", "user"]
+changeset =
+  user |> User.admin_roles_changeset(%{roles: new_roles}) |> Repo.update()
+{:error,
+ #Ecto.Changeset<
+   action: :update,
+   changes: %{roles: ["boss", "admin", "user"]},
+   errors: [roles: {"has invalid roles", []}],
+   data: #Authorize.Core.Accounts.User<>,
+   valid?: false
+ >}
+```
+
+Sweet this works as expected - so we can now build this into `Accounts` using:
+
+```elixir
+# lib/authorize/core/accounts.ex
   def grant_admin(user) do
     new_roles =
       ["admin" | user.roles]
@@ -504,23 +605,354 @@ end
 ```
 
 
-
-
-Let's look to see how this is done for the login pages (## Authentication routes) see `lib/authorize_web/router.ex:64`:
+Lets now try our new `Accounts` code in iex:
 ```elixir
-# lib/authorize_web/router.ex
-defmodule AuthorizeWeb.Router do
-  use AuthorizeWeb, :router
-  # ...
-  scope "/accounts", AuthorizeWeb.Access, as: :accounts do
-    pipe_through [:browser, :require_authenticated_user]
+iex -S mix phx.server
 
-    live_session :require_authenticated_user,
-      on_mount: [{AuthorizeWeb.Access.UserAuth, :ensure_authenticated}] do
-      live "/users/settings", UserSettingsLive, :edit
-      live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
-    end
+import Ecto.Query
+alias Authorize.Repo
+alias Authorize.Core.Accounts
+
+# from Context file
+user = Accounts.get_user_by_email("nyima@example.com")
+#Authorize.Core.Accounts.User<
+  __meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+  id: "1349f6b9-e3f1-4d7a-813b-d1f1aa49fbe3",
+  email: "nyima@example.com",
+  confirmed_at: nil,
+  roles: ["admin", "user"],
+  inserted_at: ~U[2024-02-24 10:31:40Z],
+  updated_at: ~U[2024-02-25 14:26:32Z],
+  ...
+>
+
+{:ok, user} = Accounts.revoke_admin(user)
+{:ok,
+ #Authorize.Core.Accounts.User<
+   __meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+   id: "1349f6b9-e3f1-4d7a-813b-d1f1aa49fbe3",
+   email: "nyima@example.com",
+   confirmed_at: nil,
+   roles: ["user"],
+   inserted_at: ~U[2024-02-24 10:31:40Z],
+   updated_at: ~U[2024-02-25 14:34:38Z],
+   ...
+ >}
+
+{:ok, user} = Accounts.grant_admin(user)
+{:ok,
+ #Authorize.Core.Accounts.User<
+   __meta__: #Ecto.Schema.Metadata<:loaded, "users">,
+   id: "1349f6b9-e3f1-4d7a-813b-d1f1aa49fbe3",
+   email: "nyima@example.com",
+   confirmed_at: nil,
+   roles: ["admin", "user"],
+   inserted_at: ~U[2024-02-24 10:31:40Z],
+   updated_at: ~U[2024-02-25 14:34:46Z],
+   ...
+ >}
+```
+
+Nice this works well.  Let's go back and properly build the `User.admin?` code to check if we have an `admin` and not hard-coded by the email address.
+
+```elixir
+# lib/authorize/core/accounts/user.ex
+
+# from:
+def admin?(user), do: user.email == "nyima@example.com"
+# to
+def admin?(user), do: "admin" in user.roles
+```
+
+Now lets test our access to `http://localhost:4000/admin/accounts` via the account that has the admin role and without.
+
+We can make a few additional accounts in the `seeds` file to simplify testing if you wish:
+```elixir
+# priv/repo/seeds.exs
+alias Authorize.Core.Accounts
+
+users = [
+  %{email: "batman@example.com", password: "P4ssword-f0r-You"},
+  %{email: "wolverine@example.com", password: "P4ssword-f0r-You"},
+  %{email: "hulk@example.com", password: "P4ssword-f0r-You"},
+  %{email: "drmanhattan@example.com", password: "P4ssword-f0r-You"},
+  %{email: "ironman@example.com", password: "P4ssword-f0r-You"}
+]
+
+Enum.map(users, fn user -> Accounts.register_user(user) end)
+
+batman = Accounts.get_user_by_email("batman@example.com")
+Accounts.grant_admin(batman)
+hulk = Accounts.get_user_by_email("hulk@example.com")
+Accounts.grant_admin(hulk)
+```
+
+you can run the seeds with: `mix run priv/repo/seeds.exs`
+
+## Build a working admin page
+
+we now can make our new admin page do something useful.
+
+since want to control admin status we will need all the users
+
+So let's start by adding a function `list_users` in the `Accounts` context:
+```elixir
+# lib/authorize/core/accounts.ex
+defmodule Authorize.Core.Accounts do
+  # ...
+  # sorted by email - unsorted is just `Repo.all(User)`
+  def list_users(), do: Repo.all(from u in User, order_by: [asc: u.email])
+  # ...
+end
+```
+
+you can check this works on the cli with:
+```elixir
+iex -S mix phx.server
+
+alias Authorize.Core.Accounts
+
+users = Accounts.list_users()
+
+# should now have the list of all accounts from the seeds file
+```
+
+so let's add the users to on mount to the `accounts_live` page:
+
+```elixir
+defmodule AuthorizeWeb.Admin.AccountsLive do
+  use Phoenix.LiveView
+
+  alias Authorize.Core.Accounts
+  # ...
+  @impl true
+  def mount(_params, _session, socket) do
+    all_users = Accounts.list_users()
+    socket_w_users = assign(socket, users: all_users)
+
+    {:ok, socket_w_users}
   end
   # ...
+end
+```
+
+Now that we have the users we need to list users by changing `def render` in `accounts_live` to:
+```h
+# lib/authorize_web/live/admin/accounts_live.ex
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <h1 class="text-4xl text-center">Admin</h1>
+    <p class="text-center">total users: <%= @users |> Enum.count() %></p>
+    <div style="margin-top: 20px;">
+      <table class="mx-auto">
+        <tr>
+          <th class="px-4 py-2">Email</th>
+          <th class="px-4 py-2">Roles</th>
+          <th class="px-4 py-2">Action</th>
+        </tr>
+        <%= for user <- @users do %>
+          <tr class={if rem(Enum.find_index(@users, &(&1 == user)), 2) == 0, do: "bg-gray-100"}>
+            <! -- if an admin bold-face -->
+            <%= if User.admin?(user) do %>
+              <td class="px-4 py-2 font-bold text-red-800"><%= user.email %></td>
+            <% else %>
+              <td class="px-4 py-2"><%= user.email %></td>
+            <% end %>
+            <td class="px-4 py-2"><%= user.roles |> Enum.join(", ") %></td>
+            <td class="px-4 py-2">
+              <!-- no need to grant admin to an admin -->
+              <button
+                :if={!User.admin?(user)}
+                class="mr-2 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Grant
+              </button>
+              <!-- don't show revoke to current user and only to those who are already admins -->
+              <button
+                :if={(@current_user.id != user.id) && User.admin?(user)}
+                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Revoke
+              </button>
+            </td>
+          </tr>
+        <% end %>
+      </table>
+    </div>
+    """
+  end
+```
+
+now lets make the buttons reactive - we will add a `grant` and `revoke` event_hander:
+```elixir
+# lib/authorize_web/live/admin/accounts_live.ex
+defmodule AuthorizeWeb.Admin.AccountsLive do
+  use Phoenix.LiveView
+  alias Authorize.Core.Accounts
+  alias Authorize.Core.Accounts.User
+
+  # ...
+
+  @impl true
+  def handle_event("grant", %{"id" => id}, socket) do
+    {id_int, _text} = Integer.parse(id)
+    user = Accounts.# lib/authorize_web/live/admin/accounts_live.ex
+    Accounts.grant_admin(id_int)
+    {:noreply, assign(socket, users: Accounts.list_users())}
+  end
+
+  @impl true
+  def handle_event("revoke", %{"id" => id}, socket) do
+    {id_int, _text} = Integer.parse(id)
+    Accounts.revoke_admin(id_int)
+    {:noreply, assign(socket, users: Accounts.list_users())}
+  end
+end
+```
+
+oops - we get an error:
+```
+** (KeyError) key :roles not found in: 562
+
+If you are using the dot syntax, such as map.field, make sure the left-hand side of the dot is a map
+    (authorize 0.1.0) lib/authorize/core/accounts.ex:19: Authorize.Core.Accounts.grant_admin/1
+```
+this is because we can only send an serialized id (as text) to the handler.  So we need to make our `grant` and `revoke` a bit more flexible to accept id or user by changing:
+```elixir
+# lib/authorize/core/accounts.ex
+  def grant_admin(%User{} = user) do
+    new_roles =  ["admin" | user.roles]  |> Enum.uniq()
+    user
+    |> User.admin_roles_changeset(%{roles: new_roles})
+    |> Repo.update()
+  end
+
+  def revoke_admin(%User{} = user) do
+    user
+    |> User.admin_roles_changeset(%{roles: user.roles -- ["admin"]})
+    |> Repo.update()
+  end
+```
+
+to (assuming you used binary `uuid` keys) - if you stayed with standard `id` integers then use:
+`def grant_admin(id) when is_integer(id), do: grant_admin(get_user!(id))`
+and
+`def revoke_admin(id) when is_integer(id), do: revoke_admin(get_user!(id))`
+instead.
+
+```elixir
+# lib/authorize/core/accounts.ex
+  def grant_admin(uuid) when is_binary(uuid), do: grant_admin(get_user!(uuid))
+  def grant_admin(%User{} = user) do
+    new_roles = ["admin" | user.roles] |> Enum.uniq()
+    user
+    |> User.admin_roles_changeset(%{roles:  new_roles})
+    |> Repo.update()
+  end
+
+  def revoke_admin(uuid) when is_binary(uuid), do: revoke_admin(get_user!(uuid))
+  def revoke_admin(%User{} = user) do
+    user
+    |> User.admin_roles_changeset(%{roles: user.roles -- ["admin"]})
+    |> Repo.update()
+  end
+```
+
+Now we need to update the buttons with: `phx-click="eventName` (event triggered) and `phx-value-id={user.id}` (data to send to event handler) so now our buttons will look like:
+
+```h
+# lib/authorize_web/live/admin/accounts_live.ex
+              <button
+                :if={!User.admin?(user)}
+                phx-click="grant"
+                phx-value-id={user.id}
+                class="mr-2 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Grant
+              </button>
+
+              <button
+                :if={(@current_user.id != user.id) && User.admin?(user)}
+                phx-click="revoke"
+                phx-value-id={user.id}
+                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Revoke
+              </button>
+```
+
+or all together is should now look like:
+
+```elixir
+# lib/authorize_web/live/admin/accounts_live.ex
+defmodule AuthorizeWeb.Admin.AccountsLive do
+  use Phoenix.LiveView
+  alias Authorize.Core.Accounts
+  alias Authorize.Core.Accounts.User
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <h1 class="text-4xl text-center">Admin</h1>
+    <p class="text-center">total users: <%= @users |> Enum.count() %></p>
+    <div style="margin-top: 20px;">
+      <table class="mx-auto">
+        <tr>
+          <th class="px-4 py-2">Email</th>
+          <th class="px-4 py-2">Roles</th>
+          <th class="px-4 py-2">Action</th>
+        </tr>
+        <%= for user <- @users do %>
+          <tr class={if rem(Enum.find_index(@users, &(&1 == user)), 2) == 0, do: "bg-gray-100"}>
+            <%= if User.admin?(user) do %>
+              <td class="px-4 py-2 font-bold text-red-800"><%= user.email %></td>
+            <% else %>
+              <td class="px-4 py-2"><%= user.email %></td>
+            <% end %>
+            <td class="px-4 py-2"><%= user.roles |> Enum.join(", ") %></td>
+            <td class="px-4 py-2">
+              <!-- no need to gran admin to an admin -->
+              <button
+                :if={!User.admin?(user)}
+                phx-click="grant"
+                phx-value-id={user.id}
+                class="mr-2 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Grant
+              </button>
+              <!-- don't show revoke to current user and only to those who are already admins -->
+              <button
+                :if={(@current_user.id != user.id) && User.admin?(user)}
+                phx-click="revoke"
+                phx-value-id={user.id}
+                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Revoke
+              </button>
+            </td>
+          </tr>
+        <% end %>
+      </table>
+    </div>
+    """
+  end
+
+  @impl true
+  def mount(_params, _session, socket) do
+    {:ok, assign(socket, users: Accounts.list_users())}
+  end
+
+  @impl true
+  def handle_event("grant", %{"id" => id}, socket) do
+    Accounts.grant_admin(id)
+    {:noreply, assign(socket, users: Accounts.list_users())}
+  end
+
+  @impl true
+  def handle_event("revoke", %{"id" => id}, socket) do
+    Accounts.revoke_admin(id)
+    {:noreply, assign(socket, users: Accounts.list_users())}
+  end
 end
 ```
