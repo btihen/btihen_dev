@@ -956,3 +956,102 @@ defmodule AuthorizeWeb.Admin.AccountsLive do
   end
 end
 ```
+
+## makeing the LiveView (live) - 'near realtime updates'
+
+To do this we will use Phoenix built-in PubSub.
+
+First we need to build our PubSub Channel in `Accounts`:
+```elixir
+# lib/authorize/core/accounts.ex
+  # ...
+
+  # Admin PubSub
+  def subscribe("accounts:admin_updates") do
+    Phoenix.PubSub.subscribe(Authorize.PubSub, "accounts:admin_updates")
+  end
+
+  def broadcast("accounts:admin_updates") do
+    Phoenix.PubSub.broadcast(Authorize.PubSub, "accounts:admin_updates", {:admins_updated, list_users()})
+  end
+```
+
+Now that we have build our channels where we can subscribe and publish - we need to add the `publish` to the `grant` and `revoke` admin functions - with the following:
+```elixir
+# lib/authorize/core/accounts.ex
+  # ...
+
+  # admin management
+   # admin management
+  def grant_admin(uuid) when is_binary(uuid), do: grant_admin(get_user!(uuid))
+  def grant_admin(%User{} = user) do
+    new_roles =
+      ["admin" | user.roles]
+      |> Enum.uniq()
+
+    updated =
+      user
+      |> User.admin_roles_changeset(%{roles: new_roles})
+      |> Repo.update()
+
+    case updated do
+      {:ok, user} ->
+        # Broadcast the update
+        broadcast("accounts:admin_updates")
+        # return user
+        {:ok, user}
+
+      {:error, changeset} -> {:error, changeset}
+        # Handle error
+    end
+  end
+
+  def revoke_admin(uuid) when is_binary(uuid), do: revoke_admin(get_user!(uuid))
+  def revoke_admin(%User{} = user) do
+    updated =
+      user
+      |> User.admin_roles_changeset(%{roles: user.roles -- ["admin"]})
+      |> Repo.update()
+
+    case updated do
+      {:ok, user} ->
+        # Broadcast the update
+        broadcast("accounts:admin_updates")
+        # return user
+        {:ok, user}
+
+      {:error, changeset} -> {:error, changeset}
+        # Handle error
+    end
+  end
+```
+
+First we need to update our mount add a 'handle_info` function to our Admin LivePage:
+```elixir
+# lib/authorize_web/live/admin/accounts_live.ex
+  # ...s
+
+  @impl true
+  def mount(_params, _session, socket) do
+    # Subscribe to a PubSub topic (if connected - mount happen twice -
+    # once for initial load and once to do liveView socket connection)
+    if connected?(socket), do: Accounts.subscribe("accounts:admin_updates")
+
+    {:ok, assign(socket, users: Accounts.list_users())}
+  end
+
+  # handle info ALWAYS Come after mount and before handle_events!
+  def handle_info({:admins_updated, users}, socket) do
+    socket = assign(socket, users: users)
+    {:noreply, socket}
+  end
+
+  # ...
+```
+
+Now when you open two admin pages if you change one the otherone is also updated!
+
+```bash
+git add .
+git commit -m "add live updates to admin page"
+```
