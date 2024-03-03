@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "LiveView", "Authorization"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "LiveView"]
 date: 2024-02-24T01:01:53+02:00
-lastmod: 2024-02-25T01:01:53+02:00
+lastmod: 2024-03-05T01:01:53+02:00
 featured: true
 draft: false
 
@@ -98,8 +98,10 @@ iex -S mix phx.server
 
 ## using phx.gen.auth
 
+To help keep our code better organized all out user access / authentication code will be in the 'Access' namespace using `--web Access`
+
 ```bash
-mix phx.gen.auth Accounts User users --web Accounts
+mix phx.gen.auth Accounts User users --web Access
 mix deps.get
 mix ecto.migrate
 # start phoenix and create a user
@@ -131,7 +133,7 @@ git add .
 git commit -m "added users and authorization"
 ```
 
-### create a seed file
+### create a seeds file
 
 
 ### organize user into core data
@@ -162,6 +164,94 @@ iex -S mix phx.server
 
 git add .
 git commit -m "add users to the 'core'"
+```
+
+Now the file structure should look like:
+
+```bash
+$ tree -I _build -I deps
+.
+├── README.md
+├── assets
+├── config
+├── lib
+│   ├── authorize
+│   │   ├── admin
+│   │   │   └── auth.ex
+│   │   ├── application.ex
+│   │   ├── core
+│   │   │   ├── accounts
+│   │   │   │   ├── user.ex
+│   │   │   │   ├── user_notifier.ex
+│   │   │   │   └── user_token.ex
+│   │   │   └── accounts.ex
+│   │   ├── mailer.ex
+│   │   └── repo.ex
+│   ├── authorize.ex
+│   ├── authorize_web
+│   │   ├── access
+│   │   │   └── user_auth.ex
+│   │   ├── components
+│   │   │   ├── core_components.ex
+│   │   │   ├── layouts
+│   │   │   │   ├── app.html.heex
+│   │   │   │   └── root.html.heex
+│   │   │   └── layouts.ex
+│   │   ├── controllers
+│   │   │   ├── access
+│   │   │   │   └── user_session_controller.ex
+│   │   │   ├── error_html.ex
+│   │   │   ├── error_json.ex
+│   │   │   ├── page_controller.ex
+│   │   │   ├── page_html
+│   │   │   │   └── home.html.heex
+│   │   │   └── page_html.ex
+│   │   ├── endpoint.ex
+│   │   ├── gettext.ex
+│   │   ├── live
+│   │   │   └── access
+│   │   │       ├── user_confirmation_instructions_live.ex
+│   │   │       ├── user_confirmation_live.ex
+│   │   │       ├── user_forgot_password_live.ex
+│   │   │       ├── user_login_live.ex
+│   │   │       ├── user_registration_live.ex
+│   │   │       ├── user_reset_password_live.ex
+│   │   │       └── user_settings_live.ex
+│   │   ├── router.ex
+│   │   └── telemetry.ex
+│   └── authorize_web.ex
+├── mix.exs
+├── mix.lock
+├── priv
+└── test
+    ├── authorize
+    │   └── core
+    │       └── accounts_test.exs
+    ├── authorize_web
+    │   ├── access
+    │   │   └── user_auth_test.exs
+    │   ├── controllers
+    │   │   ├── access
+    │   │   │   └── user_session_controller_test.exs
+    │   │   ├── error_html_test.exs
+    │   │   ├── error_json_test.exs
+    │   │   └── page_controller_test.exs
+    │   └── live
+    │       └── access
+    │           ├── user_confirmation_instructions_live_test.exs
+    │           ├── user_confirmation_live_test.exs
+    │           ├── user_forgot_password_live_test.exs
+    │           ├── user_login_live_test.exs
+    │           ├── user_registration_live_test.exs
+    │           ├── user_reset_password_live_test.exs
+    │           └── user_settings_live_test.exs
+    ├── support
+    │   ├── conn_case.ex
+    │   ├── data_case.ex
+    │   └── fixtures
+    │       └── core
+    │           └── accounts_fixtures.ex
+    └── test_helper.exs
 ```
 
 ## System Emails
@@ -317,7 +407,7 @@ Let's look to see how this is done for the login pages (## Authentication routes
 defmodule AuthorizeWeb.Router do
   use AuthorizeWeb, :router
   # ...
-  scope "/accounts", AuthorizeWeb.Access, as: :accounts do
+  scope "/access", AuthorizeWeb.Access, as: :access do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :require_authenticated_user,
@@ -351,10 +441,10 @@ Since our new page page has no new resources we will make the UsersLive page wit
 # lets make an admin area within liveview
 mkdir lib/authorize_web/live/admin
 # create the file needed
-touch lib/authorize_web/live/admin/accounts_live.ex
+touch lib/authorize_web/live/admin/admin_roles_live.ex
 # starter template code
-cat <<EOF > lib/authorize_web/live/admin/accounts_live.ex
-defmodule AuthorizeWeb.Admin.AccountsLive do
+cat <<EOF > lib/authorize_web/live/admin/admin_roles_live.ex
+defmodule AuthorizeWeb.Admin.AdminRolesLive do
   use Phoenix.LiveView
 
   @impl true
@@ -384,7 +474,7 @@ defmodule AuthorizeWeb.Router do
   scope "/admin", AuthorizeWeb.Admin do
     pipe_through [:browser]
 
-    live("/accounts", AccountsLive, :index)
+    live("/admin_roles", AdminRolesLive, :index)
   end
 end
 ```
@@ -392,7 +482,7 @@ end
 ##### Add Authentication requirement (via plug routing)
 
 hopefully you can now get to:
-`http://localhost:4000/admin/accounts`
+`http://localhost:4000/admin/admin_roles`
 
 we need to add this to the routes - we will start by just making sure it can only be accessed by logged in users.
 
@@ -401,7 +491,7 @@ let's protect the standard routing (plug) - with:
   scope "/admin", AuthorizeWeb.Admin do
     pipe_through [:browser, :require_authenticated_user]
 
-    live("/accounts", AccountsLive, :index)
+    live("/admin_roles", AdminRolesLive, :index)
   end
 ```
 hopefully now if you open an 'incognito' non-logged in browser you are not able to access this page and are redirected to the login / signin page.
@@ -422,7 +512,7 @@ defmodule AuthorizeWeb.Router do
     # otherwise you get the error: `attempting to redefine live_session`
     live_session :live_admin,
       on_mount: [{AuthorizeWeb.Access.UserAuth, :ensure_authenticated}] do
-      live("/accounts", AccountsLive, :index)
+      live("/admin_roles", AdminRolesLive, :index)
     end
   end
 end
@@ -444,9 +534,6 @@ def admin?(user), do: "admin" in user.roles || user.email == "nyima@example.com"
 
   # new static route plug
   def require_admin_user(conn, _opts) do
-    IO.inspect(conn.assigns)
-    IO.inspect(conn.assigns.current_user)
-
     if Authorize.Core.Accounts.User.admin?(conn.assigns.current_user) do
       conn
     else
@@ -480,7 +567,7 @@ def admin?(user), do: "admin" in user.roles || user.email == "nyima@example.com"
 
     live_session :live_admin,
       on_mount: [{AuthorizeWeb.Access.UserAuth, :ensure_authenticated}, {AuthorizeWeb.Access.UserAuth, :ensure_admin}] do
-      live("/accounts", AccountsLive, :index)
+      live("/admin_roles", AdminRolesLive, :index)
       # add other admin live routes as needed
     end
   end
@@ -583,10 +670,18 @@ changeset =
  >}
 ```
 
-Sweet this works as expected - so we can now build this into `Accounts` using:
+Sweet this works as expected - now we can make a context / boundary for our Admin area lets make the folder and file:
 
-```elixir
-# lib/authorize/core/accounts.ex
+```bash
+mkdir lib/authorize/admin
+touch lib/authorize/admin/authorization.ex
+cat <<EOF > lib/authorize/admin/authorization.ex
+defmodule Authorize.Admin.Authorized do
+  import Ecto.Query, warn: false
+  alias Authorize.Repo
+  alias Authorize.Core.Accounts
+  alias Authorize.Core.Accounts.User
+
   def grant_admin(user) do
     new_roles =
       ["admin" | user.roles]
@@ -602,16 +697,18 @@ Sweet this works as expected - so we can now build this into `Accounts` using:
     |> User.admin_roles_changeset(%{roles: user.roles -- ["admin"]})
     |> Repo.update()
   end
+end
+EOF
 ```
 
-
-Lets now try our new `Accounts` code in iex:
+Lets now try our new code in iex:
 ```elixir
 iex -S mix phx.server
 
 import Ecto.Query
 alias Authorize.Repo
 alias Authorize.Core.Accounts
+alias Authorize.Admin.Authorized
 
 # from Context file
 user = Accounts.get_user_by_email("nyima@example.com")
@@ -626,7 +723,7 @@ user = Accounts.get_user_by_email("nyima@example.com")
   ...
 >
 
-{:ok, user} = Accounts.revoke_admin(user)
+{:ok, user} = Authorized.revoke_admin(user)
 {:ok,
  #Authorize.Core.Accounts.User<
    __meta__: #Ecto.Schema.Metadata<:loaded, "users">,
@@ -639,7 +736,7 @@ user = Accounts.get_user_by_email("nyima@example.com")
    ...
  >}
 
-{:ok, user} = Accounts.grant_admin(user)
+{:ok, user} = Authorized.grant_admin(user)
 {:ok,
  #Authorize.Core.Accounts.User<
    __meta__: #Ecto.Schema.Metadata<:loaded, "users">,
@@ -664,7 +761,7 @@ def admin?(user), do: user.email == "nyima@example.com"
 def admin?(user), do: "admin" in user.roles
 ```
 
-Now lets test our access to `http://localhost:4000/admin/accounts` via the account that has the admin role and without.
+Now lets test our access to `http://localhost:4000/admin/admin_roles` via the account that has the admin role and without.
 
 We can make a few additional accounts in the `seeds` file to simplify testing if you wish:
 ```elixir
@@ -695,10 +792,10 @@ we now can make our new admin page do something useful.
 
 since want to control admin status we will need all the users
 
-So let's start by adding a function `list_users` in the `Accounts` context:
+So let's start by adding a function `list_users` in the `Admin.Authorized` context (to help with user privacy concerns):
 ```elixir
-# lib/authorize/core/accounts.ex
-defmodule Authorize.Core.Accounts do
+# lib/authorize/admin/authorization.ex
+defmodule Authorize.Admin.Authorized do
   # ...
   # sorted by email - unsorted is just `Repo.all(User)`
   def list_users(), do: Repo.all(from u in User, order_by: [asc: u.email])
@@ -710,24 +807,25 @@ you can check this works on the cli with:
 ```elixir
 iex -S mix phx.server
 
-alias Authorize.Core.Accounts
+alias Authorize.Admin.Authorized
 
-users = Accounts.list_users()
+users = Authorized.list_users()
 
 # should now have the list of all accounts from the seeds file
 ```
 
-so let's add the users to on mount to the `accounts_live` page:
+so let's add the users to on mount to the `admin_roles_live` page:
 
 ```elixir
-defmodule AuthorizeWeb.Admin.AccountsLive do
+defmodule AuthorizeWeb.Admin.AdminRolesLive do
   use Phoenix.LiveView
 
   alias Authorize.Core.Accounts
+  alias Authorize.Admin.Authorized
   # ...
   @impl true
   def mount(_params, _session, socket) do
-    all_users = Accounts.list_users()
+    all_users = Authorized.list_users()
     socket_w_users = assign(socket, users: all_users)
 
     {:ok, socket_w_users}
@@ -736,9 +834,9 @@ defmodule AuthorizeWeb.Admin.AccountsLive do
 end
 ```
 
-Now that we have the users we need to list users by changing `def render` in `accounts_live` to:
+Now that we have the users we need to list users by changing `def render` in `admin_roles_live` to:
 ```h
-# lib/authorize_web/live/admin/accounts_live.ex
+# lib/authorize_web/live/admin/admin_roles_live.ex
   @impl true
   def render(assigns) do
     ~H"""
@@ -753,27 +851,31 @@ Now that we have the users we need to list users by changing `def render` in `ac
         </tr>
         <%= for user <- @users do %>
           <tr class={if rem(Enum.find_index(@users, &(&1 == user)), 2) == 0, do: "bg-gray-100"}>
-            <! -- if an admin bold-face -->
             <%= if User.admin?(user) do %>
               <td class="px-4 py-2 font-bold text-red-800"><%= user.email %></td>
             <% else %>
               <td class="px-4 py-2"><%= user.email %></td>
             <% end %>
             <td class="px-4 py-2"><%= user.roles |> Enum.join(", ") %></td>
-            <td class="px-4 py-2">
-              <!-- no need to grant admin to an admin -->
+            <td class="px-4 py-2 text-right">
+              <!-- no need to gran admin to an admin -->
               <button
-                :if={!User.admin?(user)}
-                class="mr-2 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-              >
+                  :if={!User.admin?(user)}
+                  class="mr-2 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Grant
               </button>
-              <!-- don't show revoke to current user and only to those who are already admins -->
+              <!-- don't allow current user to disable self & only to those who are already admins -->
               <button
-                :if={(@current_user.id != user.id) && User.admin?(user)}
-                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-              >
+                  :if={@current_user.id != user.id && User.admin?(user)}
+                  class="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded">
                 Revoke
+              </button>
+              <!-- do not allow current user to delete ones own account -->
+              <button
+                  :if={@current_user.id != user.id}
+                  class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                  onclick="return confirm('Are you sure you want to delete this item?');">
+                Delete
               </button>
             </td>
           </tr>
@@ -784,30 +886,35 @@ Now that we have the users we need to list users by changing `def render` in `ac
   end
 ```
 
-now lets make the buttons reactive - we will add a `grant` and `revoke` event_hander:
+now lets make the buttons reactive - we will add a `grant`, `revoke` & `delete` event_handers:
 ```elixir
-# lib/authorize_web/live/admin/accounts_live.ex
-defmodule AuthorizeWeb.Admin.AccountsLive do
+# lib/authorize_web/live/admin/admin_roles_live.ex
+defmodule AuthorizeWeb.Admin.AdminRolesLive do
   use Phoenix.LiveView
   alias Authorize.Core.Accounts
   alias Authorize.Core.Accounts.User
+  alias Authorize.Admin.Authorized
 
   # ...
 
   @impl true
   def handle_event("grant", %{"id" => id}, socket) do
-    {id_int, _text} = Integer.parse(id)
-    user = Accounts.# lib/authorize_web/live/admin/accounts_live.ex
-    Accounts.grant_admin(id_int)
-    {:noreply, assign(socket, users: Accounts.list_users())}
+    Authorized.grant_admin(id)
+    {:noreply, assign(socket, users: Authorized.list_users())}
   end
 
   @impl true
   def handle_event("revoke", %{"id" => id}, socket) do
-    {id_int, _text} = Integer.parse(id)
-    Accounts.revoke_admin(id_int)
-    {:noreply, assign(socket, users: Accounts.list_users())}
+    Authorized.revoke_admin(id)
+    {:noreply, assign(socket, users: Authorized.list_users())}
   end
+
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    Authorized.delete_user(id)
+    {:noreply, assign(socket, users: Authorized.list_users())}
+  end
+
 end
 ```
 
@@ -818,28 +925,7 @@ oops - we get an error:
 If you are using the dot syntax, such as map.field, make sure the left-hand side of the dot is a map
     (authorize 0.1.0) lib/authorize/core/accounts.ex:19: Authorize.Core.Accounts.grant_admin/1
 ```
-this is because we can only send an serialized id (as text) to the handler.  So we need to make our `grant` and `revoke` a bit more flexible to accept id or user by changing:
-```elixir
-# lib/authorize/core/accounts.ex
-  def grant_admin(%User{} = user) do
-    new_roles =  ["admin" | user.roles]  |> Enum.uniq()
-    user
-    |> User.admin_roles_changeset(%{roles: new_roles})
-    |> Repo.update()
-  end
-
-  def revoke_admin(%User{} = user) do
-    user
-    |> User.admin_roles_changeset(%{roles: user.roles -- ["admin"]})
-    |> Repo.update()
-  end
-```
-
-to (assuming you used binary `uuid` keys) - if you stayed with standard `id` integers then use:
-`def grant_admin(id) when is_integer(id), do: grant_admin(get_user!(id))`
-and
-`def revoke_admin(id) when is_integer(id), do: revoke_admin(get_user!(id))`
-instead.
+we can fix this with pattern matching on the id and the calling the original function:
 
 ```elixir
 # lib/authorize/core/accounts.ex
@@ -859,10 +945,20 @@ instead.
   end
 ```
 
+NOTE: Since I am using a binary uuid - I don't need to convert the string from the frontend to an integer - I was using the traditional integer the code would look more like:
+```elixir
+  def grant_admin(id_string) when is_binary(id_string) do
+    {id, _text} = Integer.parse(id_string)
+    user = get_user!(id)
+    grant_admin(user)
+  end
+```
+
 Now we need to update the buttons with: `phx-click="eventName` (event triggered) and `phx-value-id={user.id}` (data to send to event handler) so now our buttons will look like:
 
 ```h
-# lib/authorize_web/live/admin/accounts_live.ex
+# lib/authorize_web/live/admin/admin_roles_live.ex
+            <td class="px-4 py-2 text-right">
               <button
                 :if={!User.admin?(user)}
                 phx-click="grant"
@@ -873,23 +969,35 @@ Now we need to update the buttons with: `phx-click="eventName` (event triggered)
               </button>
 
               <button
-                :if={(@current_user.id != user.id) && User.admin?(user)}
+                :if={@current_user.id != user.id && User.admin?(user)}
                 phx-click="revoke"
                 phx-value-id={user.id}
-                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                class="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded"
               >
                 Revoke
               </button>
+
+              <button
+                :if={@current_user.id != user.id}
+                phx-click="delete"
+                phx-value-id={user.id}
+                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                onclick="return confirm('Are you sure you want to delete this item?');"
+              >
+                Delete
+              </button>
+            </td>
 ```
 
 or all together is should now look like:
 
 ```elixir
-# lib/authorize_web/live/admin/accounts_live.ex
-defmodule AuthorizeWeb.Admin.AccountsLive do
+# lib/authorize_web/live/admin/admin_roles_live.ex
+defmodule AuthorizeWeb.Admin.AdminRolesLive do
   use Phoenix.LiveView
   alias Authorize.Core.Accounts
   alias Authorize.Core.Accounts.User
+  alias Authorize.Admin.Authorized
 
   @impl true
   def render(assigns) do
@@ -911,7 +1019,7 @@ defmodule AuthorizeWeb.Admin.AccountsLive do
               <td class="px-4 py-2"><%= user.email %></td>
             <% end %>
             <td class="px-4 py-2"><%= user.roles |> Enum.join(", ") %></td>
-            <td class="px-4 py-2">
+            <td class="px-4 py-2 text-right">
               <!-- no need to gran admin to an admin -->
               <button
                 :if={!User.admin?(user)}
@@ -923,12 +1031,21 @@ defmodule AuthorizeWeb.Admin.AccountsLive do
               </button>
               <!-- don't show revoke to current user and only to those who are already admins -->
               <button
-                :if={(@current_user.id != user.id) && User.admin?(user)}
+                :if={@current_user.id != user.id && User.admin?(user)}
                 phx-click="revoke"
                 phx-value-id={user.id}
-                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                class="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded"
               >
                 Revoke
+              </button>
+              <button
+                :if={@current_user.id != user.id}
+                phx-click="delete"
+                phx-value-id={user.id}
+                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                onclick="return confirm('Are you sure you want to delete this item?');"
+              >
+                Delete
               </button>
             </td>
           </tr>
@@ -939,96 +1056,246 @@ defmodule AuthorizeWeb.Admin.AccountsLive do
   end
 
   @impl true
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, users: Accounts.list_users())}
+  def mount(_params, _session, socket) dos
+    {:ok, assign(socket, users: Authorized.list_users())}
   end
 
   @impl true
   def handle_event("grant", %{"id" => id}, socket) do
-    Accounts.grant_admin(id)
-    {:noreply, assign(socket, users: Accounts.list_users())}
+    Authorized.grant_admin(id)
+    {:noreply, assign(socket, users: Authorized.list_users())}
   end
 
   @impl true
   def handle_event("revoke", %{"id" => id}, socket) do
-    Accounts.revoke_admin(id)
-    {:noreply, assign(socket, users: Accounts.list_users())}
+    Authorized.revoke_admin(id)
+    {:noreply, assign(socket, users: Authorized.list_users())}
+  end
+
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    Authorized.delete_user(id)
+    {:noreply, assign(socket, users: Authorized.list_users())}
   end
 end
 ```
 
-## makeing the LiveView (live) - 'near realtime updates'
+Now Our Admin page should look like:
+
+![admin page image](featured.png)
+
+## Making the LiveView (live) - 'near realtime updates'
 
 To do this we will use Phoenix built-in PubSub.
 
-First we need to build our PubSub Channel in `Accounts`:
+First we need to build our PubSub Channel in `Authorized`:
 ```elixir
-# lib/authorize/core/accounts.ex
+# lib/authorize/admin/authorized.ex
   # ...
-
-  # Admin PubSub
-  def subscribe("accounts:admin_updates") do
-    Phoenix.PubSub.subscribe(Authorize.PubSub, "accounts:admin_updates")
+  # Authorized PubSub
+  def subscribe("authorized:admin_role_updates") do
+    Phoenix.PubSub.subscribe(Authorize.PubSub, "authorized:admin_role_updates")
   end
 
-  def broadcast("accounts:admin_updates") do
-    Phoenix.PubSub.broadcast(Authorize.PubSub, "accounts:admin_updates", {:admins_updated, list_users()})
+  def broadcast("authorized:admin_role_updates") do
+    Phoenix.PubSub.broadcast(
+      Authorize.PubSub,
+      "authorized:admin_role_updates",
+      {:admins_updated, list_users()}
+    )
   end
 ```
 
-Now that we have build our channels where we can subscribe and publish - we need to add the `publish` to the `grant` and `revoke` admin functions - with the following:
+Now that we have build our channels where we can subscribe and publish - we need to add the `publish` to the `grant`, `revoke` and `delete` admin functions - so that changes will be seen - the easiest thing to do would look like:
 ```elixir
-# lib/authorize/core/accounts.ex
+# lib/authorize/admin/authorized.ex
   # ...
 
   # admin management
-   # admin management
-  def grant_admin(uuid) when is_binary(uuid), do: grant_admin(get_user!(uuid))
+  def delete_user(id) do
+    user = Repo.get!(User, id)
+    updated_user = Repo.delete(user)
+    broadcast("authorized:admin_role_updates")
+    updated_user
+  end
+
+  def grant_admin(uuid) when is_binary(uuid), do: grant_admin(Accounts.get_user!(uuid))
+
   def grant_admin(%User{} = user) do
     new_roles =
       ["admin" | user.roles]
       |> Enum.uniq()
 
-    updated =
+    updated_user =
       user
       |> User.admin_roles_changeset(%{roles: new_roles})
       |> Repo.update()
 
-    case updated do
-      {:ok, user} ->
-        # Broadcast the update
-        broadcast("accounts:admin_updates")
-        # return user
-        {:ok, user}
-
-      {:error, changeset} -> {:error, changeset}
-        # Handle error
+     broadcast("authorized:admin_role_updates")
+     updated_user
     end
   end
 
-  def revoke_admin(uuid) when is_binary(uuid), do: revoke_admin(get_user!(uuid))
+  def revoke_admin(uuid) when is_binary(uuid), do: revoke_admin(Accounts.get_user!(uuid))
+
   def revoke_admin(%User{} = user) do
     updated =
       user
       |> User.admin_roles_changeset(%{roles: user.roles -- ["admin"]})
       |> Repo.update()
 
+     broadcast("authorized:admin_role_updates")
+     updated_user
+
     case updated do
       {:ok, user} ->
-        # Broadcast the update
-        broadcast("accounts:admin_updates")
-        # return user
+        # Broadcast the update (new)
+        broadcast("authorized:admin_role_updates")
+        # return user (like before)
         {:ok, user}
 
-      {:error, changeset} -> {:error, changeset}
-        # Handle error
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 ```
 
-First we need to update our mount add a 'handle_info` function to our Admin LivePage:
+NOTE: if you thought there could be problems with load and thus only want to send the broadcast when there is really a change (or perhaps you want to handle and not just return the errors) - you could update the code to look like:
 ```elixir
-# lib/authorize_web/live/admin/accounts_live.ex
+# lib/authorize/admin/authorized.ex
+  def revoke_admin(%User{} = user) do
+    updated_user =
+      user
+      |> User.admin_roles_changeset(%{roles: user.roles -- ["admin"]})
+      |> Repo.update()
+
+    case updated_user do
+      {:ok, user} ->
+        # Broadcast the update (new)
+        broadcast("authorized:admin_role_updates")
+        # return user (like before)
+        {:ok, user}
+
+      {:error, changeset} ->
+        # return(or handle) error
+        {:error, changeset}
+    end
+```
+
+its actually more idiomatic (or at least my preference) to rewrite this using a `with` instead to handle the two cases:
+```elixir
+# lib/authorize/admin/authorized.ex
+  def grant_admin(%User{} = user) do
+    new_roles =
+      ["admin" | user.roles]
+      |> Enum.uniq()
+
+    with {:ok, user} <-
+      user
+      |> User.admin_roles_changeset(%{roles: new_roles})
+      |> Repo.update() do
+        # Broadcast the update on success
+        broadcast("authorized:admin_role_updates")
+        {:ok, user}
+    else
+      {:error, changeset} ->
+        # Handle the error case
+        {:error, changeset}
+    end
+  end
+```
+
+All the `Authorized` changes should now look like:
+
+all the changes together now look like:
+```elixir
+# lib/authorize/admin/authorized.ex
+defmodule Authorize.Admin.Authorized do
+  import Ecto.Query, warn: false
+  alias Authorize.Repo
+  alias Authorize.Core.Accounts
+  alias Authorize.Core.Accounts.User
+
+  # Authorized PubSub
+  def subscribe("authorized:admin_role_updates") do
+    Phoenix.PubSub.subscribe(Authorize.PubSub, "authorized:admin_role_updates")
+  end
+
+  def broadcast("authorized:admin_role_updates") do
+    Phoenix.PubSub.broadcast(
+      Authorize.PubSub,
+      "authorized:admin_role_updates",
+      {:admins_updated, list_users()}
+    )
+  end
+
+  # unsorted
+  # def list_users(), do: Repo.all(User)
+  def list_users(), do: Repo.all(from u in User, order_by: [asc: u.email])
+
+  def delete_user(id) do
+    user = Repo.get!(User, id)
+
+    with {:ok, user} <- Repo.delete(user) do
+      # Broadcast the update only on success
+      broadcast("authorized:admin_role_updates")
+      {:ok, user}
+    else
+      {:error, changeset} ->
+        # return(or handle) error
+        {:error, changeset}
+    end
+  end
+
+  # admin management
+  def grant_admin(uuid) when is_binary(uuid), do: grant_admin(Accounts.get_user!(uuid))
+
+  def grant_admin(%User{} = user) do
+    new_roles =
+      ["admin" | user.roles]
+      |> Enum.uniq()
+
+    with {:ok, user} <-
+           user
+           |> User.admin_roles_changeset(%{roles: new_roles})
+           |> Repo.update() do
+      # Broadcast the update only on success
+      broadcast("authorized:admin_role_updates")
+      {:ok, user}
+    else
+      {:error, changeset} ->
+        # return(or handle) error
+        {:error, changeset}
+    end
+  end
+
+  def revoke_admin(uuid) when is_binary(uuid), do: revoke_admin(Accounts.get_user!(uuid))
+
+  def revoke_admin(%User{} = user) do
+    new_roles = user.roles -- ["admin"]
+
+    with {:ok, user} <-
+           user
+           |> User.admin_roles_changeset(%{roles: new_roles})
+           |> Repo.update() do
+      # Broadcast the update only on success
+      broadcast("authorized:admin_role_updates")
+      # return user like normal
+      {:ok, user}
+    else
+      {:error, changeset} ->
+        # return(or handle) error
+        {:error, changeset}
+    end
+  end
+end
+```
+
+To enable this 'PubSub' we have to register on_mount (after connected to websockets - not on the first traditional mount) using:
+  `if connected?(socket), do: Accounts.subscribe("accounts:admin_updates")`
+and add a 'handle_info` function to our Admin LivePage to receive the broadcasts and update the page this would then look like:
+```elixir
+# lib/authorize_web/live/admin/admin_roles_live.ex
   # ...s
 
   @impl true
@@ -1045,11 +1312,165 @@ First we need to update our mount add a 'handle_info` function to our Admin Live
     socket = assign(socket, users: users)
     {:noreply, socket}
   end
-
   # ...
 ```
 
-Now when you open two admin pages if you change one the otherone is also updated!
+And all the LivePage changes will now look like:
+```elixir
+defmodule AuthorizeWeb.Admin.AdminRolesLive do
+  use Phoenix.LiveView
+  alias Authorize.Core.Accounts
+  alias Authorize.Core.Accounts.User
+  alias Authorize.Admin.Authorized
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <h1 class="text-4xl text-center">Admin</h1>
+    <p class="text-center">total users: <%= @users |> Enum.count() %></p>
+    <div style="margin-top: 20px;">
+      <table class="mx-auto">
+        <tr>
+          <th class="px-4 py-2">Email</th>
+          <th class="px-4 py-2">Roles</th>
+          <th class="px-4 py-2">Action</th>
+        </tr>
+        <%= for user <- @users do %>
+          <tr class={if rem(Enum.find_index(@users, &(&1 == user)), 2) == 0, do: "bg-gray-100"}>
+            <%= if User.admin?(user) do %>
+              <td class="px-4 py-2 font-bold text-red-800"><%= user.email %></td>
+            <% else %>
+              <td class="px-4 py-2"><%= user.email %></td>
+            <% end %>
+            <td class="px-4 py-2"><%= user.roles |> Enum.join(", ") %></td>
+            <td class="px-4 py-2 text-right">
+              <!-- no need to gran admin to an admin -->
+              <button
+                :if={!User.admin?(user)}
+                phx-click="grant"
+                phx-value-id={user.id}
+                class="mr-2 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Grant
+              </button>
+              <!-- don't show revoke to current user and only to those who are already admins -->
+              <button
+                :if={@current_user.id != user.id && User.admin?(user)}
+                phx-click="revoke"
+                phx-value-id={user.id}
+                class="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Revoke
+              </button>
+              <button
+                :if={@current_user.id != user.id}
+                phx-click="delete"
+                phx-value-id={user.id}
+                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                onclick="return confirm('Are you sure you want to delete this item?');"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+        <% end %>
+      </table>
+    </div>
+    """
+  end
+
+  @impl true
+  def mount(_params, _session, socket) do
+    # Subscribe to a PubSub topic (if connected - mount happen twice -
+    # once for initial load and once to do liveView socket connection)
+    if connected?(socket), do: Authorized.subscribe("authorized:admin_role_updates")
+
+    {:ok, assign(socket, users: Authorized.list_users())}
+  end
+
+  @impl true
+  def handle_info({:admins_updated, users}, socket) do
+    socket = assign(socket, users: users)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("grant", %{"id" => id}, socket) do
+    Authorized.grant_admin(id)
+    {:noreply, assign(socket, users: Authorized.list_users())}
+  end
+
+  @impl true
+  def handle_event("revoke", %{"id" => id}, socket) do
+    Authorized.revoke_admin(id)
+    {:noreply, assign(socket, users: Authorized.list_users())}
+  end
+
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    Authorized.delete_user(id)
+    {:noreply, assign(socket, users: Authorized.list_users())}
+  end
+end
+```
+
+Now when you open two admin pages if you change one the other one is also updated!
+
+![two web browsers with the same data](pubsub.png)
+
+Our File structure should now look like:
+```bash
+$ tree -I _build -I deps
+.
+├── README.md
+├── assets
+├── config
+├── lib
+│   ├── authorize
+│   │   ├── admin
+│   │   │   └── authorized.ex
+│   │   ├── application.ex
+│   │   ├── core
+│   │   │   ├── accounts
+│   │   │   │   ├── user.ex
+│   │   │   │   ├── user_notifier.ex
+│   │   │   │   └── user_token.ex
+│   │   │   └── accounts.ex
+│   │   ├── mailer.ex
+│   │   └── repo.ex
+│   ├── authorize.ex
+│   ├── authorize_web
+│   │   ├── access
+│   │   │   └── user_auth.ex
+│   │   ├── components
+│   │   ├── controllers
+│   │   │   └── access
+│   │   │       └── user_session_controller.ex
+│   │   ├── endpoint.ex
+│   │   ├── gettext.ex
+│   │   ├── live
+│   │   │   ├── access
+│   │   │   │   ├── user_confirmation_instructions_live.ex
+│   │   │   │   ├── user_confirmation_live.ex
+│   │   │   │   ├── user_forgot_password_live.ex
+│   │   │   │   ├── user_login_live.ex
+│   │   │   │   ├── user_registration_live.ex
+│   │   │   │   ├── user_reset_password_live.ex
+│   │   │   │   └── user_settings_live.ex
+│   │   │   └── admin
+│   │   │       └── admin_roles_live.ex
+│   │   ├── router.ex
+│   │   └── telemetry.ex
+│   └── authorize_web.ex
+├── mix.exs
+├── mix.lock
+├── priv
+└── test
+```
+
+This feels well structured and easy to navigate.
+
+Let's take a snapshot with:
 
 ```bash
 git add .
