@@ -30,6 +30,8 @@ projects: []
 
 In this article I will explore a simple authorization technique, restricting access to pages - for both static and live pages.
 
+The source code can be found at: https://github.com/btihen-dev/phoenix_authorize
+
 ## Getting started
 
 check / install newest erlang & elixir
