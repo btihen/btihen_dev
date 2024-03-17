@@ -9,7 +9,7 @@ tags: ['Ruby', 'Relationships', 'Databases', 'Data models', 'Framework Agnostic'
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2021-05-30T01:57:00+02:00
 lastmod: 2021-08-07T01:57:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

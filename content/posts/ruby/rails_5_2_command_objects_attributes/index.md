@@ -9,7 +9,7 @@ tags: ['Ruby', 'Command-Object', 'Validations', 'Attributes', 'Simplify Complexi
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2022-03-26T01:57:00+02:00
 lastmod: 2022-05-22T01:57:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

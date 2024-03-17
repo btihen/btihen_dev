@@ -9,7 +9,7 @@ tags: ['Ruby', "authentication", "passwordless auth", "MagicLink", "Signed Globa
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2021-09-19T01:36:55+02:00
 lastmod: 2021-09-21T01:36:55+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

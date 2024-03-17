@@ -9,7 +9,7 @@ tags: ['Ruby', "Rails 6.x", "Hotwire", "SPA", "HTML"]
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2021-02-20T18:57:00+02:00
 lastmod: 2021-08-07T01:57:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

@@ -9,7 +9,7 @@ tags: ['Ruby', "authentication", "passwordless auth", "MagicLink", "SecureRandom
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2021-09-22T16:09:57+02:00
 lastmod: 2021-09-22T16:09:57+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

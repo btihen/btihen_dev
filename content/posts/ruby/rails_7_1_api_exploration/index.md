@@ -7,7 +7,7 @@ summary: ""
 authors: ['btihen']
 tags: ['Rails API']
 categories: ["Code", "Ruby Language", "Rails Framework"]
-date: 2024-03-17T01:20:00+02:00
+date: 2024-03-16T01:20:00+02:00
 lastmod: 2024-03-17T01:20:00+02:00
 featured: true
 draft: false
@@ -976,4 +976,42 @@ class Person < ApplicationRecord
   def related_people = with_relations(id)
 end
 ```
+
+i like using lambdas - so this would also be possible:
+
+```ruby
+class Person < ApplicationRecord
+  RELATED_PEOPLE =
+    lambda do |person_ids| RELATED_PEOPLE.call(person_ids)
+      person_ids = Array(person_ids).map(&:to_i)
+      query1 = Person.select("people.*, person_relationships.role_one AS relationship, person_relationships.person_two_id AS person_id")
+                     .joins("INNER JOIN person_relationships ON people.id = person_relationships.person_one_id")
+                     .where(person_relationships: { person_two_id: person_ids })
+      query2 = Person.select("people.*, person_relationships.role_two AS relationship, person_relationships.person_one_id AS person_id")
+                     .joins("INNER JOIN person_relationships ON people.id = person_relationships.person_two_id")
+                     .where(person_relationships: { person_one_id: person_ids })
+      Person.find_by_sql(query1.to_sql + " UNION " + query2.to_sql)
+    end
+
+  # this is an alternative way to scope instead of using the lambda and a scope statement
+  def self.related_people_for(person_ids)
+    # query for related people
+    # related_people = with_relations(person_ids)
+    related_people = RELATED_PEOPLE.call(person_ids)
+
+    # grouping allows us to return a hash with the person_id as the key (neccesary for index controller)
+    related_people_grouped = related_people.group_by(&:person_id)
+
+    # removes unwanted attributes (possibly to later or confogure json to do this)
+    related_people_grouped.transform_values! do |related_people_arr|
+      related_people_arr.map do |related_person|
+        related_person.attributes.except('created_at', 'updated_at', 'person_id')
+      end
+    end
+  end
+
+  scope :with_related_people, lambda { |person_ids| RELATED_PEOPLE.call(person_ids) }
+
+  def related_people = RELATED_PEOPLE.call(id)
+end
 ```

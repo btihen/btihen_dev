@@ -9,7 +9,7 @@ tags: ['Ruby', 'Hotwire', 'SPA', 'WebSocket', 'Realtime', 'Lazy-Loading']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2021-03-28T01:57:00+02:00
 lastmod: 2021-08-07T01:57:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

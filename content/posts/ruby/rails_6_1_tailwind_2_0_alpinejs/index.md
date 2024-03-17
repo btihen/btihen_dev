@@ -9,7 +9,7 @@ tags: ['Ruby', "Rails 6.x", "configure", "install", "tailwindcss", "alpinejs"]
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2020-09-10T02:46:07+02:00
 lastmod: 2021-08-07T01:46:07+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image
