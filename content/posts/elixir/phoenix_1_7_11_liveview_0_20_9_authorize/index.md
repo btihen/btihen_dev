@@ -1,14 +1,14 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
-title: "Phoenix 1.7.11 with LiveView 0.20.9 - Authorization Demo"
-subtitle: "Exploring simple page restrictions"
+title: "Phoenix 1.7.11 with LiveView 0.20.9 - Authorization Intro"
+subtitle: "Article 1 - Exploring simple page restrictions"
 # Summary for listings and search engines
 summary: "Restricting access to pages - for both static and live pages"
 authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "LiveView", "Authorization"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "LiveView"]
 date: 2024-02-24T01:01:53+02:00
-lastmod: 2024-03-05T01:01:53+02:00
+lastmod: 2024-03-09T01:01:53+02:00
 featured: true
 draft: false
 
@@ -31,6 +31,11 @@ projects: []
 In this article I will explore a simple authorization technique, restricting access to pages - for both static and live pages.
 
 The source code can be found at: https://github.com/btihen-dev/phoenix_authorize
+
+## Article Sericies
+
+* Article 1 (Admin Panel) - Authorization Intro (Static- and Live-Pages)
+* Article 2 (Owner Scope) - Authorization
 
 ## Getting started
 
@@ -64,6 +69,7 @@ create project
 mix archive.install hex phx_new
 mix phx.new authorize
 cd authorize
+mix deps.update --all
 git init
 git add .
 git commit -m "initial commit"
@@ -179,7 +185,7 @@ $ tree -I _build -I deps
 ├── lib
 │   ├── authorize
 │   │   ├── admin
-│   │   │   └── auth.ex
+│   │   │   └── authorized.ex
 │   │   ├── application.ex
 │   │   ├── core
 │   │   │   ├── accounts
@@ -769,6 +775,7 @@ We can make a few additional accounts in the `seeds` file to simplify testing if
 ```elixir
 # priv/repo/seeds.exs
 alias Authorize.Core.Accounts
+alias Authorize.Admin.Authorized
 
 users = [
   %{email: "batman@example.com", password: "P4ssword-f0r-You"},
@@ -781,9 +788,9 @@ users = [
 Enum.map(users, fn user -> Accounts.register_user(user) end)
 
 batman = Accounts.get_user_by_email("batman@example.com")
-Accounts.grant_admin(batman)
+Authorized.grant_admin(batman)
 hulk = Accounts.get_user_by_email("hulk@example.com")
-Accounts.grant_admin(hulk)
+Authorized.grant_admin(hulk)
 ```
 
 you can run the seeds with: `mix run priv/repo/seeds.exs`
@@ -925,7 +932,7 @@ oops - we get an error:
 ** (KeyError) key :roles not found in: 562
 
 If you are using the dot syntax, such as map.field, make sure the left-hand side of the dot is a map
-    (authorize 0.1.0) lib/authorize/core/accounts.ex:19: Authorize.Core.Accounts.grant_admin/1
+    (authorize 0.1.0) lib/authorize/core/accounts.ex:19: Authorize.Admin.Authorized.grant_admin/1
 ```
 we can fix this with pattern matching on the id and the calling the original function:
 
