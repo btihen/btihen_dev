@@ -30,7 +30,7 @@ projects: []
 
 I was recently asked about Rails API applications and considerations.  I thought it would be interesting to explore some ideas.  Here is what I explored.
 
-This code can be found at: (coming soon)
+This code can be found at: https://github.com/btihen-dev/flintstones_api
 
 ## Getting Started
 
