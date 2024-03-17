@@ -930,45 +930,7 @@ bin/rails g model PetPeople pet person
 
 ## Refactoring
 
-using raw SQL is generally not so desired so we can update our code with - I like using lambdas so my preference would be:
-
-```ruby
-class Person < ApplicationRecord
-  RELATED_PEOPLE =
-    lambda do |person_ids| RELATED_PEOPLE.call(person_ids)
-      person_ids = Array(person_ids).map(&:to_i)
-      query1 = Person.select("people.*, person_relationships.role_one AS relationship, person_relationships.person_two_id AS person_id")
-                     .joins("INNER JOIN person_relationships ON people.id = person_relationships.person_one_id")
-                     .where(person_relationships: { person_two_id: person_ids })
-      query2 = Person.select("people.*, person_relationships.role_two AS relationship, person_relationships.person_one_id AS person_id")
-                     .joins("INNER JOIN person_relationships ON people.id = person_relationships.person_two_id")
-                     .where(person_relationships: { person_one_id: person_ids })
-      Person.find_by_sql(query1.to_sql + " UNION " + query2.to_sql)
-    end
-
-  # this is an alternative way to scope instead of using the lambda and a scope statement
-  def self.related_people_for(person_ids)
-    # query for related people
-    # related_people = with_relations(person_ids)
-    related_people = RELATED_PEOPLE.call(person_ids)
-
-    # grouping allows us to return a hash with the person_id as the key (neccesary for index controller)
-    related_people_grouped = related_people.group_by(&:person_id)
-
-    # removes unwanted attributes (possibly to later or confogure json to do this)
-    related_people_grouped.transform_values! do |related_people_arr|
-      related_people_arr.map do |related_person|
-        related_person.attributes.except('created_at', 'updated_at', 'person_id')
-      end
-    end
-  end
-
-  scope :with_related_people, lambda { |person_ids| RELATED_PEOPLE.call(person_ids) }
-
-  def related_people = RELATED_PEOPLE.call(id)
-end
-```
-however I think more common would be:
+using raw SQL is generally not so desired so we can update our code with:
 ```ruby
 class Person < ApplicationRecord
   def self.with_relations(person_ids)
@@ -985,12 +947,12 @@ class Person < ApplicationRecord
     Person.find_by_sql(query1.to_sql + " UNION " + query2.to_sql)
   end
 
-  # this is an alternative way to scope instead of using the lambda and a scope statement
+  # this is an alternative way to scope instead of using the lambda and a scope statement (returns a hash)
   def self.related_people_for(person_ids)
     # query for related people
     related_people = with_relations(person_ids)
 
-    # grouping allows us to return a hash with the person_id as the key (neccesary for index controller)
+    # grouping allows us to return a hash with the person_id as the key (necessary for index controller)
     related_people_grouped = related_people.group_by(&:person_id)
 
     # removes unwanted attributes (possibly to later or confogure json to do this)
@@ -1001,8 +963,17 @@ class Person < ApplicationRecord
     end
   end
 
-  scope :with_related_people, lambda { |person_ids| with_relations(person_ids) }
+  # this is equivalent to: with_relations(person_ids) -
+  # for many using scope is clearer and more standard
+  # (they are both used the same way)
+  # People.with_related_people(ids)
+  # People.People.with_related_people(ids)
+  scope :with_related_people, lambda { |person_ids| c(person_ids) }
 
+  # this only works for an instantiated person - this works just like a has_many would
+  # jed = Person.find_by(first_name: 'Jed')
+  # jed.related_people
   def related_people = with_relations(id)
 end
+```
 ```
