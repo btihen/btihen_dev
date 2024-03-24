@@ -1,7 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
-title: "Phoenix 1.7.11 with LiveView 0.20.12 - Auth Chat"
-subtitle: "Article 2 - Exploring Authorization for Various Users"
+title: "Phoenix 1.7.11 with LiveView 0.20.12 - Using Authorization"
+subtitle: "Article 2 - Exploring Phoenix Authorization Usages"
 # Summary for listings and search engines
 summary: "Restricting access to pages - for various users"
 authors: ["btihen"]
@@ -34,6 +34,7 @@ This code can be found at: https://github.com/btihen-dev/auth_buzz
 
 ## Article Series
 
+* Article 0 (Getting Started) - [LiveView v0.20.x Intro](https://btihen.dev/posts/elixir/phoenix_1_7_10_liveview_0_20_2_starter/)
 * Article 1 (Admin Panel) - [Authorization Intro](https://btihen.dev/posts/elixir/phoenix_1_7_11_liveview_0_20_9_authorize/)
 * Article 2 (Model Auth) - Authorization Usage
 

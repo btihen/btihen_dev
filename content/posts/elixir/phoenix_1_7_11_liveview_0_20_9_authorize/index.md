@@ -1,14 +1,14 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 title: "Phoenix 1.7.11 with LiveView 0.20.9 - Authorization Intro"
-subtitle: "Article 1 - Exploring simple page restrictions"
+subtitle: "Article 1 - Simple backend Authorization Support for Static- and Live-Pages"
 # Summary for listings and search engines
 summary: "Restricting access to pages - for both static and live pages"
 authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "LiveView", "Authorization"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "LiveView"]
 date: 2024-02-24T01:01:53+02:00
-lastmod: 2024-03-09T01:01:53+02:00
+lastmod: 2024-03-24T01:01:53+02:00
 featured: true
 draft: false
 
@@ -32,10 +32,11 @@ In this article I will explore a simple authorization technique, restricting acc
 
 The source code can be found at: https://github.com/btihen-dev/phoenix_authorize
 
-## Article Sericies
+## Article Series
 
-* Article 1 (Admin Panel) - Authorization Intro (Static- and Live-Pages)
-* Article 2 (Owner Scope) - Authorization
+* Article 0 (Getting Started) - [LiveView v0.20.x Intro](https://btihen.dev/posts/elixir/phoenix_1_7_10_liveview_0_20_2_starter/)
+* Article 1 (Admin Panel) - Authorization Intro (Backend Authorization Support for Static- and Live-Pages)
+* Article 2 (Using Auth) - [Using Authorization](https://btihen.dev/posts/elixir/phoenix_1_7_11_liveview_0_20_12_auth_chat/))
 
 ## Getting started
 

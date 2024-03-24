@@ -1,14 +1,14 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 title: "Phoenix 1.7 with LiveView 0.20 Starter Demo"
-subtitle: "Exploring and new Phoenix / LiveView features"
+subtitle: "Article 0 - Exploring and new Phoenix / LiveView features"
 # Summary for listings and search engines
 summary: "Quick features and sample usage of Phoenix and LiveView (with minimal explanations)"
 authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "LiveView"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "LiveView"]
 date: 2023-12-31T01:01:53+02:00
-lastmod: 2024-01-06T01:01:53+02:00
+lastmod: 2024-03-24T01:01:53+02:00
 featured: true
 draft: false
 
@@ -31,6 +31,12 @@ projects: []
 It's been a while since I have had time to code in Elixir.  In this article I wanted to explore its current usage and features.
 
 We will build toward a flexible Kanban / Task Tracker.  We will see how far we get.  The main point is to explore features and create a quasi-tutorial (assuming some pre-existing knowledge).
+
+## Article Series
+
+* Article 0 (Getting Started) - LiveView v0.20.x Intro
+* Article 1 (Admin Panel) - [Authorization Intro](https://btihen.dev/posts/elixir/phoenix_1_7_11_liveview_0_20_9_authorize/)
+* Article 2 (Model Auth) - [Using Authorization](https://btihen.dev/posts/elixir/phoenix_1_7_11_liveview_0_20_12_auth_chat/)
 
 ## Getting started
 
