@@ -379,3 +379,343 @@ mix ecto.migrate
 mix test
 ```
 
+## Manage Topic Members in the Admin GUI
+
+the goal is to be able to add a multi-select in the format that we can do something like the following in our topic form_component;
+```elixir
+# lib/authorize_web/live/admin/topic_live/form_component.ex
+        <.input field={@form[:title]} type="text" label="Title" />
+        <!-- a multi-select of users to add to topics as members -->
+        <select name="members[]" multiple id="members" class="form-control">
+          <%= for user <- @users do %>
+            <%= selected = user.id in Enum.map(@topic.members, & &1.id) %>
+            <option value={user.id} selected={selected}><%= user.email %></option>
+          <% end %>
+        </select>
+        <:actions>
+          <.button phx-disable-with="Saving...">Save Topic</.button>
+        </:actions>
+```
+
+but we need to do some prep-work first.
+
+Let's build the `TopicMember` context - let's start with being able to list them:
+```elixir
+# lib/authorize/buzz/topic_members.ex
+defmodule Authorize.Buzz.TopicMembers do
+  import Ecto.Query, warn: false
+  alias Authorize.Repo
+
+  alias Authorize.Buzz.TopicMembers.TopicMember
+
+  def topic_members_by_id(id) do
+    query = from(t in TopicMember, where: t.topic_id == ^id)
+    Repo.all(query)
+  end
+end
+```
+
+Let's update the `Topic` Context - lets start by preloading members when we call up topics:
+
+now we can preload members (into our topics with) to change from:
+```elixir
+  def list_topics, do: Repo.all(Topic)
+
+  def get_topic!(id), do: Repo.get!(Topic, id)
+```
+
+to load (sequentially) all our has_many models:
+```elixir
+  def list_topics do
+    Repo.all(Topic)
+    |> Repo.preload(:topic_members) # load first step (has many)
+    |> Repo.preload(topic_members: :member) # load join table
+    |> Repo.preload(:members) # finally load the model wanted!
+  end
+
+  def get_topic!(id) do
+    Repo.get!(Topic, id)
+    |> Repo.preload(:topic_members)
+    |> Repo.preload(topic_members: :member)
+    |> Repo.preload(:members)
+  end
+```
+
+or more succinctly:
+```elixir
+  def list_topics do
+    Repo.all(Topic)
+    |> Repo.preload([:topic_members, [topic_members: :member], :members])
+  end
+
+  def get_topic!(id) do
+    Repo.get!(Topic, id)
+    |> Repo.preload([:topic_members, [topic_members: :member], :members])
+  end
+```
+
+lastly the update is a bit more complicated
+```elixir
+  def update_topic(%Topic{} = topic, attrs) do
+    topic
+    |> Topic.changeset(attrs)
+    |> Repo.update()
+  end
+```
+to this.  We could figure out what's different, but that is complex. It is perhaps easier to delete the previous records and recreate a new records. _(Ideally this would be done within a transaction - ecto `multi` - we can look at this later)_
+```elixir
+  def update_topic(%Topic{} = topic, attrs) do
+    topic_members = TopicMembers.topic_members_by_id(topic.id)
+    if is_list(topic_members) && !Enum.empty?(topic_members) do
+      from(t in TopicMember, where: t.topic_id == ^topic.id) |> Repo.delete_all()
+    end
+
+    member_ids = Map.get(attrs, "member_ids") || []
+    if is_list(member_ids) && !Enum.empty?(member_ids) do
+      topic_members =
+        Enum.map(member_ids, fn member_id ->
+          now = DateTime.utc_now() |> DateTime.truncate(:second)
+          %{topic_id: topic.id, member_id: member_id, inserted_at: now, updated_at: now}
+        end)
+      Repo.insert_all(TopicMember, topic_members)
+    end
+
+    topic
+    |> Topic.changeset(attrs)
+    |> Repo.update()
+  end
+```
+
+so now the full module should look like:
+```elixir
+# lib/authorize/buzz/topics.ex
+defmodule Authorize.Buzz.Topics do
+  import Ecto.Query, warn: false
+  alias Authorize.Repo
+
+  alias Authorize.Buzz.Topics.Topic
+  alias Authorize.Buzz.TopicMembers
+  alias Authorize.Buzz.TopicMembers.TopicMember
+
+  def list_topics do
+    Repo.all(Topic) # |> Repo.preload(:members)
+    |> Repo.preload(:topic_members)
+    |> Repo.preload(topic_members: :member)
+    |> Repo.preload(:members)
+    # |> Repo.preload([:topic_members, [topic_members: :member], :members])
+  end
+
+  def get_topic!(id) do
+    Repo.get!(Topic, id)
+    |> Repo.preload(:topic_members)
+    |> Repo.preload(topic_members: :member)
+    |> Repo.preload(:members)
+    # |> Repo.preload([:topic_members, [topic_members: :member], :members])
+    |> IO.inspect(label: "get_topic!")
+  end
+
+  def create_topic(attrs \\ %{}) do
+    IO.inspect(attrs, label: "create_topic attrs")
+    %Topic{}
+    |> Topic.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_topic(%Topic{} = topic, attrs) do
+    topic_members = TopicMembers.topic_members_by_id(topic.id)
+    if is_list(topic_members) && !Enum.empty?(topic_members) do
+      from(t in TopicMember, where: t.topic_id == ^topic.id) |> Repo.delete_all()
+    end
+
+    member_ids = Map.get(attrs, "member_ids") || []
+    if is_list(member_ids) && !Enum.empty?(member_ids) do
+      topic_members =
+        Enum.map(member_ids, fn member_id ->
+          now = DateTime.utc_now() |> DateTime.truncate(:second)
+          %{topic_id: topic.id, member_id: member_id, inserted_at: now, updated_at: now}
+        end)
+      Repo.insert_all(TopicMember, topic_members)
+    end
+
+    topic
+    |> Topic.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def delete_topic(%Topic{} = topic) do
+    Repo.delete(topic)
+  end
+
+  def change_topic(%Topic{} = topic, attrs \\ %{}) do
+    Topic.changeset(topic, attrs)
+  end
+end
+```
+
+Now we need to add users to the `index` and `show` mount functions:
+```elixir
+# lib/authorize_web/live/admin/topic_live/index.ex
+defmodule AuthorizeWeb.Admin.TopicLive.Index do
+  use AuthorizeWeb, :live_view
+
+  alias Authorize.Buzz.Topics
+  alias Authorize.Buzz.Topics.Topic
+  # add this line
+  alias Authorize.Admin.Authorized
+
+  @impl true
+  def mount(_params, _session, socket) do
+    # add the next 2 lines
+    users = Authorized.list_users()
+    socket = assign(socket, :users, users)
+    {:ok, stream(socket, :topics, Topics.list_topics())}
+  end
+  # ...
+end
+```
+
+and show with;
+```elixir
+# lib/authorize_web/live/admin/topic_live/show.ex
+defmodule AuthorizeWeb.Admin.TopicLive.Show do
+  use AuthorizeWeb, :live_view
+
+  alias Authorize.Buzz.Topics
+  alias Authorize.Admin.Authorized
+
+  @impl true
+  def mount(_params, _session, socket) do
+    users = Authorized.list_users()
+    socket = assign(socket, :users, users)
+    {:ok, socket}
+  end
+  # ...
+end
+```
+
+In order to pass the users we acquired in `index.ex` and `show.ex` we need to update `index.html.heex` and `show.html.heex` by adding `users={@users}` to the `live_component` parameters - so it would now look like:
+```elixir
+# lib/authorize_web/live/admin/topic_live/index.html.heex
+<!-- ... -->
+<.modal :if={@live_action in [:new, :edit]}
+  id="topic-modal" show on_cancel={JS.patch(~p"/admin/topics")}>
+  <.live_component
+    module={AuthorizeWeb.Admin.TopicLive.FormComponent}
+    id={@topic.id || :new}
+    title={@page_title}
+    action={@live_action}
+    topic={@topic}
+    users={@users}
+    patch={~p"/admin/topics"}
+  />
+</.modal>
+```
+
+and `show` changes too:
+```elixir
+# lib/authorize_web/live/admin/topic_live/show.html.heex
+<!-- ... -->
+<.modal :if={@live_action == :edit}
+  id="topic-modal" show on_cancel={JS.patch(~p"/admin/topics/#{@topic}")}>
+  <.live_component
+    module={AuthorizeWeb.Admin.TopicLive.FormComponent}
+    id={@topic.id}
+    title={@page_title}
+    action={@live_action}
+    topic={@topic}
+    users={@users}
+    patch={~p"/admin/topics/#{@topic}"}
+  />
+</.modal>
+```
+
+now we can finally add members to the topic form (with a multi-select) by changing
+from
+```elixir
+         <.input field={@form[:title]} type="text" label="Title" />
+         <:actions>
+           <.button phx-disable-with="Saving...">Save Topic</.button>
+         </:actions>
+```
+
+to
+```elixir
+# lib/authorize_web/live/admin/topic_live/form_component.ex
+        <.input field={@form[:title]} type="text" label="Title" />
+
+        <!-- add a multi-select for members -->
+        <select name="members[]" multiple id="members" class="form-control">
+          <%= for user <- @users do %>
+            <%= selected = user.id in Enum.map(@topic.members, & &1.id) %>
+            <option value={user.id} selected={selected}><%= user.email %></option>
+          <% end %>
+        </select>
+
+        <:actions>
+          <.button phx-disable-with="Saving...">Save Topic</.button>
+        </:actions>
+```
+
+finally we need to update the form handlers from:
+```elixir
+# lib/authorize_web/live/admin/topic_live/form_component.ex
+  def handle_event("validate", %{"topic" => params}, socket) do
+    changeset =
+      socket.assigns.topic
+      |> Topics.change_topic(params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign_form(socket, changeset)}
+  end
+
+  def handle_event("save", %{"topic" => params}, socket) do
+    save_topic(socket, socket.assigns.action, params)
+  end
+  # ...
+end
+```
+
+to adding the following:
+```elixir
+    topic_params = Map.get(params, "topic")
+    member_ids = Map.get(params, "members") || []
+    params = Map.put(topic_params, "member_ids", member_ids)
+```
+to collect the new params sent by the form - so it now looks like:
+
+```elixir
+# lib/authorize_web/live/admin/topic_live/form_component.ex
+  def handle_event("validate",  params, socket) do
+    topic_params = Map.get(params, "topic")
+    member_ids = Map.get(params, "members") || []
+    params = Map.put(topic_params, "member_ids", member_ids)
+
+    changeset =
+      socket.assigns.topic
+      |> Topics.change_topic(params)
+      |> Map.put(:action, :validate)
+
+     {:noreply, assign_form(socket, changeset)}
+   end
+
+  def handle_event("save", params, socket) do
+    topic_params = Map.get(params, "topic")
+    member_ids = Map.get(params, "members") || []
+    params = Map.put(topic_params, "member_ids", member_ids)
+
+    save_topic(socket, socket.assigns.action, params)
+  end
+  # ...
+end
+```
+
+let's ensure the that we can add and remove users from:
+`http://localhost:4000/admin/topics/1/edit`
+
+```bash
+mix test
+git add .
+git commit -m "add memmbership management to the message topics"s
+```
+
+```
