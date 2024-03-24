@@ -718,4 +718,72 @@ git add .
 git commit -m "add memmbership management to the message topics"s
 ```
 
+## Display Topic Members in Admin Panel
+
+Now lets show a comma separated list of members in our topics index table - to do this we can add:
+```elixir
+  <:col :let={{_id, topic}} label="Members' Emails">
+    <%=
+      topic.members
+      |> Enum.map(& &1.email)
+      |> Enum.join(", ")
+    %>
+  </:col>
+```
+
+so now our table looks more like:
+```elixir
+# lib/authorize_web/live/admin/topic_live/index.html.heex
+  # ...
+  <:col :let={{_id, topic}} label="Title">
+    <%= topic.title %>
+  </:col>
+
+  <:col :let={{_id, topic}} label="Members' Emails">
+    <%=
+      topic.members
+      |> Enum.map(& &1.email)
+      |> Enum.join(", ")
+    %>
+  </:col>
+  # ...
+```
+
+and similarly in the show we will display a list with by adding:
+```elixir
+<:item title="Members">
+    <ul>
+      <%= for member <- @topic.members do %>
+        <li><%= member.email %></li>
+      <% end %>
+    </ul>
+  </:item>
+```
+
+to the `list` component:
+```elixir
+# lib/authorize_web/live/admin/topic_live/show.html.heex
+# ...
+<.list>
+  <:item title="Title">
+    <%= @topic.title %>
+  </:item>
+
+  <:item title="Members">
+    <ul>
+      <%= for member <- @topic.members do %>
+        <li><%= member.email %></li>
+      <% end %>
+    </ul>
+  </:item>
+</.list>
+# ...
+```
+
+now check by looking at: `http://localhost/admin/topics` and `http://localhost:4040/admin/topics/`
+
+```bash
+git add .
+git commit -m "display topic members in admin panel
+```
 ```
