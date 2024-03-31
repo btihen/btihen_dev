@@ -60,7 +60,7 @@ The end goal is to return one or many records in the following format - without 
 }
 ```
 
-This code can (soon) be found at: https://github.com/btihen-dev/api_intro
+This code can be found at: https://github.com/btihen-dev/rails_api_intro
 
 ## Getting Started
 
