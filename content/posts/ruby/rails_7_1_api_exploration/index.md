@@ -60,7 +60,7 @@ The end goal is to return one or many records in the following format - without 
 }
 ```
 
-This code can be found at: https://github.com/btihen-dev/bedrock
+This code can (soon) be found at: https://github.com/btihen-dev/api_intro
 
 ## Getting Started
 
@@ -1147,3 +1147,11 @@ cool lets wrap this up:
 git add .
 git commit -m "fixed n+1 query when returning nested person data"
 ```
+
+Note: you can follow the same logic to write controllers for Jobs and Companies.
+
+## Resources
+
+* https://guides.rubyonrails.org/api_app.html
+* https://www.youtube.com/watch?v=5pr1zCYqK00
+* https://medium.com/swlh/beginners-guide-to-building-a-rails-api-7b22aa7ec2fb
