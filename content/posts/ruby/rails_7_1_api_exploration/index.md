@@ -1134,25 +1134,62 @@ when we query `index` with:
 we notice we have a problem we need many queries to return all the people, their jobs and workplaces.  Here is an abbreviated log from such a request (with over 100 queries to process our results).
 
 ```log
-Started GET "/api/v3/people.json" for ::1 at 2024-03-31 13:11:12 +0200
-Processing by Api::V3::PeopleController#index as JSON
-  Person Load (3.4ms)  SELECT "people".* FROM "people"
-  ↳ app/controllers/api/v3/people_controller.rb:15:in `index'
-  PersonJob Load (1.4ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" = $1  [["person_id", 1]]
-  ↳ app/controllers/api/v3/people_controller.rb:15:in `index'
-  Job Load (1.1ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" = $1 LIMIT $2  [["id", 1], ["LIMIT", 1]]
-  ↳ app/controllers/api/v3/people_controller.rb:15:in `index'
-  Company Load (1.1ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" = $1 LIMIT $2  [["id", 1], ["LIMIT", 1]]
+Started GET "/api/v2/people.json" for ::1 at 2024-03-31 19:38:46 +0200
+  ActiveRecord::SchemaMigration Load (3.5ms)  SELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC
+Processing by Api::V2::PeopleController#index as JSON
+  Person Load (73.3ms)  SELECT "people".* FROM "people"
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  PersonJob Load (2.4ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" = $1  [["person_id", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Job Load (1.2ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" = $1 LIMIT $2  [["id", 1], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Company Load (0.5ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" = $1 LIMIT $2  [["id", 1], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  PersonJob Load (0.7ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" = $1  [["person_id", 2]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Job Load (0.7ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" = $1 LIMIT $2  [["id", 2], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Company Load (0.7ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" = $1 LIMIT $2  [["id", 13], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  PersonJob Load (0.5ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" = $1  [["person_id", 3]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Job Load (0.6ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" = $1 LIMIT $2  [["id", 4], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Company Load (0.5ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" = $1 LIMIT $2  [["id", 12], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Job Load (0.5ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" = $1 LIMIT $2  [["id", 3], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Company Load (0.4ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" = $1 LIMIT $2  [["id", 8], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in
+
   ...
-  PersonJob Load (1.2ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" = $1  [["person_id", 52]]
-  ↳ app/controllers/api/v3/people_controller.rb:15:in `index'
-  Job Load (1.2ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" = $1 LIMIT $2  [["id", 21], ["LIMIT", 1]]
-  ↳ app/controllers/api/v3/people_controller.rb:15:in `index'
-  Company Load (1.5ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" = $1 LIMIT $2  [["id", 15], ["LIMIT", 1]]
-  ↳ app/controllers/api/v3/people_controller.rb:15:in `index'
-Completed 200 OK in 248ms (Views: 0.4ms | ActiveRecord: 146.3ms | Allocations: 105119)
+
+    PersonJob Load (2.2ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" = $1  [["person_id", 48]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Job Load (1.8ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" = $1 LIMIT $2  [["id", 19], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Company Load (1.3ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" = $1 LIMIT $2  [["id", 4], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  PersonJob Load (1.6ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" = $1  [["person_id", 49]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Job Load (3.9ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" = $1 LIMIT $2  [["id", 20], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  CACHE Company Load (0.0ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" = $1 LIMIT $2  [["id", 2], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  PersonJob Load (1.1ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" = $1  [["person_id", 50]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  PersonJob Load (1.0ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" = $1  [["person_id", 51]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  PersonJob Load (1.6ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" = $1  [["person_id", 52]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Job Load (1.9ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" = $1 LIMIT $2  [["id", 21], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+  Company Load (1.1ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" = $1 LIMIT $2  [["id", 15], ["LIMIT", 1]]
+  ↳ app/controllers/api/v2/people_controller.rb:64:in `render_json_person'
+
+Completed 200 OK in 435ms (Views: 1.9ms | ActiveRecord: 262.0ms | Allocations: 129846)
 ```
-When the number of queries grows for each record called - this is called an N+1 query and are very inefficient and slow with large amounts of data.  Notice this request took `250ms` to return to us.
+When the number of queries grows for each record called - this is called an N+1 query and are very inefficient and slow with large amounts of data.  Notice this request took `435ms` to return to us.
 
 We can fix (refactor our queries with `includes`) this will let the database return associated data with a fixed number of queries - that doesn't grow as we return more data.  To do this lets change:
 
@@ -1292,7 +1329,7 @@ now when we test index again with:
 
 we see significant improvements:
 - queries from over 100 down to 4 (that won't grow)
-- response time from 260ms down to 60ms (that won't grow much)
+- response time from 450ms down to 250ms (that won't grow much as we add records)
 
 Here is the log/proof.
 ```log
@@ -1306,7 +1343,7 @@ Processing by Api::V2::PeopleController#index as JSON
   ↳ app/controllers/api/v2/people_controller.rb:14:in `index'
   Company Load (1.3ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)  [["id", 1], ["id", 13], ["id", 12], ["id", 8], ["id", 2], ["id", 5], ["id", 6], ["id", 14], ["id", 7], ["id", 10], ["id", 3], ["id", 9], ["id", 11], ["id", 4], ["id", 15]]
   ↳ app/controllers/api/v2/people_controller.rb:14:in `index'
-Completed 200 OK in 103ms (Views: 1.0ms | ActiveRecord: 57.2ms | Allocations: 36896)
+Completed 200 OK in 260ms (Views: 10.8ms | ActiveRecord: 182.1ms | Allocations: 59705)
 ```
 
 cool lets wrap this up:
@@ -1314,6 +1351,510 @@ cool lets wrap this up:
 git add .
 git commit -m "fixed n+1 query when returning nested person data"
 ```
+
+## API - V3 (virtual fields)
+
+Sometimes we need to return calculated or other virtual attributes.  We will show two approaches (Ruby methods and SQL calculations)
+
+### Using Ruby Methods
+
+We want to include the `full_name`, and `usual_name` - both calculated fields using ruby.
+
+Let's add our new route for our new return:
+
+```ruby
+Rails.application.routes.draw do
+  resources :jobs
+  resources :companies
+	resources :people
+
+	namespace :api do
+	  namespace :v0 do
+		  resources :people
+	  end
+	  namespace :v1 do
+		  resources :people
+	  end
+	  namespace :v2 do
+		  resources :people
+	  end
+	  namespace :v3 do
+		  resources :people
+	  end
+	end
+
+  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
+  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  # Defines the root path route ("/")
+  root "people#index"
+end
+```
+
+let's add the following methods to the people model so now it would look like:
+```ruby
+class Person < ApplicationRecord
+  has_many :person_jobs, dependent: :destroy
+  has_many :jobs, through: :person_jobs
+  has_many :companies, through: :jobs
+
+  normalizes :first_name, :nick_name, :last_name, :given_name,
+             with: ->(value) { value.strip }
+
+  validates :first_name,
+            uniqueness: { scope: :last_name,
+                          message: "first- and last-name already exists" }
+  validates :first_name, presence: true
+  validates :last_name, presence: true
+  validates :gender, inclusion: { in: %w[male female non-binary] }
+
+  def full_name = "#{first_name} #{last_name}"
+  def usual_name = "#{nick_name || first_name} #{last_name}"
+end
+```
+
+This will return a person, formal_name and common_name and we only return given_name still as a normal attribute
+
+This will necessitate updating our json_rendering too - by adding:
+
+`methods: [ :usual_name, :full_name ],`
+
+to the controller's `render_json_person` method:
+
+So now the method would look like:
+
+```ruby
+def render_json_person(ar_query, options = {})
+  render json: ar_query.as_json(
+    methods: [ :usual_name, :full_name ],
+    only: [ :given_name ],
+    include: {
+      person_jobs: {
+        only: [ :start_date, :end_date ],
+        include: {
+          job: {
+            only: [ :role ],
+            include: {
+              company: { only: [ :id, :name ] }
+            }
+          }
+        }
+      }
+    }
+  ), **options
+end
+```
+
+Now that we know what we want to do let's build the controller:
+```ruby
+mkdir app/controllers/api/v3
+
+cat << EOF > app/controllers/api/v3/people_controller.rb
+# returns nested jobs and companies for each person.
+module Api
+  module V3
+    class PeopleController < JsonController
+      before_action :set_person, only: %i[ show update destroy ]
+
+      # GET /people
+      def index
+        @people = person_query.all
+
+        render_json_person(@people)
+      end
+
+      # GET /people/1
+      def show
+        render_json_person(@person)
+      end
+
+      # POST /people
+      def create
+        @person = Person.new(person_params)
+
+        if @person.save
+          options = { status: :created, location: @person }
+          render_json_person(@person, options)
+        else
+          render json: @person.errors, status: :unprocessable_entity
+        end
+      end
+
+      # PATCH/PUT /people/1
+      def update
+        if @person.update(person_params)
+          options = { status: :ok, location: @person }
+          render_json_person(@person, options)
+        else
+          render json: @person.errors, status: :unprocessable_entity
+        end
+      end
+
+      # DELETE /people/1
+      def destroy
+        @person.destroy!
+      end
+
+      private
+
+      def person_query = Person.includes(person_jobs: [job: :company])
+
+      # Use callbacks to share common setup or constraints between actions.
+      def set_person
+        @person = person_query.where(id: params[:id])
+                              .limit(1).first
+      end
+
+      # Only allow a list of trusted parameters through.
+      def person_params
+        params.require(:person)
+              .permit(:first_name, :last_name, :nick_name, :given_name, :gender)
+      end
+
+      def render_json_person(ar_query, options = {})
+        render json: ar_query.as_json(
+          methods: [ :usual_name, :full_name ],
+          only: [ :given_name ],
+          include: {
+            person_jobs: {
+              only: [ :start_date, :end_date ],
+              include: {
+                job: {
+                  only: [ :role ],
+                  include: {
+                    company: { only: [ :id, :name ] }
+                  }
+                }
+              }
+            }
+          }
+        ), **options
+      end
+    end
+  end
+end
+EOF
+```
+
+lets test:
+```json
+curl http://localhost:3030/api/v3/people/7.json
+
+{ "given_name":null,
+  "usual_name":"Fred Flintstone",
+  "full_name":"Fredrick Jay Flintstone",
+  "person_jobs": [
+    { "start_date":"1980-01-01",
+      "end_date":null,
+      "job": {
+        "role":"crane operator",
+        "company": {
+          "id":5,
+          "name":"Bedrock \u0026 Gravel Quarry Company"
+        }
+      }
+    }
+  ]
+}
+```
+
+Cool this works let's be sure we still have an efficient query for index:
+
+```json
+curl http://localhost:3030/api/v3/people.json
+```
+
+let's look at the rails log:
+```log
+Started GET "/api/v3/people.json" for ::1 at 2024-03-31 19:23:07 +0200
+  ActiveRecord::SchemaMigration Load (3.4ms)  SELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC
+Processing by Api::V3::PeopleController#index as JSON
+  Person Load (85.5ms)  SELECT "people".* FROM "people"
+  ↳ app/controllers/api/v3/people_controller.rb:63:in `render_json_person'
+  PersonJob Load (2.0ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52)  [["person_id", 1], ["person_id", 2], ["person_id", 3], ["person_id", 4], ["person_id", 5], ["person_id", 6], ["person_id", 7], ["person_id", 8], ["person_id", 9], ["person_id", 10], ["person_id", 11], ["person_id", 12], ["person_id", 13], ["person_id", 14], ["person_id", 15], ["person_id", 16], ["person_id", 17], ["person_id", 18], ["person_id", 19], ["person_id", 20], ["person_id", 21], ["person_id", 22], ["person_id", 23], ["person_id", 24], ["person_id", 25], ["person_id", 26], ["person_id", 27], ["person_id", 28], ["person_id", 29], ["person_id", 30], ["person_id", 31], ["person_id", 32], ["person_id", 33], ["person_id", 34], ["person_id", 35], ["person_id", 36], ["person_id", 37], ["person_id", 38], ["person_id", 39], ["person_id", 40], ["person_id", 41], ["person_id", 42], ["person_id", 43], ["person_id", 44], ["person_id", 45], ["person_id", 46], ["person_id", 47], ["person_id", 48], ["person_id", 49], ["person_id", 50], ["person_id", 51], ["person_id", 52]]
+  ↳ app/controllers/api/v3/people_controller.rb:63:in `render_json_person'
+  Job Load (2.1ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)  [["id", 1], ["id", 2], ["id", 4], ["id", 3], ["id", 5], ["id", 6], ["id", 8], ["id", 10], ["id", 7], ["id", 12], ["id", 11], ["id", 16], ["id", 9], ["id", 17], ["id", 15], ["id", 13], ["id", 14], ["id", 18], ["id", 19], ["id", 20], ["id", 21]]
+  ↳ app/controllers/api/v3/people_controller.rb:63:in `render_json_person'
+  Company Load (0.8ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)  [["id", 1], ["id", 13], ["id", 8], ["id", 12], ["id", 2], ["id", 5], ["id", 14], ["id", 6], ["id", 9], ["id", 11], ["id", 3], ["id", 7], ["id", 10], ["id", 4], ["id", 15]]
+  ↳ app/controllers/api/v3/people_controller.rb:63:in `render_json_person'
+Completed 200 OK in 232ms (Views: 1.3ms | ActiveRecord: 167.9ms | Allocations: 59603)
+```
+
+cool this seems to work and is quite straightforward.
+
+Let's snapshot this:
+```bash
+git add .
+git commit -m "add ruby calculated values to our response"
+```
+
+### Using SQL Calculations
+
+Let's see if we can fix this slow response by using SQL select to return pre-calculated and included values to our model.
+
+With SQL we will return `formal_name` and `common_name`
+
+Let's add a new route for our newest breaking change:
+
+```ruby
+Rails.application.routes.draw do
+  resources :jobs
+  resources :companies
+	resources :people
+
+	namespace :api do
+	  namespace :v0 do
+		  resources :people
+	  end
+	  namespace :v1 do
+		  resources :people
+	  end
+	  namespace :v2 do
+		  resources :people
+	  end
+	  namespace :v3 do
+		  resources :people
+	  end
+	  namespace :v4 do
+		  resources :people
+	  end
+	end
+
+  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
+  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  # Defines the root path route ("/")
+  root "people#index"
+end
+```
+
+We will we will add our virtual calculated attributes lets add:
+* `formal_name` (first name and last name)
+  `CONCAT(people.first_name, ' ', people.last_name) AS formal_name`
+* `common_name` (nick_name if available otherwise first_name and last_name)
+  ```SQL
+  CASE
+    WHEN people.nick_name IS NOT NULL AND people.nick_name != '' THEN
+      CONCAT(people.nick_name, ' ', people.last_name)
+    ELSE
+      CONCAT(people.first_name, ' ', people.last_name)
+  END AS common_name
+  ```
+
+To do this we can use:
+```ruby
+def person_query
+  Person.includes(person_jobs: [job: :company])
+        .select(%{people.*,
+                 CONCAT(people.first_name, ' ', people.last_name) AS formal_name,
+                 CASE
+                   WHEN people.nick_name IS NOT NULL AND people.nick_name != '' THEN
+                     CONCAT(people.nick_name, ' ', people.last_name)
+                   ELSE
+                     CONCAT(people.first_name, ' ', people.last_name)
+                 END AS common_name})
+end
+```
+
+This will return a person, formal_name and common_name and we only return given_name still as a normal attribute
+
+This will necessitate updating our json_rendering too - by adding `methods: [:common_name, :formal_name]`
+
+So now the method would look like:
+
+```ruby
+def render_json_person(ar_query, options = {})
+  render json: ar_query.as_json(
+    methods: [:common_name, :formal_name],
+    only: [ :given_name ],
+    include: {
+      person_jobs: {
+        only: [ :start_date, :end_date ],
+        include: {
+          job: {
+            only: [ :role ],
+            include: {
+              company: { only: [ :id, :name ] }
+            }
+          }
+        }
+      }
+    }
+  ), **options
+end
+```
+
+Now that we know what we want to do let's build the controller:
+```ruby
+mkdir app/controllers/api/v4
+
+cat << EOF > app/controllers/api/v4/people_controller.rb
+# returns nested jobs and companies for each person.
+module Api
+  module V4
+    class PeopleController < JsonController
+      before_action :set_person, only: %i[ show update destroy ]
+
+      # GET /people
+      def index
+        @people = person_query.all
+
+        render_json_person(@people)
+      end
+
+      # GET /people/1
+      def show
+        render_json_person(@person)
+      end
+
+      # POST /people
+      def create
+        @person = Person.new(person_params)
+
+        if @person.save
+          options = { status: :created, location: @person }
+          render_json_person(@person, options)
+        else
+          render json: @person.errors, status: :unprocessable_entity
+        end
+      end
+
+      # PATCH/PUT /people/1
+      def update
+        if @person.update(person_params)
+          options = { status: :ok, location: @person }
+          render_json_person(@person, options)
+        else
+          render json: @person.errors, status: :unprocessable_entity
+        end
+      end
+
+      # DELETE /people/1
+      def destroy
+        @person.destroy!
+      end
+
+      private
+
+      def person_query
+        Person.includes(person_jobs: [job: :company])
+              .select(%{people.*,
+                      CONCAT(people.first_name, ' ', people.last_name) AS formal_name,
+                      CASE
+                        WHEN people.nick_name IS NOT NULL AND people.nick_name != '' THEN
+                          CONCAT(people.nick_name, ' ', people.last_name)
+                        ELSE
+                          CONCAT(people.first_name, ' ', people.last_name)
+                      END AS common_name})
+      end
+
+      # Use callbacks to share common setup or constraints between actions.
+      def set_person
+        @person = person_query.where(id: params[:id])
+                              .limit(1).first
+      end
+
+      # Only allow a list of trusted parameters through.
+      def person_params
+        params.require(:person)
+              .permit(:first_name, :last_name, :nick_name, :given_name, :gender)
+      end
+
+      def render_json_person(ar_query, options = {})
+        render json: ar_query.as_json(
+          methods: [:common_name, :formal_name],
+          only: [ :given_name ],
+          include: {
+            person_jobs: {
+              only: [ :start_date, :end_date ],
+              include: {
+                job: {
+                  only: [ :role ],
+                  include: {
+                    company: { only: [ :id, :name ] }
+                  }
+                }
+              }
+            }
+          }
+        ), **options
+      end
+    end
+  end
+end
+EOF
+```
+
+lets test:
+```json
+curl http://localhost:3030/api/v3/people/7.json
+
+{ "given_name":null,
+  "common_name":"Fred Flintstone",
+  "formal_name":"Fredrick Jay Flintstone",
+  "person_jobs": [
+    { "start_date":"1980-01-01",
+      "end_date":null,
+      "job": {
+        "role":"crane operator",
+        "company": {
+          "id":5,
+          "name":"Bedrock \u0026 Gravel Quarry Company"
+        }
+      }
+    }
+  ]
+}
+```
+
+Cool this works let's be sure we still have an efficient query for index:
+
+```json
+curl http://localhost:3030/api/v4/people.json
+```
+
+let's look at the rails log:
+```log
+Started GET "/api/v4/people.json" for ::1 at 2024-03-31 19:50:10 +0200
+  ActiveRecord::SchemaMigration Load (4.0ms)  SELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC
+Processing by Api::V4::PeopleController#index as JSON
+  Person Load (4.0ms)  SELECT people.*,
+                  CONCAT(people.first_name, ' ', people.last_name) AS formal_name,
+                  CASE
+                    WHEN people.nick_name IS NOT NULL AND people.nick_name != '' THEN
+                      CONCAT(people.nick_name, ' ', people.last_name)
+                    ELSE
+                      CONCAT(people.first_name, ' ', people.last_name)
+                  END AS common_name FROM "people"
+  ↳ app/controllers/api/v4/people_controller.rb:74:in `render_json_person'
+  PersonJob Load (1.5ms)  SELECT "person_jobs".* FROM "person_jobs" WHERE "person_jobs"."person_id" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52)  [["person_id", 1], ["person_id", 2], ["person_id", 3], ["person_id", 4], ["person_id", 5], ["person_id", 6], ["person_id", 7], ["person_id", 8], ["person_id", 9], ["person_id", 10], ["person_id", 11], ["person_id", 12], ["person_id", 13], ["person_id", 14], ["person_id", 15], ["person_id", 16], ["person_id", 17], ["person_id", 18], ["person_id", 19], ["person_id", 20], ["person_id", 21], ["person_id", 22], ["person_id", 23], ["person_id", 24], ["person_id", 25], ["person_id", 26], ["person_id", 27], ["person_id", 28], ["person_id", 29], ["person_id", 30], ["person_id", 31], ["person_id", 32], ["person_id", 33], ["person_id", 34], ["person_id", 35], ["person_id", 36], ["person_id", 37], ["person_id", 38], ["person_id", 39], ["person_id", 40], ["person_id", 41], ["person_id", 42], ["person_id", 43], ["person_id", 44], ["person_id", 45], ["person_id", 46], ["person_id", 47], ["person_id", 48], ["person_id", 49], ["person_id", 50], ["person_id", 51], ["person_id", 52]]
+  ↳ app/controllers/api/v4/people_controller.rb:74:in `render_json_person'
+  Job Load (2.2ms)  SELECT "jobs".* FROM "jobs" WHERE "jobs"."id" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)  [["id", 1], ["id", 2], ["id", 4], ["id", 3], ["id", 5], ["id", 6], ["id", 8], ["id", 10], ["id", 7], ["id", 12], ["id", 11], ["id", 16], ["id", 9], ["id", 17], ["id", 15], ["id", 13], ["id", 14], ["id", 18], ["id", 19], ["id", 20], ["id", 21]]
+  ↳ app/controllers/api/v4/people_controller.rb:74:in `render_json_person'
+  Company Load (1.0ms)  SELECT "companies".* FROM "companies" WHERE "companies"."id" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)  [["id", 1], ["id", 13], ["id", 8], ["id", 12], ["id", 2], ["id", 5], ["id", 14], ["id", 6], ["id", 9], ["id", 11], ["id", 3], ["id", 7], ["id", 10], ["id", 4], ["id", 15]]
+  ↳ app/controllers/api/v4/people_controller.rb:74:in `render_json_person'
+Completed 200 OK in 240ms (Views: 10.6ms | ActiveRecord: 85.6ms | Allocations: 60733)
+```
+
+The overall response time is about the same: 240ms.
+
+The good thing with the more involved approach is that we have reduced ActiveRecord time from 168ms to 86ms.  with very large database returns this may provide a performance boost, but not really in this case, but it is still good to know.
+
+Let's snapshot this:
+```bash
+git add .
+git commit -m "add SQL calculated values to our response"
+```
+
+### Further DB optimization
+
+Another approach for further speed improvements would be to return everything as an attribute, avoid creating objects altogether and rendering all the attributes manually.
+
+As this approach is very non-rails and takes considerable effort, this should be reserved for when it is really needed.
+
+## Other APIs (Job and Company)
 
 Note: you can follow the same logic to write controllers for Jobs and Companies.
 
