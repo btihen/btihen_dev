@@ -64,10 +64,10 @@ This code can be found at: https://github.com/btihen-dev/rails_api_intro
 
 ## Getting Started
 
-I will create a basic application - then start the api exploration.  I will use: `bin/rails new bedrock -T` instead of `bin/rails new bedrock -T --api` because I will also use this same base code to play with hotwire.  I am also going to use the database `postgresql` to then later add the AGE postgres plugin to model the relationships using a graph data-structure.
+I will create a basic application - then start the api exploration.  I will use: `bin/rails new bedrock -T` instead of `bin/rails new bedrock -T --api` because I will also use this same base code to play with hotwire.  I am also going to use the database `postgresql` to then later add the AGE postgres plugin to model the relationships using a graph data-structure.  Likewise, I will be using esbuild for the hotwire features - but this can easily be omitted.
 
 ```bash
-bin/rails new bedrock -T --database=postgresql
+rails new bedrock -T --main --database=postgresql --javascript=esbuild
 cd bedrock
 bin/rails db:create
 
@@ -121,11 +121,26 @@ class Person < ApplicationRecord
 end
 ```
 
-now migrate and add a people seed (see the code repo)
+now migrate and add a people seed (see the appendix for seed data)
 
 ```bash
 bin/rails db:migrate
 bin/rails db:seed
+```
+
+let's test:
+```ruby
+bin/rails c
+
+Person.first
+
+Person.all
+```
+
+Let's snapshot assuming this works and shows reasonable data.
+```bash
+git add .
+git commit -m "Add person model"
 ```
 
 ## NAMESPACE JSON API
@@ -134,11 +149,32 @@ Now that we have a basic setup that works lets setup the API code.
 
 I like to namespace to allow for easy versioning.
 
+So let's configure the namespace in our routing so it now looks like
+
+```ruby
+Rails.application.routes.draw do
+	resources :people
+
+	namespace :api do
+	  namespace :v0 do
+		  resources :people
+	  end
+	end
+
+  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
+  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  # Defines the root path route ("/")
+  root "people#index"
+end
+```
+
 Let's start by building a JSON only api controller with:
 
 ```ruby
 mkdir app/controllers/api
-echo <<EOF > app/controllers/api/json_controller.rb
+cat << EOF > app/controllers/api/json_controller.rb
 module Api
   class JsonController < ActionController::API
   end
@@ -149,7 +185,8 @@ EOF
 Now lets build an api v0 person controller that inherits from the aoi only controller
 ```ruby
 mkdir app/controllers/api/v0
-echo <<EOF > app/controllers/api/v0/people_controller.rb
+
+cat << EOF > app/controllers/api/v0/people_controller.rb
 module Api
   module V0
     class PeopleController < JsonController
@@ -211,27 +248,6 @@ EOF
 ```
 
 
-now let's update our routes to reflect our API namespace in the url path too using:
-
-```ruby
-Rails.application.routes.draw do
-	resources :people
-
-	namespace :api do
-	  namespace :v0 do
-		  resources :people
-	  end
-	end
-
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-  # Can be used by load balancers and uptime monitors to verify that the app is live.
-  get "up" => "rails/health#show", as: :rails_health_check
-
-  # Defines the root path route ("/")
-  # root "posts#index"
-end
-```
-
 Let's test:
 
 ```bash
@@ -275,20 +291,49 @@ curl http://localhost:3030/api/v0/people.json
 ]
 ```
 
-this is as expected let's snapshot our work:
+assuming this works is as expected let's snapshot our work:
 
 ```bash
 git add .
-git commit -m "namespaced a basic api only controller"
+git commit -m "namespaced a basic person api that returns everything"
 ```
 
 ## JSON V1 (restrict data returned)
 
-Let's change the controller to return only: id, first_name, last_name, and gender by changing how we return data to: `render json: @people.as_json(only: [:id, :first_name, :last_name, :gender, :given_last_name])`.
+Let's make a breaking change to our api and only return fields we wish and not all fields. So we will make a v1 and update the routes with:
+
+```ruby
+Rails.application.routes.draw do
+	resources :people
+
+	namespace :api do
+	  namespace :v0 do
+		  resources :people
+	  end
+	  namespace :v1 do
+		  resources :people
+	  end
+	end
+
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  root "people#index"
+end
+```
+
+Let's return only: id, first_name, last_name, and gender by changing how we return data to use:
+`render json: @people.as_json(only: [:id, :first_name, :last_name, :gender, :given_last_name])`
+
+or we can use:
+
+`render json: @people.as_json(except: [:created_at, :updated_at])`
+
+so now our controller would look like:
 
 ```ruby
 mkdir app/controllers/api/v1
-echo <<EOF > app/controllers/api/v1/people_controller.rb
+
+cat << EOF > app/controllers/api/v1/people_controller.rb
 # returns only specific fields
 module Api
   module V1
@@ -300,14 +345,14 @@ module Api
         @people = Person.all
 
         render json: @people.as_json(
-          only: [:id, :first_name, :last_name, :gender, :given_last_name]
+          except: [:created_at, :updated_at]
         )
       end
 
       # GET /people/1
       def show
         render json: @person.as_json(
-          only: [:id, :first_name, :last_name, :gender, :given_last_name]
+          only: [:id, :nick_name, :first_name, :last_name, :given_name, :gender]
         )
       end
 
@@ -317,7 +362,7 @@ module Api
 
         if @person.save
           render json: @person.as_json(
-            only: [:id, :first_name, :last_name, :gender, :given_last_name]
+            except: [:created_at, :updated_at]
           ), status: :created, location: @person
         else
           render json: @person.errors, status: :unprocessable_entity
@@ -328,7 +373,7 @@ module Api
       def update
         if @person.update(person_params)
           render json: @person.as_json(
-            only: [:id, :first_name, :last_name, :gender, :given_last_name]
+            only: [:id, :nick_name, :first_name, :last_name, :given_name, :gender]
           ), status: :ok, location: @person
         else
           render json: @person.errors, status: :unprocessable_entity
@@ -356,29 +401,6 @@ module Api
   end
 end
 EOF
-```
-
-and update the routes
-```ruby
-Rails.application.routes.draw do
-	resources :people
-
-	namespace :api do
-	  namespace :v0 do
-		  resources :people
-	  end
-	  namespace :v1 do
-		  resources :people
-	  end
-	end
-
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-  # Can be used by load balancers and uptime monitors to verify that the app is live.
-  get "up" => "rails/health#show", as: :rails_health_check
-
-  # Defines the root path route ("/")
-  # root "posts#index"
-end
 ```
 
 Let's test:
@@ -416,13 +438,13 @@ curl http://localhost:3030/api/v1/people.json
 ]
 ```
 
-this is good, lets snapshot here:
+Assuming this works, lets snapshot here:
 ```bash
 git add .
-git commit -m "added v1 aoi - restricts data sharing"
+git commit -m "added v1 aoi - restricts data fields shared"
 ```
 
-### Refactor for Maintanence
+### Refactor
 
 This is good, but every time we change our return or the model we need to make adjustments everywhere -- lets centralize our data send with a method like:
 ```ruby
@@ -515,6 +537,11 @@ module Api
 end
 ```
 
+Let's do a quick test to see that everything still works:
+
+```bash
+curl http://localhost:3030/api/v1/people.json
+```
 Here is are the commands to test all the actions:
 
 index:
@@ -557,10 +584,10 @@ now we can snapshot our refactoring:
 
 ```bash
 git add .
-git commit -m "refactored to make it easy to managed return values"
+git commit -m "refactored v1 to easily managed return values"
 ```
 
-## Nested Data Associations
+## Nested Associations
 
 ### add companies
 
@@ -571,7 +598,7 @@ lets add these to the code.
 first will will add the companies:
 
 ```bash
-bin/rails g scaffold Company nam
+bin/rails g scaffold Company name
 ```
 
 let's make the company name required and unique in the database:
@@ -599,8 +626,25 @@ class Company < ApplicationRecord
 end
 ```
 
-be sure the companies act as expected - you can add the company seed data to the database.
+be sure the companies act as expected - you can add the company seed data to the database. The easiest was to add more data is just to recreate the DB and reseed your data.
 
+```bash
+bin/rails db:drop
+bin/rails db:create
+bin/rails db:migrate
+bin/rails db:seed
+```
+
+let's test:
+```ruby
+bin/rails c
+
+Company.first
+
+Company.all
+```
+
+assuming everything works as expected:
 
 ```bash
 git add .
@@ -659,9 +703,58 @@ class Company < ApplicationRecord
 end
 ```
 
-you should now be able to seed the jobs and see that they work in association with companies.
+Let's update the seeds file and run our migrations.
 
+```bash
+bin/rails db:drop
+bin/rails db:create
+bin/rails db:migrate
+bin/rails db:seed
 ```
+
+let's test (especially the associations):
+```ruby
+bin/rails c
+
+Company.first
+# #<Company:0x0000000122e58ad0
+#  id: 1,
+#  name: "San Cemente",
+#  created_at: Sun, 31 Mar 2024 15:32:31.512139000 UTC +00:00,
+#  updated_at: Sun, 31 Mar 2024 15:32:31.512139000 UTC +00:00>
+
+Company.first.jobs
+# [#<Job:0x0000000122e5b7d0
+#   id: 1,
+#   role: "owner",
+#   company_id: 1,
+#   created_at: Sun, 31 Mar 2024 15:32:31.693088000 UTC +00:00,
+#   updated_at: Sun, 31 Mar 2024 15:32:31.693088000 UTC +00:00>]
+```
+
+Let's test the reverse too:
+```ruby
+bin/rails c
+
+Job.last
+# #<Job:0x0000000104e43720
+#  id: 21,
+#  role: "The Grand Poobah",
+#  company_id: 15,
+#  created_at: Sun, 31 Mar 2024 15:32:31.877515000 UTC +00:00,
+#  updated_at: Sun, 31 Mar 2024 15:32:31.877515000 UTC +00:00>
+
+Job.last.company
+# #<Company:0x0000000131d28480
+#  id: 15,
+#  name: "Water Buffalo Lodge",
+#  created_at: Sun, 31 Mar 2024 15:32:31.637401000 UTC +00:00,
+#  updated_at: Sun, 31 Mar 2024 15:32:31.637401000 UTC +00:00>
+```
+
+cool, its looking good - let's snapshot before ew
+
+```bash
 git add .
 git commit -m "added jobs in association with companies"
 ```
@@ -683,7 +776,7 @@ let's ensure that a PersonJob always has a `start_date` and each person can only
 class CreatePersonJobs < ActiveRecord::Migration[7.2]
   def change
     create_table :person_jobs do |t|
-	    t.date :state_date, null: false
+	    t.date :start_date, null: false
 		  t.date :end_date
       t.references :person, null: false, foreign_key: true, index: true
       t.references :job, null: false, foreign_key: true, index: true
@@ -706,7 +799,7 @@ class PersonJob < ApplicationRecord
   validates :person, presence: true
   validates :start_date, presence: true
   validates :person,
-            uniqueness: { scope: [:job, :start_Date]
+            uniqueness: { scope: [:job, :start_date],
                           message: "person and job with start_date already exists" }
 end
 ```
@@ -766,17 +859,90 @@ end
 seed the data for PersonJob and test all the relations.
 
 ```bash
+bin/rails db:drop
+bin/rails db:create
+bin/rails db:migrate
+bin/rails db:seed
+```
+
+let's test (especially the associations):
+```ruby
+bin/rails c
+
+# Test People Relationships
+Person.first.jobs
+# [#<Job:0x0000000120351760
+#   id: 1,
+#   role: "owner",
+#   company_id: 1,
+#   created_at: Sun, 31 Mar 2024 15:48:33.169108000 UTC +00:00,
+#   updated_at: Sun, 31 Mar 2024 15:48:33.169108000 UTC +00:00>]
+
+Person.first.companies
+# [#<Company:0x000000011e785158
+#   id: 1,
+#   name: "San Cemente",
+#   created_at: Sun, 31 Mar 2024 15:48:33.006684000 UTC +00:00,
+#   updated_at: Sun, 31 Mar 2024 15:48:33.006684000 UTC +00:00>]
+
+# Test Jobs Relationships
+Job.first.people
+# [#<Person:0x00000001015db900
+#   id: 1,
+#   first_name: "Zeke",
+#   last_name: "Flintstone",
+#   nick_name: nil,
+#   given_name: nil,
+#   gender: "male",
+#   created_at: Sun, 31 Mar 2024 15:48:32.620435000 UTC +00:00,
+#   updated_at: Sun, 31 Mar 2024 15:48:32.620435000 UTC +00:00>]
+
+Job.first.company
+# #<Company:0x000000012086dfc8
+#  id: 1,
+#  name: "San Cemente",
+#  created_at: Sun, 31 Mar 2024 15:48:33.006684000 UTC +00:00,
+#  updated_at: Sun, 31 Mar 2024 15:48:33.006684000 UTC +00:00>
+
+# Test Company Relationships
+Company.first.jobs
+# [#<Job:0x0000000120844ec0
+#   id: 1,
+#   role: "owner",
+#   company_id: 1,
+#   created_at: Sun, 31 Mar 2024 15:48:33.169108000 UTC +00:00,
+#   updated_at: Sun, 31 Mar 2024 15:48:33.169108000 UTC +00:00>]
+
+Company.first.people
+# [#<Person:0x000000011e8ad0d0
+#   id: 1,
+#   first_name: "Zeke",
+#   last_name: "Flintstone",
+#   nick_name: nil,
+#   given_name: nil,
+#   gender: "male",
+#   created_at: Sun, 31 Mar 2024 15:48:32.620435000 UTC +00:00,
+#   updated_at: Sun, 31 Mar 2024 15:48:32.620435000 UTC +00:00>]
+```
+
+Cool now that everything works let's snapshot again.
+
+```bash
 git add .
 git commit -m "add PersonJob and associations"
 ```
 
 
-## JSON V2 with nested data
+## JSON V2 - nested data
 
-now that we have our base application and relationships - lets make another api version that returns nested data when we can start by adding our new route:
+now that we have our base application and relationships - lets make another breaking change and update the data structure and return nested Job and Company data.
+
+Let's add our new route:
 
 ```ruby
 Rails.application.routes.draw do
+  resources :jobs
+  resources :companies
 	resources :people
 
 	namespace :api do
@@ -796,7 +962,7 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   # Defines the root path route ("/")
-  # root "posts#index"
+  root "people#index"
 end
 ```
 
@@ -808,7 +974,7 @@ now of course we will need our new controller - to do this we need to adjust our
         ), **options
       end
 ```
-to:
+to (now we have some nice examples of only, include and except):
 ```ruby
       def render_json_person(ar_query, options = {})
         render json: model.as_json(
@@ -836,7 +1002,8 @@ NOTE: we haven't adjusted our queries yet (we will refactor shortly), first let'
 Now our newest controller should look like:
 ```ruby
 mkdir app/controllers/api/v2
-touch <<EOF > app/controllers/api/v2/person_controller.rb
+
+cat << EOF > app/controllers/api/v2/people_controller.rb
 # returns nested jobs and companies for each person.
 module Api
   module V2
@@ -884,8 +1051,19 @@ module Api
 
       private
 
+      # Use callbacks to share common setup or constraints between actions.
+      def set_person
+        @person = Person.find(params[:id])
+      end
+
+      # Only allow a list of trusted parameters through.
+      def person_params
+        params.require(:person)
+              .permit(:first_name, :last_name, :nick_name, :given_name, :gender)
+      end
+
       def render_json_person(ar_query, options = {})
-        render json: model.as_json(
+        render json: ar_query.as_json(
           include: {
             person_jobs: {
               only: [ :start_date, :end_date ],
@@ -901,17 +1079,6 @@ module Api
           },
           except: [ :updated_at, :created_at ]
         ), **options
-      end
-
-      # Use callbacks to share common setup or constraints between actions.
-      def set_person
-        @person = Person.find(params[:id])
-      end
-
-      # Only allow a list of trusted parameters through.
-      def person_params
-        params.require(:person)
-              .permit(:first_name, :last_name, :nick_name, :given_name, :gender)
       end
     end
   end
@@ -958,7 +1125,7 @@ git add .
 git commit -m "add JSON v2 people with nested job and company data"
 ```
 
-### Refactor without N+1 Queries
+### Refactor: fix N+1 Queries
 
 when we query `index` with:
 
@@ -1086,8 +1253,20 @@ module Api
         Person.includes(person_jobs: [ job: :company ])
       end
 
+      # Use callbacks to share common setup or constraints between actions.
+      def set_person
+        @person = person_query.where(id: params[:id])
+                              .limit(1).first
+      end
+
+      # Only allow a list of trusted parameters through.
+      def person_params
+        params.require(:person)
+              .permit(:first_name, :last_name, :nick_name, :given_name, :gender)
+      end
+
       def render_json_person(ar_query, options = {})
-        render json: model.as_json(
+        render json: ar_query.as_json(
           include: {
             person_jobs: {
               only: [ :start_date, :end_date ],
@@ -1103,18 +1282,6 @@ module Api
           },
           except: [ :updated_at, :created_at ]
         ), **options
-      end
-
-      # Use callbacks to share common setup or constraints between actions.
-      def set_person
-        @person = person_query.where(id: params[:id])
-                              .limit(1).first
-      end
-
-      # Only allow a list of trusted parameters through.
-      def person_params
-        params.require(:person)
-              .permit(:first_name, :last_name, :nick_name, :given_name, :gender)
       end
     end
   end
@@ -1155,3 +1322,320 @@ Note: you can follow the same logic to write controllers for Jobs and Companies.
 * https://guides.rubyonrails.org/api_app.html
 * https://www.youtube.com/watch?v=5pr1zCYqK00
 * https://medium.com/swlh/beginners-guide-to-building-a-rails-api-7b22aa7ec2fb
+
+
+## APPENDIX
+
+In rails we can seed sample data using the file: `db/seeds.rb`  The data found for this sample project was found from the following links.
+```
+# db/seeds.rb
+
+# Family Tree and jobs
+# https://www.youtube.com/watch?app=desktop&v=AHWVVm_wd0s
+#
+# Flintstone characters and pets
+# https://en.wikipedia.org/wiki/The_Flintstones
+# https://www.ranker.com/list/all-the-flintstones-characters/reference
+
+```
+
+### People Seed
+
+```ruby
+## PEOPLE
+#########
+## Flintstone family
+# agriculture (hillbilly)
+# San Cemente Owner
+zeke = Person.create!(first_name: 'Zeke', last_name: 'Flintstone', gender: 'male')
+# agriculture (hillbilly)
+jed = Person.create!(first_name: 'Jed', last_name: 'Flintstone', gender: 'male')
+
+# soldier / pilot
+rocky = Person.create!(first_name: 'Rockbottom', nick_name: 'Rocky', last_name: 'Flintstone', gender: 'male')
+
+# rich uncle
+giggles = Person.create!(first_name: 'Jay Giggles', nick_name: 'Uncle Giggles', last_name: 'Flintstone', gender: 'male')
+
+# freeway traffic reporter
+pops = Person.create!(first_name: 'Ed Pops', nick_name: 'Pops', last_name: 'Flintstone', gender: 'male')
+# homemaker
+edna = Person.create!(first_name: 'Edna', last_name: 'Flintstone', given_name: 'Hardrock', gender: 'female')
+
+# married to wilma
+# son of pops & edna (crane operator at 'Slate Rock & Gravel Company')
+fred = Person.create!(first_name: 'Fredrick Jay', nick_name: 'Fred', last_name: 'Flintstone', gender: 'male')
+# married to fred
+# reporter & caterer & homemaker
+wilma = Person.create!(first_name: 'Wilma', last_name: 'Flintstone', given_name: 'Slaghoople', gender: 'female')
+
+# daughter of fred & wilma, married to bamm-bamm
+# advertising executive
+pebbles = Person.create!(first_name: 'Pebbles Wilma', nick_name: 'Pebbles', last_name: 'Rubble', given_name: 'Flintstone', gender: 'female')
+# adopted brother to pebbles
+stoney = Person.create!(first_name: 'Stoney', last_name: 'Flintstone', gender: 'male')
+
+
+## Hardrock family
+# father to Edna, Tex, Jemina (married to Lucile)
+james = Person.create!(first_name: 'James', last_name: 'Hardrock', gender: 'male')
+# mother to Edna, Tex, Jemina (married to James)
+lucile = Person.create!(first_name: 'Lucile', last_name: 'Hardrock', given_name: 'von Stone', gender: 'female')
+
+# sister to Tex & Edna
+jemina = Person.create!(first_name: 'Jemina', last_name: 'Hardrock', gender: 'female')
+
+# texrock rangers & rancher (town: texrock)
+# brother to Edna
+tex = Person.create!(first_name: 'Tex', last_name: 'Hardrock', gender: 'male')
+
+# daughter of tex
+mary = Person.create!(first_name: 'Mary Lou', last_name: 'Hardrock', gender: 'female')
+# son of tex (ranch owner)
+tumbleweed = Person.create!(first_name: 'Tumbleweed', last_name: 'Hardrock', gender: 'male')
+
+## Slaghoople family
+# father to Wilma, married to Pearl
+ricky = Person.create!(first_name: 'Richard', nick_name: 'Ricky', last_name: 'Slaghoople', gender: 'male')
+pearl = Person.create!(first_name: 'Pearl', last_name: 'Slaghoople', gender: 'female')
+
+# wilma's sister
+mica = Person.create!(first_name: 'Mica', last_name: 'Slaghoople', gender: 'female')
+# wilma's sister
+mickey = Person.create!(first_name: 'Michael', nick_name: 'Mickey', last_name: 'Slaghoople', gender: 'female')
+# wilma's brother
+michael = Person.create!(first_name: 'Jerry', last_name: 'Slaghoople', gender: 'male')
+
+## McBricker family
+brick = Person.create!(first_name: 'Brick', last_name: 'McBricker', gender: 'male')
+jean = Person.create!(first_name: 'Jean', last_name: 'McBricker', gender: 'female')
+
+# betty's bother (child of brick & jean)
+# HS Basketball player
+brad = Person.create!(first_name: 'Brad', last_name: 'McBricker', gender: 'male')
+
+
+## Slate family
+# flo's brother (lives in granite town)
+# manager of 'Bedrock & Gravel Quarry Company'
+mr_slate = Person.create!(first_name: 'George', nick_name: 'Mr.', last_name: 'Slate', gender: 'male')
+# married to mr. slate
+mrs_slate = Person.create!(first_name: 'Mrs.', last_name: 'Slate', gender: 'female')
+
+# child of mr. slate & mrs. slate
+eugene = Person.create!(first_name: 'Eugene', last_name: 'Slate', gender: 'male')
+# child of mr. slate & mrs. slate
+bessie = Person.create!(first_name: 'Bessie', last_name: 'Slate', gender: 'female')
+# bessie's child (son)
+eddie = Person.create!(first_name: 'Edward', nick_name: 'Eddie', last_name: 'Slate', gender: 'male')
+
+
+## Rubble family
+# married to flo
+# used car salesman
+bob = Person.create!(first_name: 'Robert', nick_name: 'Bob', last_name: 'Rubble', gender: 'male')
+# married to bob (homemaker)
+flo = Person.create!(first_name: 'Florence', nick_name: 'Flo', last_name: 'Rubble', given_name: 'Slate', gender: 'female')
+
+# barney's brother (younger)
+dusty = Person.create!(first_name: 'Dusty', last_name: 'Rubble', gender: 'male')
+
+# married to betty (child of bob & flo)
+# police officer & crane operator at 'Slate Rock & Gravel Company'
+barney = Person.create!(first_name: 'Bernard Matthew', nick_name: 'Barney', last_name: 'Rubble', gender: 'male')
+# married to barney, child of brick & jean
+# reporter & caterer & homemaker
+betty = Person.create!(first_name: 'Elizabeth Jean', nick_name: 'Betty', last_name: 'Rubble', given_name: 'McBricker', gender: 'female')
+
+# adopted son of barney & betty (married to pebbles)
+# auto mechanic, then screenwriter
+bamm = Person.create!(first_name: 'Bamm-Bamm', last_name: 'Rubble', gender: 'male')
+# son of bamm-bamm & pebbles
+chip = Person.create!(first_name: 'Charleston Frederick', nick_name: 'Chip', last_name: 'Rubble', gender: 'male')
+# daughter of bamm-bamm & pebbles
+roxy = Person.create!(first_name: 'Roxann Elisabeth', nick_name: 'Roxy', last_name: 'Rubble', gender: 'female')
+
+
+## The Gruesomes – A creepy but friendly family, who move in next door to the Flintstones in later seasons.
+# Uncle Ghastly – The uncle of Gobby from Creepella's side of the family, who is mostly shown as a large furry hand with claws emerging from a door, a well, or a wall. His shadow was also seen in their debut episode. He wasn't named until his second appearance, which is also the only time he is heard speaking, as he is heard laughing from a well.
+ghastly = Person.create!(first_name: 'Ghastly', last_name: 'Gruesome', gender: 'male')
+# Weirdly Gruesome – The patriarch of the Gruesome family, who works as a reality-show host.
+# reality host
+weirdly = Person.create!(first_name: 'Weirdly', last_name: 'Gruesome', gender: 'male')
+# Creepella Gruesome – Weirdly's tall wife.
+creepella = Person.create!(first_name: 'Creepella', last_name: 'Gruesome', gender: 'female')
+# Goblin "Gobby" Gruesome – Weirdly and Creepella's son.
+gobby = Person.create!(first_name: 'Goblin', nick_name: 'Gobby', last_name: 'Gruesome', gender: 'male')
+
+
+## The Hatrocks – A family of hillbillies, who feuded with the Flintstones' Arkanstone branch similarly to the Hatfield–McCoy feud. Fred and Barney reignite a feud with them in "The Bedrock Hillbillies", when Fred inherits San Cemente from his late great-great-uncle Zeke Flintstone and they fight over who made Zeke's portrait. The Hatrocks later return in "The Hatrocks and the Gruesomes", where they bunk with the Flintstones during their trip to Bedrock World's Fair and their antics start to annoy them as they guilt-trip Fred into extending their stay. It is also revealed that they dislike bug music. and the Flintstones, the Rubbles, and the Gruesomes are able to drive them away by performing the Four Insects song "She Said Yeah Yeah Yeah".[a] After learning that the Bedrock World's Fair would feature the Four Insects performing, they fled back to Arkanstone.
+# Granny Hatrock – The mother of Jethro and grandmother of Zack and Slab.
+granny = Person.create!(first_name: 'Granny', last_name: 'Hatrock', gender: 'female')
+# Jethro Hatrock – The patriarch of the Hatrock Family. He had brown hair in "The Hatrocks and the Flintstones" and taupe-gray hair in "The Hatrocks and the Gruesomes".
+jethro = Person.create!(first_name: 'Jethro', last_name: 'Hatrock', gender: 'male')
+# Gravella Hatrock – Jethro's wife.
+gravella = Person.create!(first_name: 'Gravella', last_name: 'Hatrock', gender: 'female')
+# Zack Hatrock – Jethro and Gravella's oldest son.
+zack = Person.create!(first_name: 'Zack', last_name: 'Hatrock', gender: 'male')
+# Slab Hatrock – The youngest son of Jethro and Gravella.
+slab = Person.create!(first_name: 'Slab', last_name: 'Hatrock', gender: 'male')
+# Benji Hatrock – Jethro's son-in-law.
+benji = Person.create!(first_name: 'Benji', last_name: 'Hatrock', gender: 'male')
+
+## others
+# Friend to Barney & Fred (fire chief)
+joe = Person.create!(first_name: 'Joseph', nick_name: 'Joe', last_name: 'Rockhead', gender: 'male')
+
+# paperboy (town: bedrock)
+arnold = Person.create!(first_name: 'Arnold', last_name: 'Granite', gender: 'male')
+
+stoney = Person.create!(first_name: 'Stoney', last_name: 'Curtis', gender: 'male')
+perry = Person.create!(first_name: 'Perry', last_name: 'Masonry', gender: 'male')
+
+# Sam Slagheap – The Grand Poobah of the Water Buffalo Lodge.
+sam = Person.create!(first_name: 'Samuel', nick_name: 'Sam', last_name: 'Slagheap', gender: 'male')
+```
+
+
+### Company Seeds
+
+```ruby
+## Companies
+san_cemente = Company.create!(name: 'San Cemente')
+bedrock_news = Company.create!(name: 'Bedrock Daily News')
+bedrock_police = Company.create!(name: 'Bedrock Police Department')
+bedrock_fire = Company.create!(name: 'Bedrock Fire Department')
+bedrock_quarry = Company.create!(name: 'Bedrock & Gravel Quarry Company')
+betty_wilma_catering = Company.create!(name: 'Betty & Wilma Catering')
+texrock_ranch = Company.create!(name: 'Texrock Ranch')
+teradactyl = Company.create!(name: 'Teradactyl Flights')
+auto_repair = Company.create!(name: 'Bedrock Auto Repair')
+used_cars = Company.create!(name: 'Bedrock Used Cars')
+bedrock_entetainment = Company.create!(name: 'Bedrock Entertainment')
+bedrock_army = Company.create!(name: 'Bedrock Army')
+independent = Company.create!(name: 'Independent')
+advertising = Company.create!(name: 'Bedrock Advertising')
+buffalo_lodge = Company.create!(name: 'Water Buffalo Lodge')
+```
+
+### Jobs Seeds
+
+```ruby
+## Jobs
+## San Cemente Owner
+cemente = Job.create!(role: 'owner', company: san_cemente)
+# agriculture
+farmer = Job.create!(role: 'farmer', company: independent)
+# pilot
+pilot = Job.create!(role: 'pilot', company: teradactyl)
+# soldier
+soldier = Job.create!(role: 'soldier', company: bedrock_army)
+# wealthy
+wealth = Job.create!(role: 'independently wealthy', company: independent)
+# reporter
+traffic = Job.create!(role: 'traffice reporter', company: bedrock_news)
+reporter = Job.create!(role: 'news reporter', company: bedrock_news)
+# homemaker
+homemaker = Job.create!(role: 'homemaker', company: independent)
+# mining company manager
+manager = Job.create!(role: 'manager', company: bedrock_quarry)
+# crane operator
+crane = Job.create!(role: 'crane operator', company: bedrock_quarry)
+# advertising executive
+advertising = Job.create!(role: 'advertising executive', company: advertising)
+# caterer
+caterer = Job.create!(role: 'caterer', company: betty_wilma_catering)
+# auto mechanic
+mechanic = Job.create!(role: 'auto mechanic', company: auto_repair)
+# screenwriter
+screenwriter = Job.create!(role: 'screenwriter', company: bedrock_entetainment)
+# police officer
+police = Job.create!(role: 'police officer', company: bedrock_police)
+# rancher
+rancher = Job.create!(role: 'rancher', company: texrock_ranch)
+# used car salesman
+salesman = Job.create!(role: 'used car salesman', company: used_cars)
+# reality show host
+host = Job.create!(role: 'reality show host', company: bedrock_entetainment)
+# fire chief
+fire_chief = Job.create!(role: 'fire chief', company: bedrock_fire)
+# paperboy
+paper_delivery = Job.create!(role: 'paperboy', company: bedrock_news)
+# Grand Poobah
+grand_poobah = Job.create!(role: 'The Grand Poobah', company: buffalo_lodge)
+```
+
+
+### PersonJobs Seeds
+
+```ruby
+## Person Jobs
+# zeke - San Cemente Owner
+PersonJob.create!(person: zeke, job: cemente, start_date: Date.new(1980, 1, 1))
+# jed - farmer
+PersonJob.create!(person: jed, job: farmer, start_date: Date.new(1980, 1, 1))
+# rocky - ww1 soldier
+PersonJob.create!(person: rocky, job: soldier, start_date: Date.new(1980, 1, 1), end_date: Date.new(1985, 12, 31))
+# rocy - pilot after war
+PersonJob.create!(person: rocky, job: pilot, start_date: Date.new(1986, 1, 1))
+
+# giggles rich uncle
+PersonJob.create!(person: giggles, job: wealth, start_date: Date.new(1980, 1, 1))
+
+# pops - freeway traffic reporter
+PersonJob.create!(person: pops, job: traffic, start_date: Date.new(1980, 1, 1))
+# edna - homemaker
+PersonJob.create!(person: edna, job: homemaker, start_date: Date.new(1980, 1, 1))
+
+# fred - crane operator
+PersonJob.create!(person: fred, job: crane, start_date: Date.new(1980, 1, 1))
+# married to fred
+# wilma - reporter & caterer & homemaker
+PersonJob.create!(person: wilma, job: reporter, start_date: Date.new(1980, 1, 1), end_date: Date.new(1989, 12, 31))
+PersonJob.create!(person: wilma, job: caterer, start_date: Date.new(1990, 1, 1))
+PersonJob.create!(person: wilma, job: homemaker, start_date: Date.new(1980, 1, 1))
+
+# pebbles - advertising executive
+PersonJob.create!(person: pebbles, job: advertising, start_date: Date.new(1995, 1, 1))
+
+# texrock rangers & rancher (town: texrock)
+PersonJob.create!(person: tex, job: rancher, start_date: Date.new(2080, 1, 1))
+
+# mr_slate - manager
+PersonJob.create!(person: mr_slate, job: manager, start_date: Date.new(1980, 1, 1))
+
+
+## Rubble family
+# bob - used car salesman
+PersonJob.create!(person: bob, job: salesman, start_date: Date.new(1980, 1, 1))
+# flo - (homemaker)
+PersonJob.create!(person: flo, job: homemaker, start_date: Date.new(1980, 1, 1))
+
+# police officer & crane operator at 'Slate Rock & Gravel Company'
+PersonJob.create!(person: barney, job: police, start_date: Date.new(1980, 1, 1), end_date: Date.new(1989, 12, 31))
+PersonJob.create!(person: barney, job: crane, start_date: Date.new(1990, 1, 1))
+
+# betty - reporter & caterer & homemaker
+PersonJob.create!(person: betty, job: reporter, start_date: Date.new(1980, 1, 1), end_date: Date.new(1989, 12, 31))
+PersonJob.create!(person: betty, job: caterer, start_date: Date.new(1990, 1, 1))
+PersonJob.create!(person: betty, job: homemaker, start_date: Date.new(1980, 1, 1))
+
+# bamm-bamm - auto mechanic, then screenwriter
+PersonJob.create!(person: bamm, job: mechanic, start_date: Date.new(1995, 1, 1), end_date: Date.new(1999, 12, 31))
+PersonJob.create!(person: bamm, job: screenwriter, start_date: Date.new(2000, 1, 1))
+
+
+## The Gruesomes
+# weirdly - reality host
+PersonJob.create!(person: weirdly, job: host, start_date: Date.new(1990, 1, 1))
+
+## others
+# joe - fire chief)
+PersonJob.create!(person: joe, job: fire_chief, start_date: Date.new(1980, 1, 1))
+
+# paperboy (town: bedrock)
+PersonJob.create!(person: arnold, job: paper_delivery, start_date: Date.new(1980, 1, 1))
+
+# Sam Slagheap – The Grand Poobah of the Water Buffalo Lodge.
+PersonJob.create!(person: sam, job: grand_poobah, start_date: Date.new(1985, 1, 1))
+```
