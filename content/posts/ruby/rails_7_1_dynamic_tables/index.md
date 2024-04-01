@@ -40,6 +40,7 @@ In the case I will use the following options:
 
 ```bash
 rails new dynamic_tables -T --main --database=postgresql --javascript=esbuild --css=bootstrap
+cd dynamic_tables
 ```
 
 ## Dynamic Tables
@@ -47,16 +48,16 @@ rails new dynamic_tables -T --main --database=postgresql --javascript=esbuild --
 Let's convert the people `index` view into a table view `app/views/people/index.html.erb`
 
 ```ruby
-# app/views/people/index.html.erb
+# app/views/characters/index.html.erb
 <p style="color: green"><%= notice %></p>
 
-<% content_for :title, "People" %>
+<% content_for :title, "Characters" %>
 
-<h1>People</h1>
+<h1>Characters</h1>
 
 <div class="row justify-content-start">
   <div class="col-4">
-    <%= link_to "New", new_person_path, class: "btn btn-primary" %>
+    <%= link_to "New", new_character_path, class: "btn btn-primary" %>
   </div>
   <div class="col-8">
 
@@ -79,17 +80,37 @@ Let's convert the people `index` view into a table view `app/views/people/index.
       <th scope="col">
         Gender
       </th>
+      <th scope="col">
+        Species
+      </th>
+      <th scope="col">
+        Companie-Job
+      </th>
     </tr>
   </thead>
 
   <tbody class="scrollable-table">
-    <div id="person">
-      <% @people.each do |person| %>
-        <tr id="<%= dom_id person %>">
-          <th scope="row"><%= link_to "#{person.id}", edit_person_path(person) %></th>
-          <td><%= person.first_name %></td>
-          <td><%= person.last_name %></td>
-          <td><%= person.gender %></td>
+    <div id="character">
+      <% @characters.each do |character| %>
+        <% jobs = character.jobs %>
+        <% companies = character.companies %>
+        <% companies_jobs = companies.zip(jobs) %>
+        <tr id="<%= dom_id character %>">
+          <th scope="row"><%= link_to "#{character.id}", edit_character_path(character) %></th>
+          <td><%= character.first_name %></td>
+          <td><%= character.last_name %></td>
+          <td><%= character.gender %></td>
+          <td><%= character.species.kind %></td>
+          <td>
+            <ul>
+              <% character.person_jobs.each do |person_job| %>
+                <li>
+                  <%= person_job.company.name %>: <%= person_job.job.role %>
+                  <%= person_job.start_date.strftime("%e.%b.%y") %>-<%= person_job.end_date&.strftime("%e.%b.%y") %>
+                </li>
+              <% end %>
+            </ul>
+          </td>
         </tr>
       <% end %>
     </div>
