@@ -67,8 +67,8 @@ This code can be found at: https://github.com/btihen-dev/rails_api_intro
 I will create a basic application - then start the api exploration.  I will use: `bin/rails new bedrock -T` instead of `bin/rails new bedrock -T --api` because I will also use this same base code to play with hotwire.  I am also going to use the database `postgresql` to then later add the AGE postgres plugin to model the relationships using a graph data-structure.  Likewise, I will be using esbuild for the hotwire features - but this can easily be omitted.
 
 ```bash
-rails new bedrock -T --main --database=postgresql --javascript=esbuild
-cd bedrock
+rails new api_intro -T --main --database=postgresql --javascript=esbuild --css=tailwind
+cd api_intro
 bin/rails db:create
 
 git add .
