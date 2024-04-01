@@ -42,8 +42,12 @@ rails new base_app -T --main --database=postgresql --javascript=esbuild
 # setup and git commit (in case you are experimenting and want to rollback)
 cd base_app
 bin/rails db:create
+git add .
+git commit -m "initial commit"
+```
 
-# use generators to build basic code structure
+use generators to build basic code structure
+```bash
 bin/rails g scaffold Species kind
 bin/rails g scaffold Character nick_name first_name \
             last_name given_name gender species:references
@@ -51,6 +55,8 @@ bin/rails g scaffold Company name
 bin/rails g scaffold Job role company:references
 bin/rails g model PersonJob start_date:date end_date:date \
             person:references job:references
+git add .
+git commit -m "add generated code"
 ```
 
 update migrations:
@@ -124,6 +130,9 @@ class CreatePersonJobs < ActiveRecord::Migration[7.2]
     add_index :person_jobs, %i[person_id job_id start_date], unique: true
   end
 end
+
+git add .
+git commit -m "update migrations"
 ```
 
 update models:
@@ -195,6 +204,8 @@ class PersonJob < ApplicationRecord
   belongs_to :person, class_name: 'Character', foreign_key: :person_id
   belongs_to :job
 
+  has_one :company, through: :job
+
   validates :job, presence: true
   validates :person, presence: true
   validates :start_date, presence: true
@@ -203,19 +214,67 @@ class PersonJob < ApplicationRecord
                           message: "person and job with start_date already exists" }
 end
 EOF
+
+git add .
+git commit -m "update models"
 ```
 
-run migrations
-```bash
-bin/rails db:migrate
+update the routes `config/routes.rb` with a root page using `root "characters#index"`:
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  resources :jobs
+  resources :companies
+  resources :characters
+  resources :species
+  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+
+  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
+  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  # Render dynamic PWA files from app/views/pwa/*
+  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+
+  # Defines the root path route ("/")
+  root "characters#index"
+end
 ```
 
 populate seed file `db/seeds.rb` with the seed data (see Appendix):
+
 ```bash
+# run the migratons
+bin/rails db:migrate
+
+# seed app with test data
 bin/rails db:seed
 ```
 
-you should now be good to go!
+Test with:
+```ruby
+bin/rails c
+
+Character.first
+Character.first.jobs
+Character.first.companies
+
+Job.first
+Job.last.people
+Job.first.company
+
+Company.first
+Company.last.jobs
+Company.first.people
+```
+
+assuming this works, you should now be good to go!
+
+```bash
+git add .
+git commit -m "base app with migration and seed data"
+```
 
 
 ## Setup with Explanations
@@ -549,8 +608,10 @@ end
 so now let's ensure our new model reflects the database - with the following code.  The logic and code changes should look familiar.
 ```ruby
 class PersonJob < ApplicationRecord
-  belongs_to :person
+  belongs_to :person, class_name: "Character", foreign_key: :person_id
   belongs_to :job
+
+  has_one :company, through: :job
 
   validates :job, presence: true
   validates :person, presence: true
