@@ -32,7 +32,166 @@ A basic Rails app structure that offers a variety of opportunities for various R
 
 This code can be found at: https://github.com/btihen-dev/rails_base_app
 
-## Setup
+## Quick Summary
+
+without explanations nor step:
+```bash
+# use other options as needed
+rails new base_app -T --main --database=postgresql --javascript=esbuild
+
+# setup and git commit (in case you are experimenting and want to rollback)
+cd base_app
+bin/rails db:create
+
+# use generators to build basic code structure
+bin/rails g scaffold Person nick_name first_name \
+            last_name given_name gender
+bin/rails g scaffold Company name
+bin/rails g scaffold Job role company:references
+bin/rails g model PersonJob start_date:date end_date:date \
+            person:references job:references
+```
+
+update migrations:
+```ruby
+class CreatePeople < ActiveRecord::Migration[7.2]
+  def change
+    create_table :people do |t|
+      t.string :first_name, null: false
+      t.string :last_name, null: false
+      t.string :nick_name
+      t.string :given_name
+      t.string :gender, null: false
+
+      t.timestamps
+    end
+
+    add_index :people, %i[first_name last_name gender],
+              unique: true
+  end
+end
+
+class CreateCompanies < ActiveRecord::Migration[7.2]
+  def change
+    create_table :companies do |t|
+      t.string :name, null: false
+
+      t.timestamps
+    end
+
+    add_index :companies, :name, unique: true
+  end
+end
+
+class CreateJobs < ActiveRecord::Migration[7.2]
+  def change
+    create_table :jobs do |t|
+      t.string :role, null: false
+      t.references :company, null: false, foreign_key: true, index: true
+
+      t.timestamps
+    end
+
+    add_index :jobs, %i[role company_id], unique: true
+  end
+end
+
+class CreatePersonJobs < ActiveRecord::Migration[7.2]
+  def change
+    create_table :person_jobs do |t|
+	    t.date :start_date, null: false
+		  t.date :end_date
+      t.references :person, null: false, foreign_key: true, index: true
+      t.references :job, null: false, foreign_key: true, index: true
+
+      t.timestamps
+    end
+
+    add_index :person_jobs, %i[person_id job_id start_date], unique: true
+  end
+end
+```
+
+update models:
+```ruby
+cat << EOF > app/models/person.rb
+class Person < ApplicationRecord
+  has_many :person_jobs, dependent: :destroy
+  has_many :jobs, through: :person_jobs
+  has_many :companies, through: :jobs
+
+  normalizes :first_name, :nick_name, :last_name, :given_name,
+             with: ->(value) { value.strip }
+
+  validates :first_name,
+            uniqueness: { scope: :last_name,
+                          message: "first_name and last_name already exists" }
+  validates :first_name, presence: true
+  validates :last_name, presence: true
+  validates :gender, presence: true
+  validates :gender, inclusion: { in: %w[male female] }
+end
+EOF
+
+cat << EOF > app/models/company.rb
+class Company < ApplicationRecord
+  has_many :jobs, dependent: :destroy
+  has_many :person_jobs, through: :jobs
+  has_many :people, through: :person_jobs
+
+  normalizes :name,  with: ->(value) { value.strip }
+
+  validates :name, presence: true
+  validates :name, uniqueness: true
+end
+EOF
+
+cat << EOF > app/models/job.rb
+class Job < ApplicationRecord
+  belongs_to :company
+
+  has_many :person_jobs, dependent: :destroy
+  has_many :people, through: :person_jobs
+
+  normalizes :role, :title, :company, with: ->(value) { value.strip }
+
+  validates :company, presence: true
+  validates :role, presence: true
+  validates :role,
+            uniqueness: { scope: :company_id,
+                          message: "role and company already exists" }
+end
+EOF
+
+cat << EOF > app/models/person_job.rb
+class PersonJob < ApplicationRecord
+  belongs_to :person
+  belongs_to :job
+
+  validates :job, presence: true
+  validates :person, presence: true
+  validates :start_date, presence: true
+  validates :person,
+            uniqueness: { scope: [:job, :start_date],
+                          message: "person and job with start_date already exists" }
+end
+EOF
+```
+
+run migrations
+```bash
+bin/rails db:migrate
+```
+
+populate seed file `db/seeds.rb` with the seed data (see Appendix):
+```bash
+bin/rails db:seed
+```
+
+you should now be good to go!
+
+
+## Setup with Explanations
 
 The options may change based on the experiment, but in general the following is my preferred starting point.
 
@@ -41,7 +200,7 @@ The options may change based on the experiment, but in general the following is 
 asdf local ruby 3.3.0
 
 # generate the new app
-rails new base_app -T --main --database=postgresql --javascript=esbuild --css=tailwind
+rails new base_app -T --main --database=postgresql --javascript=esbuild
 
 # setup and git commit (in case you are experimenting and want to rollback)
 cd base_app
@@ -67,7 +226,7 @@ bin/rails g scaffold Person nick_name first_name \
 Let's update the migration to make the first & last name required as well as gender & lets ensure we cant add the same person twice with a unique index on `first_name last_name gender`
 
 ```ruby
-class CreatePeople < ActiveRecord::Migration[7.1]
+class CreatePeople < ActiveRecord::Migration[7.2]
   def change
     create_table :people do |t|
       t.string :first_name, null: false
@@ -474,7 +633,7 @@ In rails we can seed sample data using the file: `db/seeds.rb`  The data found f
 
 # Family Tree and jobs
 # https://www.youtube.com/watch?app=desktop&v=AHWVVm_wd0s
-#
+
 # Flintstone characters and pets
 # https://en.wikipedia.org/wiki/The_Flintstones
 # https://www.ranker.com/list/all-the-flintstones-characters/reference
@@ -571,7 +730,6 @@ bessie = Person.create!(first_name: 'Bessie', last_name: 'Slate', gender: 'femal
 # bessie's child (son)
 eddie = Person.create!(first_name: 'Edward', nick_name: 'Eddie', last_name: 'Slate', gender: 'male')
 
-
 ## Rubble family
 # married to flo
 # used car salesman
@@ -596,7 +754,6 @@ bamm = Person.create!(first_name: 'Bamm-Bamm', last_name: 'Rubble', gender: 'mal
 chip = Person.create!(first_name: 'Charleston Frederick', nick_name: 'Chip', last_name: 'Rubble', gender: 'male')
 # daughter of bamm-bamm & pebbles
 roxy = Person.create!(first_name: 'Roxann Elisabeth', nick_name: 'Roxy', last_name: 'Rubble', gender: 'female')
-
 
 ## The Gruesomes – A creepy but friendly family, who move in next door to the Flintstones in later seasons.
 # Uncle Ghastly – The uncle of Gobby from Creepella's side of the family, who is mostly shown as a large furry hand with claws emerging from a door, a well, or a wall. His shadow was also seen in their debut episode. He wasn't named until his second appearance, which is also the only time he is heard speaking, as he is heard laughing from a well.
@@ -636,13 +793,9 @@ perry = Person.create!(first_name: 'Perry', last_name: 'Masonry', gender: 'male'
 
 # Sam Slagheap – The Grand Poobah of the Water Buffalo Lodge.
 sam = Person.create!(first_name: 'Samuel', nick_name: 'Sam', last_name: 'Slagheap', gender: 'male')
-```
 
-
-### Company Seeds
-
-```ruby
 ## Companies
+############
 san_cemente = Company.create!(name: 'San Cemente')
 bedrock_news = Company.create!(name: 'Bedrock Daily News')
 bedrock_police = Company.create!(name: 'Bedrock Police Department')
@@ -658,12 +811,9 @@ bedrock_army = Company.create!(name: 'Bedrock Army')
 independent = Company.create!(name: 'Independent')
 advertising = Company.create!(name: 'Bedrock Advertising')
 buffalo_lodge = Company.create!(name: 'Water Buffalo Lodge')
-```
 
-### Jobs Seeds
-
-```ruby
 ## Jobs
+#######
 ## San Cemente Owner
 cemente = Job.create!(role: 'owner', company: san_cemente)
 # agriculture
@@ -705,13 +855,9 @@ fire_chief = Job.create!(role: 'fire chief', company: bedrock_fire)
 paper_delivery = Job.create!(role: 'paperboy', company: bedrock_news)
 # Grand Poobah
 grand_poobah = Job.create!(role: 'The Grand Poobah', company: buffalo_lodge)
-```
 
-
-### PersonJobs Seeds
-
-```ruby
 ## Person Jobs
+##############
 # zeke - San Cemente Owner
 PersonJob.create!(person: zeke, job: cemente, start_date: Date.new(1980, 1, 1))
 # jed - farmer
