@@ -40,16 +40,75 @@ In the case I will use the following options:
 
 ```bash
 rails new dynamic_tables -T --main --database=postgresql --javascript=esbuild --css=bootstrap
-cd dynamic_tables
-bin/rails db:create
-
-git add .
-git commit -m "initial commit"
 ```
 
-Follow the instructions in: https://btihen.dev/posts/ruby/rails_7_1_base_app/
-
 ## Dynamic Tables
+
+Let's convert the people `index` view into a table view `app/views/people/index.html.erb`
+
+```ruby
+# app/views/people/index.html.erb
+<p style="color: green"><%= notice %></p>
+
+<% content_for :title, "People" %>
+
+<h1>People</h1>
+
+<div class="row justify-content-start">
+  <div class="col-4">
+    <%= link_to "New", new_person_path, class: "btn btn-primary" %>
+  </div>
+  <div class="col-8">
+
+  </div>
+</div>
+
+<table class="table table-striped table-hover">
+  <thead class="sticky-top">
+    <tr class="table-primary">
+
+      <th scope="col">
+        ID
+      </th>
+      <th scope="col">
+        First Name
+      </th>
+      <th scope="col">
+        Last Name
+      </th>
+      <th scope="col">
+        Gender
+      </th>
+    </tr>
+  </thead>
+
+  <tbody class="scrollable-table">
+    <div id="person">
+      <% @people.each do |person| %>
+        <tr id="<%= dom_id person %>">
+          <th scope="row"><%= link_to "#{person.id}", edit_person_path(person) %></th>
+          <td><%= person.first_name %></td>
+          <td><%= person.last_name %></td>
+          <td><%= person.gender %></td>
+        </tr>
+      <% end %>
+    </div>
+  </tbody>
+</table>
+```
+
+start rails:
+```bash
+bin/rails s
+```
+
+go to: `http://localhost:3030/people` and be sure this table looks reasonable.
+
+now let's commit this.
+```bash
+git add .
+git commit -m "basic people table added"
+```
 
 
 
