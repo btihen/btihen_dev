@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "LiveView", "Authorization"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "LiveView"]
 date: 2024-03-09T01:01:53+02:00
-lastmod: 2024-03-24T01:01:53+02:00
+lastmod: 2024-04-20T01:01:53+02:00
 featured: true
 draft: false
 
@@ -787,4 +787,126 @@ now check by looking at: `http://localhost/admin/topics` and `http://localhost:4
 git add .
 git commit -m "display topic members in admin panel
 ```
+
+## Admin Fixes
+
+### New
+
+Now that we are are dependent on an Array of 'members' in our display, we need to preload members (even though empty) when we make new Topics. So in the topics context I will simplify this with a `new_topic()` method that looks like:
+
+```elixir
+# lib/authorize/buzz/topics.ex
+
+  def new_topic() do
+    %Topic{}
+    |> Repo.preload(:topic_members)
+    |> Repo.preload([topic_members: :member])
+    |> Repo.preload(:members)
+  end
+```
+
+now I will adjust new `apply_action` in the admin index `:new` with the `Topics.new_topic()` function:
+```elixir
+# lib/authorize_web/live/admin/topic_live/index.ex
+
+  defp apply_action(socket, :new, _params) do
+    socket
+    |> assign(:page_title, "New Topic")
+    |> assign(:topic, Topics.new_topic())
+  end
+```
+
+These fixes work, but we still need to manually reload the page afterwards to see the members, to fix this we need to ensure we have the new members loaded when we broadcast the changes we also need to update `create_topic` to save all members via topic members (like the update) and then load all members afterwards using `get_topic!(topic.id)` which reloads and does an eager load of all the members:
+
+```elixir
+# lib/authorize/buzz/topics.ex
+def create_topic(attrs \\ %{}) do
+    topic_changeset =
+      new_topic()
+      |> Topic.changeset(attrs)
+      |> Repo.insert()
+
+    {:ok, topic} = topic_changeset
+    member_ids = Map.get(attrs, "member_ids") || []
+    if is_list(member_ids) && !Enum.empty?(member_ids) do
+      topic_members =
+        Enum.map(member_ids, fn member_id ->
+          now = DateTime.utc_now() |> DateTime.truncate(:second)
+          %{topic_id: topic.id, member_id: member_id, inserted_at: now, updated_at: now}
+        end)
+      Repo.insert_all(TopicMember, topic_members)
+    end
+
+    # reload since added members after initial save
+    topic = get_topic!(topic.id)
+    {:ok, topic}
+  end
+```
+
+### Update
+
+you may also have noticed that we need to do a manual update after we update members, just like with the `new` we can fix the `update` broadcast by reloading all members before we broadcast the change using the same `get_topic!(topic.id)` - now update looks like:
+
+```elixir
+# lib/authorize/buzz/topics.ex
+ def update_topic(%Topic{} = topic, attrs) do
+    topic
+    |> Topic.changeset(attrs)
+    |> Repo.update()
+
+    # Delete all members
+    topic_members = TopicMembers.topic_members_by_id(topic.id)
+    if is_list(topic_members) && !Enum.empty?(topic_members) do
+      from(t in TopicMember, where: t.topic_id == ^topic.id) |> Repo.delete_all()
+    end
+
+    # rebuild members with the new ones
+    member_ids = Map.get(attrs, "member_ids") || []
+    if is_list(member_ids) && !Enum.empty?(member_ids) do
+      topic_members =
+        Enum.map(member_ids, fn member_id ->
+          now = DateTime.utc_now() |> DateTime.truncate(:second)
+          %{topic_id: topic.id, member_id: member_id, inserted_at: now, updated_at: now}
+        end)
+      Repo.insert_all(TopicMember, topic_members)
+    end
+
+    # reload since added members after initial save
+    topic = get_topic!(topic.id)
+    {:ok, topic}
+  end
+```
+
+### Delete
+
+We also need to add the delete strategy for delete to work when it has members so we need to update the schema with
+`has_many :topic_members, TopicMember, on_delete: :delete_all`
+so now the scheme looks like:
+
+```elixir
+# lib/authorize/buzz/topics/topic.ex
+defmodule Authorize.Buzz.Topics.Topic do
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  alias Authorize.Buzz.TopicMembers.TopicMember
+
+  @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
+  schema "topics" do
+    field :title, :string
+
+    has_many :topic_members, TopicMember, on_delete: :delete_all
+    has_many :members, through: [:topic_members, :member]
+
+    timestamps(type: :utc_datetime)
+  end
+
+  @doc false
+  def changeset(topic, attrs) do
+    topic
+    |> cast(attrs, [:title])
+    |> validate_required([:title])
+  end
+end
 ```
