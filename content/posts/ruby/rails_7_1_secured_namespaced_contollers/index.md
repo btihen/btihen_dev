@@ -226,7 +226,7 @@ class Admin::ContactsController < ApplicationController
 
   # Only allow a list of trusted parameters through.
   def admin_contact_params
-    params.fetch(:admin_contact, {})
+    params.require(:contact).permit(:email, :first_name, :last_name, :message)
   end
 end
 ```
@@ -417,6 +417,21 @@ and now in `new`
 </div>
 ```
 
+and show also needs updating to all allow deletions:
+```ruby
+#
+<p style="color: green"><%= notice %></p>
+
+<%= render 'admin_contact', admin_contact: @admin_contact %>
+
+<div>
+  <%= link_to "Edit", edit_admin_contact_path(@admin_contact) %> |
+  <%= link_to "List contacts", admin_contacts_path %>
+
+  <%= button_to "Destroy", admin_contacts_path(@admin_contact), method: :delete %>
+</div>
+```
+
 Now if we go to: `localhost:3000/admin/contacts` we should be able to see and edit out contacts
 
 let's commit:
@@ -462,6 +477,8 @@ class User < ApplicationRecord
   # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
   devise :database_authenticatable, # :registerable,
          :recoverable, :rememberable, :validatable
+
+  normalizes :email, with: -> email { email.downcase.strip }
 end
 ```
 Devise without sign-up article:
@@ -590,7 +607,7 @@ class ContactsController < ApplicationController
 end
 ```
 
-now test and be sure that when you login you can see the admin pages and when you are not loged in you cannot see them (& that you still have access to the landing page/root page)
+now test and be sure that when you login you can see the admin pages and when you are not logged in you cannot see them (& that you still have access to the landing page/root page)
 
 ```bash
 git add .
@@ -600,8 +617,10 @@ git commit -m "admin page is restricted"
 Now, following the same steps as above for contacts, you can build a new admin controller to manage your users starting with:
 ```bash
 rails g scaffold_controller admin/user
-bin/rails db:migrate
 ```
+
+I'll add this code to the repo and let the reader try this independently.
+
 
 ## Separating Users and Admins
 
@@ -630,6 +649,22 @@ this will make sure our existing users are a `user` and we can now make a new `a
 now let's migrate:
 ```
 bin/rails db:migrate
+```
+
+let's sanitize the user roles by adding
+`normalizes :roles, with: -> roles { roles.map { |r| r.blank? ? 'user' : r }.uniq }`
+to the user model so that in now looks like
+
+```ruby
+class User < ApplicationRecord
+  # Include default devise modules. Others available are:
+  # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
+  devise :database_authenticatable, # :registerable,
+         :recoverable, :rememberable, :validatable
+
+  normalizes :email, with: -> email { email.downcase.strip }
+  normalizes :roles, with: -> roles { roles.map { |r| r.blank? ? 'user' : r }.uniq }
+end
 ```
 
 now we can create a new admin user from the Command line using:
@@ -727,7 +762,7 @@ class Admin::ContactsController <  Admin::ApplicationController
 
   # Only allow a list of trusted parameters through.
   def admin_contact_params
-    params.fetch(:admin_contact, {})
+    params.require(:contact).permit(:email, :first_name, :last_name, :message)
   end
 end
 ```
