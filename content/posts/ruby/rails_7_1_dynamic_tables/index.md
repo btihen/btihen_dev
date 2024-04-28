@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Rails', 'Tables']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2024-04-01T01:20:00+02:00
-lastmod: 2024-04-01T01:20:00+02:00
+lastmod: 2024-04-27T01:20:00+02:00
 featured: true
 draft: false
 
@@ -52,70 +52,73 @@ Let's convert the people `index` view into a table view `app/views/people/index.
 <p style="color: green"><%= notice %></p>
 
 <% content_for :title, "Characters" %>
+<div class="container text-center">
 
-<h1>Characters</h1>
+  <div class="row justify-content-start">
+    <div class="col-9">
+      <h1>Characters</h1>
 
-<div class="row justify-content-start">
-  <div class="col-4">
-    <%= link_to "New", new_character_path, class: "btn btn-primary" %>
-  </div>
-  <div class="col-8">
+      <table class="table table-striped table-hover">
+        <thead class="sticky-top">
+          <tr class="table-primary">
 
+            <th scope="col">
+              ID
+            </th>
+            <th scope="col">
+              First Name
+            </th>
+            <th scope="col">
+              Last Name
+            </th>
+            <th scope="col">
+              Gender
+            </th>
+            <th scope="col">
+              Species
+            </th>
+            <th scope="col">
+              Company-Job
+            </th>
+          </tr>
+        </thead>
+
+        <tbody class="scrollable-table">
+          <div id="characters">
+            <% @characters.each do |character| %>
+              <% jobs = character.jobs %>
+              <% companies = character.companies %>
+              <% companies_jobs = companies.zip(jobs) %>
+              <tr id="<%= dom_id character %>">
+                <th scope="row"><%= link_to "#{character.id}", edit_character_path(character) %></th>
+                <td><%= character.first_name %></td>
+                <td><%= character.last_name %></td>
+                <td><%= character.gender %></td>
+                <td><%= character.species.kind %></td>
+                <td class="text-start">
+                  <ul class="list-unstyled">
+                    <% character.person_jobs.each do |person_job| %>
+                      <li>
+                        <b><%= person_job.company.name %></b><br>
+                        &nbsp; &nbsp;- <%= person_job.job.role %><br>
+                        &nbsp; &nbsp;- <%= person_job.start_date.strftime("%e %b '%y") %> -
+                                       <%= person_job.end_date&.strftime("%e %b '%y") %>
+                      </li>
+                    <% end %>
+                  </ul>
+                </td>
+              </tr>
+            <% end %>
+          </div>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col-3">
+      <%= link_to "New", new_character_path, class: "mt-5 sticky-top btn btn-primary" %>
+    </div>
   </div>
 </div>
-
-<table class="table table-striped table-hover">
-  <thead class="sticky-top">
-    <tr class="table-primary">
-
-      <th scope="col">
-        ID
-      </th>
-      <th scope="col">
-        First Name
-      </th>
-      <th scope="col">
-        Last Name
-      </th>
-      <th scope="col">
-        Gender
-      </th>
-      <th scope="col">
-        Species
-      </th>
-      <th scope="col">
-        Companie-Job
-      </th>
-    </tr>
-  </thead>
-
-  <tbody class="scrollable-table">
-    <div id="character">
-      <% @characters.each do |character| %>
-        <% jobs = character.jobs %>
-        <% companies = character.companies %>
-        <% companies_jobs = companies.zip(jobs) %>
-        <tr id="<%= dom_id character %>">
-          <th scope="row"><%= link_to "#{character.id}", edit_character_path(character) %></th>
-          <td><%= character.first_name %></td>
-          <td><%= character.last_name %></td>
-          <td><%= character.gender %></td>
-          <td><%= character.species.kind %></td>
-          <td>
-            <ul>
-              <% character.person_jobs.each do |person_job| %>
-                <li>
-                  <%= person_job.company.name %>: <%= person_job.job.role %>
-                  <%= person_job.start_date.strftime("%e.%b.%y") %>-<%= person_job.end_date&.strftime("%e.%b.%y") %>
-                </li>
-              <% end %>
-            </ul>
-          </td>
-        </tr>
-      <% end %>
-    </div>
-  </tbody>
-</table>
 ```
 
 start rails:
