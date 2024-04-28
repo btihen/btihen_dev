@@ -607,6 +607,36 @@ class ContactsController < ApplicationController
 end
 ```
 
+one last item to add is a logout link - this must be done since it is a delete and not a get - so just going to a link doesn't work.  So we can add:
+` <%= current_user ? button_to("Logout: #{current_user.email}", destroy_user_session_path, method: :delete) : button_to("Login", new_user_session_path) %>`
+or if you don't want a sign-in just:
+` <%= button_to("Logout: #{current_user.email}", destroy_user_session_path, method: :delete) if current_user %>`
+
+NOTE: most devise redirects are broken due to the way Turbo catches them, thus `link_to` with devise are mostly broken, but using `button_to` seems to work.
+
+```ruby
+# app/views/layouts/application.html.erb
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SecuredNamespace</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body>
+    <p class="notice"><%= notice %></p>
+    <p class="alert"><%= alert %></p>
+    <%= current_user ? button_to("Logout: #{current_user.email}", destroy_user_session_path, method: :delete) : link_to("Signin", new_user_session_path) %>
+    <%= yield %>
+  </body>
+</html>
+```
+
 now test and be sure that when you login you can see the admin pages and when you are not logged in you cannot see them (& that you still have access to the landing page/root page)
 
 ```bash
@@ -783,3 +813,4 @@ now you can also make controllers & resources available within additional namesp
 * https://stackoverflow.com/questions/34908931/devise-and-rails-how-to-secure-login-url
 * https://stackoverflow.com/questions/36128818/devise-skip-authentication-based-on-route
 * https://stackoverflow.com/questions/32409820/add-an-array-column-in-rails
+* https://dev.to/spaquet/rails-7-devise-log-out-d1n
