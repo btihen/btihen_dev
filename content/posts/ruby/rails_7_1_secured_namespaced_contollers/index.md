@@ -614,13 +614,21 @@ or if you don't want a sign-in just:
 
 NOTE: most devise redirects are broken due to the way Turbo catches them.
 One fix is to use:
-`<%= link_to "Sign out", destroy_user_session_path, data: { turbo_method: :delete" } %>`
+`<%= link_to "Sign out", destroy_user_session_path, data: { turbo_method: :delete } %>`
+or with the following format:
+`<%= link_to "Log Out", destroy_user_session_path, 'data-turbo-method': :delete %>`
 instead of:
 `<%= link_to "Sign out", destroy_user_session_path, method: delete %>`
 Another fix is to use `button_to` i.e.
 `button_to("Logout: #{current_user.email}", destroy_user_session_path, method: :delete)`
 instead of `link_to` - which just sends a GET verb instead of a DELETE.
 `link_to("Logout: #{current_user.email}", destroy_user_session_path, method: :delete)`
+
+NOTE: if any Devise or other link is getting messed up, adding:
+`, data: { turbo_method: :delete } `
+or
+`, 'data-turbo-method': :delete`
+to you link is likely to fix the problem.
 
 ```ruby
 # app/views/layouts/application.html.erb
@@ -650,11 +658,6 @@ now test and be sure that when you login you can see the admin pages and when yo
 ```bash
 git add .
 git commit -m "admin page is restricted"
-```
-
-Now, following the same steps as above for contacts, you can build a new admin controller to manage your users starting with:
-```bash
-rails g scaffold_controller admin/user
 ```
 
 I'll add this code to the repo and let the reader try this independently.
@@ -805,7 +808,7 @@ class Admin::ContactsController <  Admin::ApplicationController
 end
 ```
 
-be sure you test that all this works as expected and commit:
+be sure you test that all this works as expected and commcontactsit:
 ```bash
 git add .
 git commit -m "add roles to allow for other namespaces"
@@ -813,8 +816,39 @@ git commit -m "add roles to allow for other namespaces"
 
 now you can also make controllers & resources available within additional namespaces beyond just `admin` and provide different levels of access.
 
+## USER ADMIN PANEL
 
-## RESORUCES
+Now that we have `admin` and `user` roles - we can follow most of the same steps we used for contacts to build an admin page for users. We will start with:
+```bash
+rails g scaffold_controller admin/user
+```
+
+Here I will only provide a few notes for the differences that are a little tricky:
+
+1. roles is an array so we need to use strong params differently in this case we need to tell rails to expect an array by using `roles: []` so the file looks like:
+```ruby
+# app/controllers/admin/users_controller.rb
+  def admin_user_params
+    params.require(:user).permit(:email, roles: [])
+  end
+```
+
+2. the form field for `roles` is a multi-select so `:multiple => true` is important - so the `_form` needs to use something like:
+```ruby
+# app/views/admin/users/_form.html.erb
+  <div>
+    <%= form.label :roles, style: "display: block" %>
+    <%= form.select :roles,
+                    ['admin', 'user'],
+                    :prompt => "Select Roles",
+                    :multiple => true
+    %>
+  </div>
+```
+
+If any of this is still confusing you can refer to the repo with a full working solution at: https://github.com/btihen-dev/rails_secured_namespace
+
+## RESOURCES
 
 * https://stackoverflow.com/questions/4316940/create-a-devise-user-from-ruby-console
 * https://medium.com/@tdaniel/removing-user-registration-from-devise-3baa8d1738be
@@ -823,3 +857,5 @@ now you can also make controllers & resources available within additional namesp
 * https://stackoverflow.com/questions/32409820/add-an-array-column-in-rails
 * https://dev.to/spaquet/rails-7-devise-log-out-d1n
 * https://chimkan.com/rails-7-and-devise-issue-with-sign-out/
+* https://www.ruby-forum.com/t/how-do-i-select-multiple-things-in-a-form/70186/3
+* https://bhartee-tech-ror.medium.com/creating-a-rails-7-application-with-devise-and-roles-15fdac91ebd4
