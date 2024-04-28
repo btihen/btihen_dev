@@ -392,7 +392,7 @@ Now the `edit` view:
 <br>
 
 <div>
-  <%= link_to "Show this contact", @admin_contact %> |
+  <%= link_to "Show this contact", admin_contacts_path(@admin_contact) %> |
   <%= link_to "Back to contacts", admin_contacts_path %>
 </div>
 ```
@@ -425,7 +425,222 @@ git add .
 git commit -m "admin section with full management
 ```
 
-## Authentication & Athorization
-Lets restrict the admin page if this area an admin - we will use
-``
-instead.
+## Simple Authentication & Authorization
+Let's restrict the admin page to logged in users.
+
+We can easily do this with Devise: `https://github.com/heartcombo/devise` which has great instructions which I will summarize here.
+
+```bash
+bundle add devise
+rails generate devise:install
+
+# in config/environments/development.rb:
+config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
+
+rails generate devise User
+bin/rails db:migrate
+
+# in app/views/layouts/application.html.erb.
+<p class="notice"><%= notice %></p>
+<p class="alert"><%= alert %></p>
+# to this area:
+<body>
+  <p class="notice"><%= notice %></p>
+  <p class="alert"><%= alert %></p>
+  <%= yield %>
+</body>
+
+# we need to generate the views to remove the signup links
+rails g devise:views
+```
+
+Now you can adjust the how devise works with the user in the User model in this case we do NOT want people to register on their own so we will remove `registerable` in:
+```ruby
+# app/models/user.rb
+class User < ApplicationRecord
+  # Include default devise modules. Others available are:
+  # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
+  devise :database_authenticatable, # :registerable,
+         :recoverable, :rememberable, :validatable
+end
+```
+Devise without sign-up article:
+https://medium.com/@tdaniel/removing-user-registration-from-devise-3baa8d1738be
+
+Now we want to remove the registerable links and forms so we change the line:
+`devise_for :users`
+to
+`devise_for :users, :skip => [:registrations]`
+
+now routes should look like
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  devise_for :users, :skip => [:registrations]
+
+  namespace :admin do
+    resources :contacts
+  end
+  resources :contacts
+
+  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
+  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  get "up" => "rails/health#show", as: :rails_health_check
+
+  # Defines the root path route ("/")
+  root "contacts#new"
+end
+```
+
+Now we need to remove the `sign-up` / `new_registration` link in `app/views/devise/shared/_links.html.erb` as the following code will now error:
+```ruby
+<%- if devise_mapping.registerable? && controller_name != 'registrations' %>
+  <%= link_to "Sign up", new_registration_path(resource_name) %><br />
+<% end %>
+```
+
+so now this file should look like:
+```ruby
+# app/views/devise/shared/_links.html.erb
+<%- if controller_name != 'sessions' %>
+  <%= link_to "Log in", new_session_path(resource_name) %><br />
+<% end %>
+
+<%- if devise_mapping.recoverable? && controller_name != 'passwords' && controller_name != 'registrations' %>
+  <%= link_to "Forgot your password?", new_password_path(resource_name) %><br />
+<% end %>
+
+<%- if devise_mapping.confirmable? && controller_name != 'confirmations' %>
+  <%= link_to "Didn't receive confirmation instructions?", new_confirmation_path(resource_name) %><br />
+<% end %>
+
+<%- if devise_mapping.lockable? && resource_class.unlock_strategy_enabled?(:email) && controller_name != 'unlocks' %>
+  <%= link_to "Didn't receive unlock instructions?", new_unlock_path(resource_name) %><br />
+<% end %>
+
+<%- if devise_mapping.omniauthable? %>
+  <%- resource_class.omniauth_providers.each do |provider| %>
+    <%= button_to "Sign in with #{OmniAuth::Utils.camelize(provider)}", omniauth_authorize_path(resource_name, provider), data: { turbo: false } %><br />
+  <% end %>
+<% end %>
+
+```
+
+let's check that there is no sign-up route with:
+```bash
+bin/rails routes
+
+Prefix               Verb   URI Pattern                    Controller#Action
+-------------------------------------------------------------------
+new_user_session     GET    /users/sign_in(.:format)       devise/sessions#new
+user_session         POST   /users/sign_in(.:format)       devise/sessions#create
+destroy_user_session DELETE /users/sign_out(.:format)      devise/sessions#destroy
+new_user_password    GET    /users/password/new(.:format)  devise/passwords#new
+edit_user_password   GET    /users/password/edit(.:format) devise/passwords#edit
+user_password        PATCH  /users/password(.:format)      devise/passwords#update
+                     PUT    /users/password(.:format)      devise/passwords#update
+                     POST   /users/password(.:format)      devise/passwords#create
+```
+
+now it is important to restart rails if already running!
+
+Let's create a new user from the Command line (since we can no longer register via a web interface):
+```ruby
+User.create!({:email => "test@example.com", :password => "1123456789-asdfg", :password_confirmation => "1123456789-asdfg" })
+```
+If you have `confirmable` module enabled for devise, make sure you are setting the `confirmed_at` value to something like Time.now while creating. In our case this should not be the case.
+
+
+Now let's make a new controller in our admin area:
+
+```ruby
+#app/controllers/admin/application_controller.rb
+class Admin::ApplicationController < ApplicationController
+  before_action :authenticate_user!
+end
+```
+
+Now any controller that inherits from `Admin::ApplicationController` will requite authentication!
+
+so now we can adjust existing admin controller from
+`class Admin::ContactsController < ApplicationController`
+to:
+`class Admin::ContactsController <  Admin::ApplicationController`
+
+thus the controller now now looks like:
+
+```ruby
+# app/controllers/admin/contacts_controller.rb
+class Admin::ContactsController <  Admin::ApplicationController
+  before_action :set_admin_contact, only: %i[ show edit update destroy ]
+
+  def index
+    @admin_contacts = Contact.all
+  end
+
+  def show
+  end
+
+  def new
+    @admin_contact = Contact.new
+  end
+
+  def edit
+  end
+
+  def create
+    @admin_contact = Contact.new(admin_contact_params)
+
+    respond_to do |format|
+      if @admin_contact.save
+        format.html { redirect_to admin_contact_url(@admin_contact), notice: "Contact was successfully created." }
+        format.json { render :show, status: :created, location: @admin_contact }
+      else
+        format.html { render :new, status: :unprocessable_entity }
+        format.json { render json: @admin_contact.errors, status: :unprocessable_entity }
+      end
+    end
+  end
+
+  def update
+    respond_to do |format|
+      if @admin_contact.update(admin_contact_params)
+        format.html { redirect_to admin_contact_url(@admin_contact), notice: "Contact was successfully updated." }
+        format.json { render :show, status: :ok, location: @admin_contact }
+      else
+        format.html { render :edit, status: :unprocessable_entity }
+        format.json { render json: @admin_contact.errors, status: :unprocessable_entity }
+      end
+    end
+  end
+
+  def destroy
+    @admin_contact.destroy!
+
+    respond_to do |format|
+      format.html { redirect_to admin_contacts_url, notice: "Contact was successfully destroyed." }
+      format.json { head :no_content }
+    end
+  end
+
+  private
+
+  # Use callbacks to share common setup or constraints between actions.
+  def set_admin_contact
+    @admin_contact = Contact.find(params[:id])
+  end
+
+  # Only allow a list of trusted parameters through.
+  def admin_contact_params
+    params.fetch(:admin_contact, {})
+  end
+end
+```
+
+now test and be sure that when you login you can see the admin pages and when you are not loged in you cannot see them (& that you still have access to the landing page/root page)
+
+```bash
+git add .
+git commit -m "admin page is restricted"
+```
+
