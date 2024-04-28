@@ -5,7 +5,7 @@ title: "Rails 7.1.x Secured Namespaced Controllers"
 subtitle: "Organizing and Securing Controllers by Usage"
 summary: ""
 authors: ['btihen']
-tags: ['Rails', 'Security', 'Design', 'Organization','Controllers', 'Scope', 'Namespace']
+tags: ['Rails', 'Security', 'Design', 'Organization','Controllers', 'Scope', 'Namespace', 'array params', 'logout turbo fix']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2024-04-27T01:20:00+02:00
 lastmod: 2024-04-28T01:20:00+02:00
