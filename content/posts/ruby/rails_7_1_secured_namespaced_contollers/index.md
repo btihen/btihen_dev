@@ -550,15 +550,110 @@ User.create!({:email => "test@example.com", :password => "1123456789-asdfg", :pa
 ```
 If you have `confirmable` module enabled for devise, make sure you are setting the `confirmed_at` value to something like Time.now while creating. In our case this should not be the case.
 
-
-Now let's make a new controller in our admin area:
-
+The easiest way to secure the entire application is to now add:
+ `before_action :authenticate_user!` to
+our application_controller.
 ```ruby
-#app/controllers/admin/application_controller.rb
-class Admin::ApplicationController < ApplicationController
+# app/controllers/application_controller.rb
+class ApplicationController < ApplicationController
   before_action :authenticate_user!
 end
 ```
+
+And the add ` skip_before_action :authenticate_user!` to our root page so that it can be accessed without a login, so it now looks like:
+
+```ruby
+# app/controllers/contacts_controller.rb
+class ContactsController < ApplicationController
+  skip_before_action :authenticate_user!
+
+  def new
+    @contact = Contact.new
+  end
+
+  def create
+    @contact = Contact.new(contact_params)
+
+    if @contact.save
+      redirect_to root_path, notice: "Contact was successfully created."
+    else
+      render :new, status: :unprocessable_entity
+    end
+  end
+
+  private
+
+  # Only allow a list of trusted parameters through.
+  def contact_params
+    params.require(:contact).permit(:email, :first_name, :last_name, :message)
+  end
+end
+```
+
+now test and be sure that when you login you can see the admin pages and when you are not loged in you cannot see them (& that you still have access to the landing page/root page)
+
+```bash
+git add .
+git commit -m "admin page is restricted"
+```
+
+Now, following the same steps as above for contacts, you can build a new admin controller to manage your users starting with:
+```bash
+rails g scaffold_controller admin/user
+bin/rails db:migrate
+```
+
+## Separating Users and Admins
+
+If you would like multiple levels of access we can add a roles attribute to our users.
+
+let's make a user migration to add an array of roles to our user with the default rule as a user and admin as an option.
+
+```bash
+rails g migration add_roles_to_user roles:text
+```
+
+now we need to adjust our migration a bit to tell postgressql to accept an array - change:
+`add_column :users, :roles, :text`
+to
+`add_column :users, :roles, :text, array: true, default:  ['user']`
+now the migration should look like:
+```ruby
+class AddRolesToUser < ActiveRecord::Migration[7.1]
+  def change
+    add_column :users, :roles, :text, array: true, default: ['user']
+  end
+end
+```
+this will make sure our existing users are a `user` and we can now make a new `admin` account.
+
+now let's migrate:
+```
+bin/rails db:migrate
+```
+
+now we can create a new admin user from the Command line using:
+```ruby
+User.create!({:email => "admin@example.com", :roles => ["admin"], :password => "987654321-lkjhg", :password_confirmation => "987654321-lkjhg" })
+```
+
+now lets create a new admin application controller to user only admins have access:
+```ruby
+# app/controllers/admin/application_controller.rb
+class Admin::ApplicationController < ApplicationController
+  before_action :authenticate_admin!
+
+  private
+
+  def authenticate_admin!
+    # if not logged will be redirected to login page
+    authenticate_user!
+    # if not an admin will be redirected to root page
+    redirect_to root_path, alert: 'not authorized' unless current_user.roles.include?('admin')
+  end
+end
+```
+
 
 Now any controller that inherits from `Admin::ApplicationController` will requite authentication!
 
@@ -637,10 +732,19 @@ class Admin::ContactsController <  Admin::ApplicationController
 end
 ```
 
-now test and be sure that when you login you can see the admin pages and when you are not loged in you cannot see them (& that you still have access to the landing page/root page)
-
+be sure you test that all this works as expected and commit:
 ```bash
 git add .
-git commit -m "admin page is restricted"
+git commit -m "add roles to allow for other namespaces"
 ```
 
+now you can also make controllers & resources available within additional namespaces beyond just `admin` and provide different levels of access.
+
+
+## RESORUCES
+
+* https://stackoverflow.com/questions/4316940/create-a-devise-user-from-ruby-console
+* https://medium.com/@tdaniel/removing-user-registration-from-devise-3baa8d1738be
+* https://stackoverflow.com/questions/34908931/devise-and-rails-how-to-secure-login-url
+* https://stackoverflow.com/questions/36128818/devise-skip-authentication-based-on-route
+* https://stackoverflow.com/questions/32409820/add-an-array-column-in-rails
