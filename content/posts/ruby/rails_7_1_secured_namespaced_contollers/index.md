@@ -612,7 +612,15 @@ one last item to add is a logout link - this must be done since it is a delete a
 or if you don't want a sign-in just:
 ` <%= button_to("Logout: #{current_user.email}", destroy_user_session_path, method: :delete) if current_user %>`
 
-NOTE: most devise redirects are broken due to the way Turbo catches them, thus `link_to` with devise are mostly broken, but using `button_to` seems to work.
+NOTE: most devise redirects are broken due to the way Turbo catches them.
+One fix is to use:
+`<%= link_to "Sign out", destroy_user_session_path, data: { turbo_method: :delete" } %>`
+instead of:
+`<%= link_to "Sign out", destroy_user_session_path, method: delete %>`
+Another fix is to use `button_to` i.e.
+`button_to("Logout: #{current_user.email}", destroy_user_session_path, method: :delete)`
+instead of `link_to` - which just sends a GET verb instead of a DELETE.
+`link_to("Logout: #{current_user.email}", destroy_user_session_path, method: :delete)`
 
 ```ruby
 # app/views/layouts/application.html.erb
@@ -814,3 +822,4 @@ now you can also make controllers & resources available within additional namesp
 * https://stackoverflow.com/questions/36128818/devise-skip-authentication-based-on-route
 * https://stackoverflow.com/questions/32409820/add-an-array-column-in-rails
 * https://dev.to/spaquet/rails-7-devise-log-out-d1n
+* https://chimkan.com/rails-7-and-devise-issue-with-sign-out/
