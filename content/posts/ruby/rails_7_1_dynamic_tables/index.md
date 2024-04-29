@@ -350,6 +350,9 @@ now when you sort a column it doesn't reset the scroll location.
 * https://www.youtube.com/watch?v=phOUsR0dm5s
 * https://medium.com/@gjuliao32/installing-bootstrap-rails-7-a-step-by-step-guide-0fc4a843d94f
 
+### Bootstrap Icond
+
+* https://icons.getbootstrap.com/
 
 ### Rails Table Articles
 
