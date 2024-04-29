@@ -30,7 +30,7 @@ projects: []
 
 I recently learned that Rails 7.1+ has some delightful features that make it easy to render dynamic tables without JavaScript.  This is an exploration of using these new features.
 
-This code can be found at: https://github.com/btihen-dev/rails_dynamic_tables
+This code can be found at: https://github.com/btihen-dev/rails_dynamic_table
 
 ## Getting Started
 
@@ -42,8 +42,6 @@ In the case I will use the following options:
 rails new dynamic_tables -T --main --database=postgresql --css=bootstrap
 cd dynamic_tables
 ```
-
-The code for this blog will be found at: https://github.com/btihen-dev/rails_dynamic_tables
 
 NOTE: So far this code only works when using `import maps` and not when using `esbuild`.  When I find a solution I will update this article or write a new one about these features with esbuild.
 
