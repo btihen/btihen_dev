@@ -145,7 +145,7 @@ We want sortable columns without a page reload (so open your developer window an
 Let's add a sort link helper method to our `app/helpers/people_helper.rb`
 
 ```ruby
-# app/helpers/characters_helper.rb`
+# app/helpers/characters_helper.rb
 module CharactersHelper
   def sort_link(column:, label:)
     link_to(label, characters_path(column: column))
@@ -198,7 +198,152 @@ Let's update the people `index` with our new sort methods.
   </thead>
 ```
 
-This is a cool proof of concept, but unfortunately only sorts into asc and not descencing.
+This is a cool proof of concept, but unfortunately only sorts into ascending and not yet descending.
+
+## Bi-directional Sort
+
+we update the helper with:
+```ruby
+# app/helpers/characters_helper.rb
+module CharactersHelper
+  def sort_link(column:, label:)
+    direction = column == params[:column] ? next_direction : 'asc'
+    link_to(label, characters_path(column: column, direction: direction))
+  end
+
+  def next_direction = params[:direction] == 'asc' ? 'desc' : 'asc'
+
+  def sort_indicator = tag.span(class: "sort sort-#{params[:direction]}")
+
+  def show_sort_indicator_for(column)
+    sort_indicator if params[:column] == column
+  end
+end
+```
+
+and the controller with:
+```ruby
+# app/controllers/characters_controller.rb
+  def index
+    query = Character
+            .includes(:species)
+            .includes(person_jobs: { job: :company })
+    if params[:column].present?
+      # @characters = query.order("#{params[:column]}").all
+      @characters = query.order("#{params[:column]} #{params[:direction]}").all
+    else
+      @characters = query.all
+    end
+  end
+```
+
+this is pretty cool, but with every refresh we reset our scroll location, which is annoying when navigating a long table.
+
+## Adding Sort Arrows
+
+```ruby
+# app/helpers/characters_helper.rb
+module CharactersHelper
+  def sort_link(column:, label:)
+    direction = column == params[:column] ? future_direction : 'asc'
+    link_to(label, characters_path(column: column, direction: direction))
+  end
+
+  def future_direction = params[:direction] == 'asc' ? 'desc' : 'asc'
+
+  def sort_arrow
+    case params[:direction]
+    when 'asc' then tag.i(class: "bi bi-arrow-up")
+    when 'desc' then tag.i(class: "bi bi-arrow-down")
+    else tag.i(class: "bi bi-arrow-down-up")
+    end
+  end
+
+  def sort_arrow_for(column)
+    params[:column] == column ? sort_arrow : tag.i(class: "bi bi-arrow-down-up")
+  end
+end
+```
+
+now let's update the view too:
+```ruby
+# app/views/people/index.html.erb
+  <thead class="sticky-top">
+    <tr class="table-primary">
+      <th scope="col">
+        <%= sort_link(column: "id", label: "Id") %>
+        <%= sort_arrow_for("id") %>
+      </th>
+      <th scope="col">
+        <%= sort_link(column: "first_name", label: "First Name") %>
+        <%= sort_arrow_for("first_name") %>
+      </th>
+      <th scope="col">
+        <%= sort_link(column: "last_name", label: "Last Name") %>
+        <%= sort_arrow_for("last_name") %>
+      </th>
+      <th scope="col">
+        <%= sort_link(column: "gender", label: "Gender") %>
+        <%= sort_arrow_for("gender") %>
+      </th>
+      <th scope="col">
+        <%= sort_link(column: "species.species_name", label: "Species") %>
+        <%= sort_arrow_for("species.species_name") %>
+      </th>
+      <th scope="col">
+        Company-Job
+      </th>
+    </tr>
+  </thead>
+```
+
+## Fix Scroll Reset
+
+To fix scroll reset we need to enable new Turbo 8 features - morph dom and keeping scroll location:
+
+```ruby
+# app/views/layouts/application.html.erb
+  <head>
+    ...
+    <!-- adds morph-dom to rails and fixes scroll reset -->
+    <meta name="turbo-refresh-method" content="morph">
+    <meta name="turbo-refresh-scroll" content="preserve">
+    <%= turbo_refreshes_with method: :morph, scroll: :preserve  %>
+    <%= yield :head %>
+    ...
+  </head>
+```
+
+you can add this feature more surgically, this enables these features everywhere.
+
+Now we need to inform our helper about the morph-dom by adding `data: { turbo_action: 'replace' }` to our path so the helper now looks
+```ruby
+# app/helpers/characters_helper.rb
+module CharactersHelper
+  def sort_link(column:, label:)
+    direction = column == params[:column] ? future_direction : 'asc'
+    link_to(label, characters_path(column: column, direction: direction), data: { turbo_action: 'replace' })
+  end
+
+  def future_direction = params[:direction] == 'asc' ? 'desc' : 'asc'
+
+  def sort_arrow
+    case params[:direction]
+    when 'asc' then tag.i(class: "bi bi-arrow-up")
+    when 'desc' then tag.i(class: "bi bi-arrow-down")
+    else tag.i(class: "bi bi-arrow-down-up")
+    end
+  end
+
+  def sort_arrow_for(column)
+    return sort_arrow if params[:column] == column
+
+    tag.i(class: "bi bi-arrow-down-up")
+  end
+end
+```
+
+now when you sort a column it doesn't reset the scroll location.
 
 ## Resources
 
@@ -210,9 +355,9 @@ This is a cool proof of concept, but unfortunately only sorts into asc and not d
 
 ### Rails Table Articles
 
-* [Table Filtering Rails 7.0](https://www.colby.so/posts/filtering-tables-with-rails-and-hotwire)
-* [Table Sorting Rails 7.1](https://www.colby.so/posts/turbo-8-refresh-sorting)
-* [Table Sorting Rails 7.0](https://www.colby.so/posts/sortable-table-with-rails-and-turbo-frames)
+* [Table Sorting Rails 7.1 - 21 Mar 2024](https://www.colby.so/posts/turbo-8-refresh-sorting)
+* [Table Filtering Rails 7.0 - 15 Oct 2021](https://www.colby.so/posts/filtering-tables-with-rails-and-hotwire)
+* [Table Sorting Rails 7.0 - 19 Sep 2021](https://www.colby.so/posts/sortable-table-with-rails-and-turbo-frames)
 * [Table Sorting with Stimulus](https://www.colby.so/posts/a-sortable-table-with-rails-and-stimulusreflex)
 
 ### Rails Hotwire
