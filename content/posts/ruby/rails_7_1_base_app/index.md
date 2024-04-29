@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Rails', 'Base App']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2024-04-01T01:20:00+02:00
-lastmod: 2024-04-01T01:20:00+02:00
+lastmod: 2024-04-29T01:20:00+02:00
 featured: true
 draft: false
 
@@ -37,7 +37,9 @@ This code can be found at: https://github.com/btihen-dev/rails_base_app
 without explanations nor step:
 ```bash
 # use other options as needed
-rails new base_app -T --main --database=postgresql --javascript=esbuild
+rails new base_app --database=postgresql -T
+# main is good for testing very new features, but leads to lots of update messages
+# rails new base_app -T --main --database=postgresql --javascript=esbuild
 
 # setup and git commit (in case you are experimenting and want to rollback)
 cd base_app
@@ -48,10 +50,10 @@ git commit -m "initial commit"
 
 use generators to build basic code structure
 ```bash
-bin/rails g scaffold Species kind
+bin/rails g scaffold Species species_name
 bin/rails g scaffold Character nick_name first_name \
             last_name given_name gender species:references
-bin/rails g scaffold Company name
+bin/rails g scaffold Company company_name
 bin/rails g scaffold Job role company:references
 bin/rails g model PersonJob start_date:date end_date:date \
             person:references job:references
@@ -64,12 +66,12 @@ update migrations:
 class CreateSpecies < ActiveRecord::Migration[7.2]
   def change
     create_table :species do |t|
-      t.string :kind, null: false
+      t.string :species_name, null: false
 
       t.timestamps
     end
 
-    add_index :species, :kind, unique: true
+    add_index :species, :species_name, unique: true
   end
 end
 
@@ -94,12 +96,12 @@ end
 class CreateCompanies < ActiveRecord::Migration[7.2]
   def change
     create_table :companies do |t|
-      t.string :name, null: false
+      t.string :company_name, null: false
 
       t.timestamps
     end
 
-    add_index :companies, :name, unique: true
+    add_index :companies, :company_name, unique: true
   end
 end
 
@@ -139,12 +141,11 @@ update models:
 ```ruby
 cat << EOF > app/models/species.rb
 class Species < ApplicationRecord
-  normalizes :kind, with: ->(value) { value.strip }
+  normalizes :species_name, with: ->(value) { value.strip }
 
-  validates :kind, presence: true
-  validates :kind, uniqueness: true
+  validates :species_name, presence: true
+  validates :species_name, uniqueness: true
 end
-
 EOF
 
 cat << EOF > app/models/character.rb
@@ -175,10 +176,10 @@ class Company < ApplicationRecord
   has_many :person_jobs, through: :jobs
   has_many :people, through: :person_jobs
 
-  normalizes :name,  with: ->(value) { value.strip }
+  normalizes :company_name,  with: ->(value) { value.strip }
 
-  validates :name, presence: true
-  validates :name, uniqueness: true
+  validates :company_name, presence: true
+  validates :company_name, uniqueness: true
 end
 EOF
 
@@ -240,6 +241,91 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   root "characters#index"
 end
+```
+
+UPDATE the Character Controller to prevent N+1 queries:
+```ruby
+# app/controllers/characters_controller.rb
+  def index
+    @characters = Character
+                  .includes(species: [], person_jobs: { job: :company })
+                  .all
+  end
+```
+
+Also the index view MUST use full paths to avoid N+1 queries - even with all the includes:
+```ruby
+# app/views/characters/index.html.erb
+<p style="color: green"><%= notice %></p>
+
+<% content_for :title, "Characters" %>
+<div class="container text-center">
+
+  <div class="row justify-content-start">
+    <div class="col-9">
+      <h1>Characters</h1>
+
+      <table class="table table-striped table-hover">
+        <thead class="sticky-top">
+          <tr class="table-primary">
+
+            <th scope="col">
+              ID
+            </th>
+            <th scope="col">
+              First Name
+            </th>
+            <th scope="col">
+              Last Name
+            </th>
+            <th scope="col">
+              Gender
+            </th>
+            <th scope="col">
+              Species
+            </th>
+            <th scope="col">
+              Company-Job
+            </th>
+          </tr>
+        </thead>
+
+        <tbody class="scrollable-table">
+          <div id="characters">
+          <% @characters.each do |character| %>
+            <tr id="<%= dom_id(character) %>">
+              <th scope="row"><%= link_to "#{character.id}", edit_character_path(character) %></th>
+              <td><%= character.first_name %></td>
+              <td><%= character.last_name %></td>
+              <td><%= character.gender %></td>
+              <td><%= character.species.species_name %></td>
+              <td class="text-start">
+                <ul class="list-unstyled">
+                  <% character.person_jobs.each do |person_job| %>
+                    <li>
+                      <b><%= person_job.job.company.company_name %></b><br>
+                      &nbsp; - <%= person_job.job.role %><br>
+                      &nbsp; &nbsp;
+                      <em>
+                        (<%= person_job.start_date.strftime("%e %b '%y") %> -
+                         <%= person_job.end_date&.strftime("%e %b '%y") || 'present' %> )
+                      </em>
+                    </li>
+                  <% end %>
+                </ul>
+              </td>
+            </tr>
+          <% end %>
+          </div>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col-3">
+      <%= link_to "New", new_character_path, class: "mt-5 sticky-top btn btn-primary" %>
+    </div>
+  </div>
+</div>
 ```
 
 populate seed file `db/seeds.rb` with the seed data (see Appendix):
@@ -305,20 +391,20 @@ Now we will use generators to create some basic models and controllers for our b
 We have several types of characters, humans, aliens, pets, etc. So every character will be associated with a species.
 
 ```bash
-bin/rails g scaffold Species kind
+bin/rails g scaffold Species species_name
 ```
 
-update migration to require the kind and it must be unique.
+update migration to require that the `species_name` and must be unique.
 ```ruby
 class CreateSpecies < ActiveRecord::Migration[7.2]
   def change
     create_table :species do |t|
-      t.string :kind, null: false
+      t.string :species_name, null: false
 
       t.timestamps
     end
 
-    add_index :species, :kind, unique: true
+    add_index :species, :species_name, unique: true
   end
 end
 ```
@@ -326,10 +412,10 @@ end
 update the model to reflect the model.
 ```ruby
 class Species < ApplicationRecord
-  normalizes :kind, with: ->(value) { value.strip }
+  normalizes :species_name, with: ->(value) { value.strip }
 
-  validates :kind, presence: true
-  validates :kind, uniqueness: true
+  validates :species_name, presence: true
+  validates :species_name, uniqueness: true
 end
 ```
 
@@ -422,12 +508,12 @@ let's make the company name required and unique in the database:
 class CreateCompanies < ActiveRecord::Migration[7.2]
   def change
     create_table :companies do |t|
-      t.string :name, null: false
+      t.string :company_name, null: false
 
       t.timestamps
     end
 
-    add_index :companies, :name, unique: true
+    add_index :companies, :company_name, unique: true
   end
 end
 ```
@@ -435,10 +521,10 @@ end
 let's normalize the name field, and add the validations to our database to reflect the database restrictions
 ```ruby
 class Company < ApplicationRecord
-  normalizes :name,  with: ->(value) { value.strip }
+  normalizes :company_name,  with: ->(value) { value.strip }
 
-  validates :name, presence: true
-  validates :name, uniqueness: true
+  validates :company_name, presence: true
+  validates :company_name, uniqueness: true
 end
 ```
 
@@ -512,10 +598,10 @@ we should now also update `company` to reflect that it can have many jobs with `
 class Company < ApplicationRecord
   has_many :jobs
 
-  normalizes :name,  with: ->(value) { value.strip }
+  normalizes :job_title,  with: ->(value) { value.strip }
 
-  validates :name, presence: true
-  validates :name, uniqueness: true
+  validates :job_title, presence: true
+  validates :job_title, uniqueness: true
 end
 ```
 
@@ -535,7 +621,7 @@ bin/rails c
 Company.first
 # #<Company:0x0000000122e58ad0
 #  id: 1,
-#  name: "San Cemente",
+#  company_name: "San Cemente",
 #  created_at: Sun, 31 Mar 2024 15:32:31.512139000 UTC +00:00,
 #  updated_at: Sun, 31 Mar 2024 15:32:31.512139000 UTC +00:00>
 
@@ -563,7 +649,7 @@ Job.last
 Job.last.company
 # #<Company:0x0000000131d28480
 #  id: 15,
-#  name: "Water Buffalo Lodge",
+#  company_name: "Water Buffalo Lodge",
 #  created_at: Sun, 31 Mar 2024 15:32:31.637401000 UTC +00:00,
 #  updated_at: Sun, 31 Mar 2024 15:32:31.637401000 UTC +00:00>
 ```
@@ -652,10 +738,10 @@ class Company < ApplicationRecord
   has_many :person_jobs, through: :jobs
   has_many :people, through: :person_jobs
 
-  normalizes :name,  with: ->(value) { value.strip }
+  normalizes :company_name,  with: ->(value) { value.strip }
 
-  validates :name, presence: true
-  validates :name, uniqueness: true
+  validates :company_name, presence: true
+  validates :company_name, uniqueness: true
 end
 ```
 
@@ -701,7 +787,7 @@ Character.first.jobs
 Character.first.companies
 # [#<Company:0x000000011e785158
 #   id: 1,
-#   name: "San Cemente",
+#   company_name: "San Cemente",
 #   created_at: Sun, 31 Mar 2024 15:48:33.006684000 UTC +00:00,
 #   updated_at: Sun, 31 Mar 2024 15:48:33.006684000 UTC +00:00>]
 
@@ -720,7 +806,7 @@ Job.first.people
 Job.first.company
 # #<Company:0x000000012086dfc8
 #  id: 1,
-#  name: "San Cemente",
+#  company_name: "San Cemente",
 #  created_at: Sun, 31 Mar 2024 15:48:33.006684000 UTC +00:00,
 #  updated_at: Sun, 31 Mar 2024 15:48:33.006684000 UTC +00:00>
 
@@ -777,11 +863,11 @@ In rails we can seed sample data using the file: `db/seeds.rb`  The data found f
 
 ## Species
 ##########
-human = Species.create!(kind: 'human')
-alien = Species.create!(kind: 'alien')
-dino = Species.create!(kind: 'dinosaur')
-kanga = Species.create!(kind: 'kangaroo')
-tiger = Species.create!(kind: 'saber-tooth tiger')
+human = Species.create!(species_name: 'human')
+alien = Species.create!(species_name: 'alien')
+dino = Species.create!(species_name: 'dinosaur')
+kanga = Species.create!(species_name: 'kangaroo')
+tiger = Species.create!(species_name: 'saber-tooth tiger')
 
 ## PEOPLE
 #########
@@ -949,21 +1035,21 @@ hoppy = Character.create!(species: kanga, first_name: 'Hoppy', last_name: 'Rubbl
 
 ## Companies
 ############
-san_cemente = Company.create!(name: 'San Cemente')
-bedrock_news = Company.create!(name: 'Bedrock Daily News')
-bedrock_police = Company.create!(name: 'Bedrock Police Department')
-bedrock_fire = Company.create!(name: 'Bedrock Fire Department')
-bedrock_quarry = Company.create!(name: 'Bedrock & Gravel Quarry Company')
-betty_wilma_catering = Company.create!(name: 'Betty & Wilma Catering')
-texrock_ranch = Company.create!(name: 'Texrock Ranch')
-teradactyl = Company.create!(name: 'Teradactyl Flights')
-auto_repair = Company.create!(name: 'Bedrock Auto Repair')
-used_cars = Company.create!(name: 'Bedrock Used Cars')
-bedrock_entetainment = Company.create!(name: 'Bedrock Entertainment')
-bedrock_army = Company.create!(name: 'Bedrock Army')
-independent = Company.create!(name: 'Independent')
-advertising = Company.create!(name: 'Bedrock Advertising')
-buffalo_lodge = Company.create!(name: 'Water Buffalo Lodge')
+san_cemente = Company.create!(company_name: 'San Cemente')
+bedrock_news = Company.create!(company_name: 'Bedrock Daily News')
+bedrock_police = Company.create!(company_name: 'Bedrock Police Department')
+bedrock_fire = Company.create!(company_name: 'Bedrock Fire Department')
+bedrock_quarry = Company.create!(company_name: 'Bedrock & Gravel Quarry Company')
+betty_wilma_catering = Company.create!(company_name: 'Betty & Wilma Catering')
+texrock_ranch = Company.create!(company_name: 'Texrock Ranch')
+teradactyl = Company.create!(company_name: 'Teradactyl Flights')
+auto_repair = Company.create!(company_name: 'Bedrock Auto Repair')
+used_cars = Company.create!(company_name: 'Bedrock Used Cars')
+bedrock_entetainment = Company.create!(company_name: 'Bedrock Entertainment')
+bedrock_army = Company.create!(company_name: 'Bedrock Army')
+independent = Company.create!(company_name: 'Independent')
+advertising = Company.create!(company_name: 'Bedrock Advertising')
+buffalo_lodge = Company.create!(company_name: 'Water Buffalo Lodge')
 
 ## Jobs
 #######

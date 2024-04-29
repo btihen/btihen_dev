@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Rails', 'Tables']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2024-04-01T01:20:00+02:00
-lastmod: 2024-04-27T01:20:00+02:00
+lastmod: 2024-04-29T01:20:00+02:00
 featured: true
 draft: false
 
@@ -39,9 +39,13 @@ I will create a basic application - using the starting point in the [Basic App](
 In the case I will use the following options:
 
 ```bash
-rails new dynamic_tables -T --main --database=postgresql --javascript=esbuild --css=bootstrap
+rails new dynamic_tables -T --main --database=postgresql --css=bootstrap
 cd dynamic_tables
 ```
+
+The code for this blog will be found at: https://github.com/btihen-dev/rails_dynamic_tables
+
+NOTE: So far this code only works when using `import maps` and not when using `esbuild`.  When I find a solution I will update this article or write a new one about these features with esbuild.
 
 ## Dynamic Tables
 
@@ -86,23 +90,23 @@ Let's convert the people `index` view into a table view `app/views/people/index.
         <tbody class="scrollable-table">
           <div id="characters">
             <% @characters.each do |character| %>
-              <% jobs = character.jobs %>
-              <% companies = character.companies %>
-              <% companies_jobs = companies.zip(jobs) %>
-              <tr id="<%= dom_id character %>">
+              <tr id="<%= dom_id(character) %>">
                 <th scope="row"><%= link_to "#{character.id}", edit_character_path(character) %></th>
                 <td><%= character.first_name %></td>
                 <td><%= character.last_name %></td>
                 <td><%= character.gender %></td>
-                <td><%= character.species.kind %></td>
+                <td><%= character.species.species_name %></td>
                 <td class="text-start">
                   <ul class="list-unstyled">
                     <% character.person_jobs.each do |person_job| %>
                       <li>
-                        <b><%= person_job.company.name %></b><br>
-                        &nbsp; &nbsp;- <%= person_job.job.role %><br>
-                        &nbsp; &nbsp;- <%= person_job.start_date.strftime("%e %b '%y") %> -
-                                       <%= person_job.end_date&.strftime("%e %b '%y") %>
+                        <b><%= person_job.job.company.company_name %></b><br>
+                        &nbsp; - <%= person_job.job.role %><br>
+                        &nbsp; &nbsp;
+                        <em>
+                          (<%= person_job.start_date.strftime("%e %b '%y") %> -
+                          <%= person_job.end_date&.strftime("%e %b '%y") || 'present' %> )
+                        </em>
                       </li>
                     <% end %>
                   </ul>
@@ -123,7 +127,7 @@ Let's convert the people `index` view into a table view `app/views/people/index.
 
 start rails:
 ```bash
-bin/rails s
+bin/rails s -p 3030
 ```
 
 go to: `http://localhost:3030/people` and be sure this table looks reasonable.
@@ -134,8 +138,67 @@ git add .
 git commit -m "basic people table added"
 ```
 
+## Sortable Columns
 
+We want sortable columns without a page reload (so open your developer window and open the network so you can see how fast and little data is transmitted)
 
+Let's add a sort link helper method to our `app/helpers/people_helper.rb`
+
+```ruby
+# app/helpers/characters_helper.rb`
+module CharactersHelper
+  def sort_link(column:, label:)
+    link_to(label, characters_path(column: column))
+  end
+end
+```
+
+Let's update the people index controller `app/controllers/people_controller.rb` to use this new helper method.
+```ruby
+# app/controllers/people_controller.rb
+  def index
+    query =
+      Character
+      .includes(:species)
+      .includes(person_jobs: [ job: :company ])
+
+    if params[:column].present?
+      @characters = query.order("#{params[:column]}").all
+    else
+      @characters = query.all
+    end
+end
+```
+
+Let's update the people `index` with our new sort methods.
+
+```ruby
+# app/views/people/index.html.erb
+  <thead class="sticky-top">
+    <tr class="table-primary">
+      <th scope="col">
+        <%= sort_link(column: "id", label: "Id") %>
+      </th>
+      <th scope="col">
+        <%= sort_link(column: "first_name", label: "First Name") %>
+      </th>
+      <th scope="col">
+        <%= sort_link(column: "last_name", label: "Last Name") %>
+      </th>
+      <th scope="col">
+        <%= sort_link(column: "gender", label: "Gender") %>
+      </th>
+      <th scope="col">
+        <%= sort_link(column: "species.species_name", label: "Species") %>
+      </th>
+      <th scope="col">
+        Company-Job
+      </th>
+    </tr>
+  </thead>
+```
+
+This is a cool proof of concept, but unfortunately only sorts into asc and not descencing.
 
 ## Resources
 
