@@ -39,7 +39,7 @@ I will create a basic application - using the starting point in the [Basic App](
 In the case I will use the following options:
 
 ```bash
-rails new dynamic_tables -T --main --database=postgresql --css=bootstrap
+rails _7.1.3.2_ new dynamic_tables -T --database=postgresql --css=bootstrap
 cd dynamic_tables
 ```
 
@@ -342,6 +342,11 @@ end
 ```
 
 now when you sort a column it doesn't reset the scroll location.
+
+## Add Search Filter
+
+https://www.colby.so/posts/filtering-tables-with-rails-and-hotwire
+
 
 ## Resources
 
