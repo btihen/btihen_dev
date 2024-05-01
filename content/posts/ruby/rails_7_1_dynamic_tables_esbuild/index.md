@@ -39,7 +39,8 @@ In the case I will use the following options:
 
 ```bash
 # install rails 7.1.x
-rails _7.1.3.2_ new esbuild_tables -T --database=postgresql --css=bootstrap --javascript=esbuild
+rails _7.1.3.2_ new esbuild_tables -T --database=postgresql --css=bootstrap \
+      --javascript=esbuild
 cd esbuild_tables
 
 # build the models
