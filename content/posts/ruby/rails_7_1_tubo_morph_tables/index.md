@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Rails', 'Tables']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2024-05-01T01:20:00+02:00
-lastmod: 2024-05-01T01:20:00+02:00
+lastmod: 2024-05-02T01:20:00+02:00
 featured: true
 draft: false
 
@@ -30,16 +30,20 @@ projects: []
 
 I recently learned that Rails 7.1+ has some delightful features that make it easy to render dynamic tables without JavaScript.  This is an exploration of using these new features.
 
-This code can be found at: https://github.com/btihen-dev/rails_morph_tables (coming soon)
+The cool thing is that morph updates without a full page reload - so its fast! and very easy to setup.
+
+This code can be found at: https://github.com/btihen-dev/rails_morph_tables
 
 ## Getting Started
 
-In the case I will use the following options (some people prefer esbuild, be sure `esbuild` works and builds the proper files - see **APPENDIX**)
+Initially, I had a little problem with esbuild - partly because I didn't start rails with `bin/dev` procfile.  See the **Appendix**  to be sure `esbuild` works and builds the proper files.
+
+With import-maps you can start rails with just: `bin/rails`, but with esbuild be sure to use `bin/dev`!
 
 ```bash
 # install rails 7.1.x
-rails _7.1.3.2_ new morph_tables -T -d postgresql --css=bootstrap
-# rails _7.1.3.2_ new morph_tables -T -j esbuild -d postgresql --css=bootstrap
+rails _7.1.3.2_ new morph_tables -T -j esbuild -d postgresql --css=bootstrap
+# rails _7.1.3.2_ new morph_tables -T -d postgresql --css=bootstrap
 cd morph_tables
 
 # build the models
@@ -52,7 +56,7 @@ bin/rails g model PersonJob start_date:date end_date:date \
             character:references job:references
 
 # Add data to the seeds file see:
-# https://github.com/btihen-dev/rails_dynamic_tables/blob/main/db/seeds.rb
+# https://github.com/btihen-dev/rails_morph_tables/blob/main/db/seeds.rb
 
 bin/rails db:create
 bin/rails db:migrate
@@ -60,6 +64,9 @@ bin/rails db:seed
 
 git add .
 git commit -m "add generated code"
+
+# start rails and test
+bin/dev
 ```
 
 NOTE: So far this code only works when using `import maps` and not when using `esbuild`.  When I find a solution I will update this article or write a new one about these features with esbuild.
@@ -99,6 +106,15 @@ class Character < ApplicationRecord
 
   normalizes :first_name, :nick_name, :last_name, :given_name,
              with: ->(value) { value.strip }
+
+  validates :first_name,
+            uniqueness: { scope: :last_name,
+                          message: "first_name and last_name already exists" }
+  validates :first_name, presence: true
+  validates :last_name, presence: true
+  validates :species, presence: true
+  validates :gender, presence: true
+  validates :gender, inclusion: { in: %w[male female] }
 end
 ```
 
@@ -108,9 +124,12 @@ end
 class Company < ApplicationRecord
   has_many :jobs, dependent: :destroy
   has_many :person_jobs, through: :jobs
-  has_many :people, through: :person_jobs
+  has_many :characters, through: :person_jobs
 
   normalizes :company_name,  with: ->(value) { value.strip }
+
+  validates :company_name, presence: true
+  validates :company_name, uniqueness: true
 end
 ```
 
@@ -124,6 +143,12 @@ class Job < ApplicationRecord
   has_many :people, through: :person_jobs
 
   normalizes :role, :title, :company, with: ->(value) { value.strip }
+
+  validates :company, presence: true
+  validates :role, presence: true
+  validates :role,
+            uniqueness: { scope: :company_id,
+                          message: "role and company already exists" }
 end
 ```
 
@@ -135,6 +160,13 @@ class PersonJob < ApplicationRecord
   belongs_to :job
 
   has_one :company, through: :job
+
+  validates :job, presence: true
+  validates :person, presence: true
+  validates :start_date, presence: true
+  validates :person,
+            uniqueness: { scope: [ :job, :start_date ],
+                          message: "person and job with start_date already exists" }
 end
 ```
 
@@ -142,7 +174,12 @@ end
 ```ruby
 # app/models/species.rb
 class Species < ApplicationRecord
+  has_many :characters, dependent: :destroy
+
   normalizes :species_name, with: ->(value) { value.strip }
+
+  validates :species_name, presence: true
+  validates :species_name, uniqueness: true
 end
 ```
 
@@ -272,7 +309,7 @@ Let's convert the people `index` view into a table view `app/views/people/index.
 
 start rails:
 ```bash
-bin/rails s -p 3030
+bin/dev
 ```
 
 go to: `http://localhost:3030/people` and be sure this table looks reasonable.
