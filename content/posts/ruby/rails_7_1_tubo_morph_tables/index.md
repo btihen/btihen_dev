@@ -561,7 +561,7 @@ and remove the button now the form looks like:
         Company
         <%= form_with url: characters_path, method: :get,
             data: {
-              controller: "filter-form", filter_form_target: "form"
+              controller: "filter-form", filter_form_target: "form", turbo_action: 'replace' # adding replace here keeps the scroll location correct
             } do |form| %>
           <%= form.text_field :company_filter,
               placeholder: "partial name",
@@ -598,8 +598,7 @@ now the template looks like:
       <th scope="col">
         Company
         <%= form_with url: characters_path, method: :get,
-            data: {
-              controller: "filter-form", filter_form_target: "form"
+            data: {controller: "filter-form", filter_form_target: "form", turbo_action: 'replace' # adding replace here keeps the scroll location correct
             } do |form| %>
           <%= form.text_field :company_filter,
               placeholder: "partial name",
