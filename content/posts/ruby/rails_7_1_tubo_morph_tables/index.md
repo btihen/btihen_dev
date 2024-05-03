@@ -34,6 +34,30 @@ The cool thing is that morph updates without a full page reload - so its fast! a
 
 This code can be found at: https://github.com/btihen-dev/rails_morph_tables
 
+## Quick Summary
+
+By adding this config in our head we enable Morph:
+
+```ruby
+# app/views/layouts/application.html.erb
+  <head>
+    ...
+
+    <meta name="turbo-refresh-method" content="morph">
+    <meta name="turbo-refresh-scroll" content="preserve">
+    <%= turbo_refreshes_with method: :morph, scroll: :preserve  %>
+    <%= yield :head %>
+
+    ...
+  </head>
+```
+
+Then we can add:
+`, data: { turbo_action: 'replace' }`
+to links (like sorting links or form submit urls). Then morph will automatically update only changes without a full page reload and it doesn't reset our page location.
+
+The following article shows how to do this with sorting links and a filter/search form - this article is a summary of [Dynamic Table Sorting with Morph](https://btihen.dev/posts/ruby/rails_7_1_dynamic_tables/) and expands on Dynamic Filtering (with a form input) using Turbo morph.
+
 ## Getting Started
 
 Initially, I had a little problem with esbuild - partly because I didn't start rails with `bin/dev` procfile.  See the **Appendix**  to be sure `esbuild` works and builds the proper files.
@@ -71,9 +95,11 @@ bin/dev
 
 NOTE: So far this code only works when using `import maps` and not when using `esbuild`.  When I find a solution I will update this article or write a new one about these features with esbuild.
 
-## Dynamic Tables
+## Basic Setup Table Sort
 
-lets make the character index page our home (root) page by adding `root "characters#index"` to the end of our routes:
+This section is a summary of the article [Dynamic Table Sorting with Morph](https://btihen.dev/posts/ruby/rails_7_1_dynamic_tables/), but repeated hear to build the base app and is an adaptation of the article: https://www.colby.so/posts/turbo-8-refresh-sorting
+
+Lets make the character index page our home (root) page by adding `root "characters#index"` to the end of our routes:
 ```ruby
 #
 Rails.application.routes.draw do
@@ -379,10 +405,9 @@ now when you sort a column it doesn't reset the scroll location.
 
 ## Add Filter (submit with button)
 
-https://www.colby.so/posts/filtering-tables-with-rails-and-hotwire
+This section is built up the article: https://www.colby.so/posts/filtering-tables-with-rails-and-hotwire, but adapted to use the simplicity of Turbo 8 Morph instead of the full hotwire features.
 
-
-we can add a form to submit our filter text in the `company` header with:
+Add a form to submit our filter text in the `company` header with:
 ```ruby
       <th scope="col">
         Company
