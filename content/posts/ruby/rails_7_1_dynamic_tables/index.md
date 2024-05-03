@@ -1,14 +1,14 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Rails 7.1.x Dynamic Tables"
-subtitle: "Simple Dynamic Tables without Javascript"
+title: "Rails 7.1.x Dynamic Tables using Turbo Morph"
+subtitle: "Simple Dynamic Tables with Turbo 8 Morph"
 summary: ""
 authors: ['btihen']
-tags: ['Rails', 'Tables']
+tags: ['Rails', 'Tables', 'Turbo', 'Turbo 8', 'Morph', 'Morph Dom']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2024-04-01T01:20:00+02:00
-lastmod: 2024-04-29T01:20:00+02:00
+lastmod: 2024-05-03T01:20:00+02:00
 featured: true
 draft: false
 
@@ -28,7 +28,7 @@ image:
 projects: []
 ---
 
-I recently learned that Rails 7.1+ has some delightful features that make it easy to render dynamic tables without JavaScript.  This is an exploration of using these new features.
+I recently learned that Rails 7.1+ has some delightful features that make it easy to render dynamic tables without JavaScript.  This is an exploration of using these new features.  This article is an adaptation of the article: https://www.colby.so/posts/turbo-8-refresh-sorting and https://www.colby.so/posts/filtering-tables-with-rails-and-hotwire
 
 This code can be found at: https://github.com/btihen-dev/rails_dynamic_table
 

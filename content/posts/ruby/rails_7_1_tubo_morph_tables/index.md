@@ -5,10 +5,10 @@ title: "Rails 7.1.x - Dynamic Tables with Turbo Morph"
 subtitle: "Very Simple and easy Dynamic Tables"
 summary: ""
 authors: ['btihen']
-tags: ['Rails', 'Tables']
+tags: ['Rails', 'Tables', 'Turbo', 'Turbo 8', 'Morph', 'Morph Dom']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2024-05-01T01:20:00+02:00
-lastmod: 2024-05-02T01:20:00+02:00
+lastmod: 2024-05-03T01:20:00+02:00
 featured: true
 draft: false
 
