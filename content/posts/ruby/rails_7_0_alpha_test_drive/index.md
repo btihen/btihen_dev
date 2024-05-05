@@ -9,7 +9,7 @@ tags: ['Ruby', 'install', 'initialize']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2021-09-18T21:20:00+02:00
 lastmod: 2021-09-18T21:20:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

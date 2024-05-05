@@ -9,7 +9,7 @@ tags: ['Rails', 'Base App']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2024-04-01T01:20:00+02:00
 lastmod: 2024-04-29T01:20:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

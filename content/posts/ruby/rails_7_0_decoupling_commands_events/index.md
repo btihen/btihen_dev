@@ -9,7 +9,7 @@ tags: ['Ruby', 'event bus', 'publish/subscribe pattern', 'command class', 'Archi
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2022-04-23T01:20:00+02:00
 lastmod: 2022-05-26T01:20:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image
