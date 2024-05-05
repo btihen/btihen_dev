@@ -9,7 +9,7 @@ tags: ['Rails', 'Tables', 'Turbo', 'Turbo 8', 'Morph', 'Morph Dom']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2024-04-01T01:20:00+02:00
 lastmod: 2024-05-03T01:20:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

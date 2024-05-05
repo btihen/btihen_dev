@@ -9,7 +9,7 @@ tags: ['Ruby']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2021-09-19T15:56:34+02:00
 lastmod: 2021-09-19T15:56:34+02:00
-featured: true
+featured: false
 draft: true
 
 # Featured image

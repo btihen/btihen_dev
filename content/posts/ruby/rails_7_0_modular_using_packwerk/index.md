@@ -7,7 +7,7 @@ authors: ['btihen']
 tags: ['Ruby', 'Packwerk', 'Architecture', 'Citadel Design']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 summary: Packwerk enables lightweight modular Rails projects.  It is a flexible, low overhead alternative to Rails Engines. Crucially, for established code it allows a gradual migration and to only enforce module boundaries when the code is sufficiently refactored with low coupling.
-featured: true
+featured: false
 draft: false
 
 image:

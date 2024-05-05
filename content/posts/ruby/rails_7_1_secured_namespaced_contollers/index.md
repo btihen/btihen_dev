@@ -9,7 +9,7 @@ tags: ['Rails', 'Security', 'Design', 'Organization','Controllers', 'Scope', 'Na
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2024-04-27T01:20:00+02:00
 lastmod: 2024-04-28T01:20:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

@@ -9,7 +9,7 @@ tags: ["Tech", "Hugo", "Static Site", "theme"]
 categories: ["Technology", "Website"]
 date: 2023-03-04T01:39:21+02:00
 lastmod: 2021-03-05T01:39:21+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

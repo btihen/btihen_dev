@@ -9,7 +9,7 @@ tags: ["Tech", "website", "ssl", "domain", "github", "cloudflare", "namecheap"]
 categories: ["Technology", "Website"]
 date: 2020-05-31T13:22:48+02:00
 lastmod: 2020-05-31T13:22:48+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

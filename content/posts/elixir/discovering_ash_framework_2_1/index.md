@@ -10,7 +10,7 @@ tags: ["Elixir", "Ash", "Phoenix", "GraphQL", "JSON API"]
 categories: ["Code", "Elixir Language", "Ash Framework"]
 date: 2022-11-03T01:01:53+02:00
 lastmod: 2022-11-03T01:01:53+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

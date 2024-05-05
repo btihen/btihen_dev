@@ -9,7 +9,7 @@ tags: ['Ruby', 'ERB', 'Static Site']
 categories: ["Code", "Ruby Language", "Bridgetown Framework"]
 date: 2022-03-05T01:57:00+02:00
 lastmod: 2022-03-13T01:57:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

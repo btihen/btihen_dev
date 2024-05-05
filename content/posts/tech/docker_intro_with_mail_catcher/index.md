@@ -9,7 +9,7 @@ tags: ["Tech", "Docker", "email", "Testing"]
 categories: ["Technology", "Docker"]
 date: 2020-05-12T21:19:09+02:00
 lastmod: 2020-05-23T21:19:09+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

@@ -9,7 +9,7 @@ tags: ["Tech", "Hugo", "Static Site", "git", "Academic Theme", "commands"]
 categories: ["Technology", "Website"]
 date: 2020-05-23T10:39:21+02:00
 lastmod: 2020-05-23T10:39:21+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

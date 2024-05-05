@@ -9,7 +9,7 @@ tags: ['Ruby', "authentication", "passwordless", "Devise", "Signed GlobalID", "M
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2021-12-18T01:36:55+02:00
 lastmod: 2021-12-18T01:36:55+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

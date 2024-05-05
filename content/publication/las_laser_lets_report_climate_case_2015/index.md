@@ -32,7 +32,7 @@ tags:
 - Self-Regulation
 - Student Agency
 categories: ["Education", "Agile", "EDgility"]
-featured: true
+featured: false
 url_pdf:
 url_code:
 url_dataset:

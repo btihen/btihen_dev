@@ -9,7 +9,7 @@ tags: ['Ruby', 'Ractor', 'Architecture', 'Design', 'Actor Model', Supervision']
 categories: ["Code", "Ruby Language", 'Parallel Computing']
 date: 2022-04-23T01:20:00+02:00
 lastmod: 2022-04-23T01:20:00+02:00
-featured: true
+featured: false
 draft: true
 
 # Featured image

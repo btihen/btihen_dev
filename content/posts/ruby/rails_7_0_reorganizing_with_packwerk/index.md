@@ -6,7 +6,7 @@ summary: Packwerk enables lightweight modular Rails projects.  It is a flexible,
 authors: ['btihen']
 tags: ['Ruby', 'Packwerk', 'Architecture', 'Design']
 categories: ["Code", "Ruby Language", "Rails Framework"]
-featured: true
+featured: false
 draft: false
 
 # Featured image

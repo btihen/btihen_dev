@@ -9,7 +9,7 @@ tags: ['Ruby', "strategy pattern", "lambda"]
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2021-08-14T01:11:22+02:00
 lastmod: 2021-08-14T01:11:22+02:00
-featured: true
+featured: false
 draft: true
 
 # Featured image

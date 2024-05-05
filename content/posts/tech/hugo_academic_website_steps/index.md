@@ -9,7 +9,7 @@ tags: ["Tech", "Hugo", "Static Site", "git", "submodules"]
 categories: ["Technology", "Website"]
 date: 2020-05-16T10:39:21+02:00
 lastmod: 2021-08-07T01:39:21+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

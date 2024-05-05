@@ -24,7 +24,7 @@ tags:
 - Self-Regulation
 - Student Agency
 categories: ["Education", "Agile", "EDgility"]
-featured: true
+featured: false
 url_pdf: https://resources.finalsite.net/images/v1571421333/lasch/x6zkzvqfmlcpc7rxnljy/Spotlight_Magazine_2019_DIGITAL.pdf
 url_code: ''
 url_dataset: ''

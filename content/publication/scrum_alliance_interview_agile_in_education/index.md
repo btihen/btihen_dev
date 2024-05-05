@@ -26,7 +26,7 @@ summary: "Principles to cultivate engaged, collaborative and self-regulated stud
 
 tags: ["EDgility", "Agility", "Education"]
 categories: ["Education", "EDgility", "Agile"]
-featured: true
+featured: false
 
 # Custom links (optional).
 #   Uncomment and edit lines below to show custom links.

@@ -9,7 +9,7 @@ tags: ['Ruby', 'Citadel Design', 'Architecture', 'Packwerk', 'Shopify']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2022-03-12T01:20:00+02:00
 lastmod: 2022-03-12T01:20:00+02:00
-featured: true
+featured: false
 draft: true
 
 # Featured image

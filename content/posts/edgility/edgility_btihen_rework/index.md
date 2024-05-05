@@ -9,7 +9,7 @@ tags: ["EDgility", "deliberate practice", "self-assess", "self-reflect", "self-C
 categories: ["Education", "Agile", "EDgility"]
 date: 2020-06-28T15:01:22+02:00
 lastmod: 2020-06-16T15:01:22+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

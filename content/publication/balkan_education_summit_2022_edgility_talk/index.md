@@ -30,7 +30,7 @@ We think you’ll enjoy the practical advice, based on a real world example, to 
 # Summary. An optional shortened abstract.
 summary: "As part of the ECIS Leadership Conference - April 2020, Guide and Lead Managing Partner, Tim Logan gives an overview of the importance of agility in building schools as life-affirming 21st century organisations."
 
-featured: true
+featured: false
 
 # Custom links (optional).
 #   Uncomment and edit lines below to show custom links.

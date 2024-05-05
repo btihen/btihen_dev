@@ -9,7 +9,7 @@ tags: ['Ruby', "devise", "authentication", "namespace"]
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2020-07-10T20:45:51+02:00
 lastmod: 2020-08-07T20:45:51+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

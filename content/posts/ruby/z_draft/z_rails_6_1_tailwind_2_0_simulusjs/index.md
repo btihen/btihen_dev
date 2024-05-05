@@ -9,7 +9,7 @@ tags: ['Ruby', "rails 6", "configure", "install", "tailwind css", "stimulus"]
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2020-09-10T01:46:07+02:00
 lastmod: 2021-03-21T01:46:07+02:00
-featured: true
+featured: false
 draft: true
 
 # Featured image

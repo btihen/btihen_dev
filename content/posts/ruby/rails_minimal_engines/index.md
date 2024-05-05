@@ -9,7 +9,7 @@ tags: ['Ruby', 'Rails', 'Engines', 'Organizations']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-07-11T01:20:00+02:00
 lastmod: 2023-10-20T01:20:00+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

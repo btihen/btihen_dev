@@ -9,7 +9,7 @@ tags: ["Tech", "Codium", "Editor", "Plugin", "Tooling"]
 categories: ["Technology", "Code Editor"]
 date: 2020-11-03T01:19:09+02:00
 lastmod: 2020-11-13T01:19:09+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

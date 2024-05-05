@@ -9,7 +9,7 @@ tags: ["Elixir", "Phoenix 1.6.x", "TailwindCSS", "TailwindCSS 3.x", "AlpineJS", 
 categories: ["Code", "Elixir Language", "Phoenix Framework"]
 date: 2022-02-27T01:01:53+02:00
 lastmod: 2022-08-12T01:01:53+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image

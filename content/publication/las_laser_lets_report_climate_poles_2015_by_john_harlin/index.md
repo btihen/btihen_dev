@@ -28,7 +28,7 @@ summary: "To understand plant ecology, one needs to know the exact temperature t
 
 tags: ["EDgility", "Citizen Science", "Climate", "Ecology", "Engineering"]
 categories: ["Education", "EDgility", "Agile"]
-featured: true
+featured: false
 
 # Custom links (optional).
 #   Uncomment and edit lines below to show custom links.

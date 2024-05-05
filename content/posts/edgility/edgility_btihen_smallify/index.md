@@ -9,7 +9,7 @@ tags: ["EDgility", "value", "exploration", "exploration", "uplift", "self-motiva
 categories: ["Education", "EDgility", "Agile"]
 date: 2020-07-24T14:05:38+02:00
 lastmod: 2020-07-24T14:05:38+02:00
-featured: true
+featured: false
 draft: false
 
 # Featured image
