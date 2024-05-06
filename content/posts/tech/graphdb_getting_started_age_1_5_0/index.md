@@ -136,7 +136,7 @@ $$) as (person agtype);
 
                 person
 -----------------------------------------------
- {"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone", "first_name": "Fred", "given_name": "Flintstone"}}::vertex
+{"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone", "first_name": "Fred", "given_name": "Flintstone"}}::vertex
 (1 row)
 ```
 
@@ -175,7 +175,7 @@ $$) as (person agtype);
 
                             person
 --------------------------------------------------
- {"id": 844424930131970, "label": "Person", "properties": {"gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::vertex
+{"id": 844424930131970, "label": "Person", "properties": {"gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::vertex
 (1 row)
 ```
 
@@ -194,7 +194,7 @@ $$) as (married_to agtype);
 
                     married_to
 -----------------------------------------------
- {"id": 1125899906842625, "label": "MarriedTo", "end_id": 844424930131970, "start_id": 844424930131969, "properties": {"role": "husband", "family_name": "Flintstone-Slaghoople"}}::edge
+{"id": 1125899906842625, "label": "MarriedTo", "end_id": 844424930131970, "start_id": 844424930131969, "properties": {"role": "husband", "family_name": "Flintstone-Slaghoople"}}::edge
 (1 row)
 ```
 
@@ -215,7 +215,7 @@ $$) as (Relationship agtype, Path agtype);
 
           relationship       |            path
 --------------------------------------------------------
- {"id": 1125899906842626, "label": "MarriedTo", "end_id": 844424930131969, "start_id": 844424930131970, "properties": {"role": "wife", "family_name": "Flintstone-Slaghoople"}}::edge | [{"id": 844424930131970, "label": "Person", "properties": {"gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::vertex, {"id": 1125899906842626, "label": "MarriedTo", "end_id": 844424930131969, "start_id": 844424930131970, "properties": {"role": "wife", "family_name": "Flintstone-Slaghoople"}}::edge, {"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone", "first_name": "Fred", "given_name": "Flintstone"}}::vertex]::path
+{"id": 1125899906842626, "label": "MarriedTo", "end_id": 844424930131969, "start_id": 844424930131970, "properties": {"role": "wife", "family_name": "Flintstone-Slaghoople"}}::edge | [{"id": 844424930131970, "label": "Person", "properties": {"gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::vertex, {"id": 1125899906842626, "label": "MarriedTo", "end_id": 844424930131969, "start_id": 844424930131970, "properties": {"role": "wife", "family_name": "Flintstone-Slaghoople"}}::edge, {"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone", "first_name": "Fred", "given_name": "Flintstone"}}::vertex]::path
 (1 row)
 ```
 
@@ -238,7 +238,7 @@ $$) as (path agtype);
 
                             path
 ----------------------------------------------------------
- [{"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone", "first_name": "Fred", "given_name": "Flintstone"}}::vertex, {"id": 1407374883553282, "label": "WorksAt", "end_id": 1688849860263937, "start_id": 844424930131969, "properties": {"role": "Crane Operator"}}::edge, {"id": 1688849860263937, "label": "company", "properties": {"name": "Bedrock Quarry"}}::vertex, {"id": 1407374883553281, "label": "WorksAt", "end_id": 1688849860263937, "start_id": 844424930131971, "properties": {}}::edge, {"id": 844424930131971, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Barney", "given_name": "Rubble"}}::vertex]::path
+[{"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone", "first_name": "Fred", "given_name": "Flintstone"}}::vertex, {"id": 1407374883553282, "label": "WorksAt", "end_id": 1688849860263937, "start_id": 844424930131969, "properties": {"role": "Crane Operator"}}::edge, {"id": 1688849860263937, "label": "company", "properties": {"name": "Bedrock Quarry"}}::vertex, {"id": 1407374883553281, "label": "WorksAt", "end_id": 1688849860263937, "start_id": 844424930131971, "properties": {}}::edge, {"id": 844424930131971, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Barney", "given_name": "Rubble"}}::vertex]::path
 (1 row)
 ```
 
@@ -262,7 +262,7 @@ $$) as (path1 agtype, path2 agtype);
 
             path1        |          path2
 ----------------------------------------------------
- [{"id": 844424930131971, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Barney", "given_name": "Rubble"}}::vertex, {"id": 1125899906842627, "label": "MarriedTo", "end_id": 844424930131972, "start_id": 844424930131971, "properties": {"role": "husband"}}::edge, {"id": 844424930131972, "label": "Person", "properties": {"gender": "female", "last_name": "Rubble", "first_name": "Betty", "given_name": "McBricker"}}::vertex]::path | [{"id": 844424930131972, "label": "Person", "properties": {"gender": "female", "last_name": "Rubble", "first_name": "Betty", "given_name": "McBricker"}}::vertex, {"id": 1125899906842628, "label": "MarriedTo", "end_id": 844424930131971, "start_id": 844424930131972, "properties": {"role": "wife"}}::edge, {"id": 844424930131971, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Barney", "given_name": "Rubble"}}::vertex]::path
+[{"id": 844424930131971, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Barney", "given_name": "Rubble"}}::vertex, {"id": 1125899906842627, "label": "MarriedTo", "end_id": 844424930131972, "start_id": 844424930131971, "properties": {"role": "husband"}}::edge, {"id": 844424930131972, "label": "Person", "properties": {"gender": "female", "last_name": "Rubble", "first_name": "Betty", "given_name": "McBricker"}}::vertex]::path | [{"id": 844424930131972, "label": "Person", "properties": {"gender": "female", "last_name": "Rubble", "first_name": "Betty", "given_name": "McBricker"}}::vertex, {"id": 1125899906842628, "label": "MarriedTo", "end_id": 844424930131971, "start_id": 844424930131972, "properties": {"role": "wife"}}::edge, {"id": 844424930131971, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Barney", "given_name": "Rubble"}}::vertex]::path
 (1 row)
 ```
 
@@ -290,7 +290,7 @@ $$) as (path agtype);
 
                             path
 -----------------------------------------------------
- [{"id": 844424930131972, "label": "Person", "properties": {"gender": "female", "last_name": "Rubble", "first_name": "Betty", "given_name": "McBricker"}}::vertex, {"id": 1407374883553284, "label": "WorksAt", "end_id": 1688849860263938, "start_id": 844424930131972, "properties": {"role": "Reporter"}}::edge, {"id": 1688849860263938, "label": "company", "properties": {"name": "Bedrock News"}}::vertex, {"id": 1407374883553283, "label": "WorksAt", "end_id": 1688849860263938, "start_id": 844424930131970, "properties": {"role": "News Anchor"}}::edge, {"id": 844424930131970, "label": "Person", "properties": {"gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::vertex]::path
+[{"id": 844424930131972, "label": "Person", "properties": {"gender": "female", "last_name": "Rubble", "first_name": "Betty", "given_name": "McBricker"}}::vertex, {"id": 1407374883553284, "label": "WorksAt", "end_id": 1688849860263938, "start_id": 844424930131972, "properties": {"role": "Reporter"}}::edge, {"id": 1688849860263938, "label": "company", "properties": {"name": "Bedrock News"}}::vertex, {"id": 1407374883553283, "label": "WorksAt", "end_id": 1688849860263938, "start_id": 844424930131970, "properties": {"role": "News Anchor"}}::edge, {"id": 844424930131970, "label": "Person", "properties": {"gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::vertex]::path
 (1 row)
 ```
 
@@ -321,13 +321,13 @@ $$) as (Marriages agtype);
 
                           marriages
 --------------------------------------------------------
- [{"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone
+[{"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone
 ", "first_name": "Fred", "given_name": "Flintstone"}}::vertex, {"id": 1125899906842625, "label": "Marr
 iedTo", "end_id": 844424930131970, "start_id": 844424930131969, "properties": {"role": "husband", "fam
 ily_name": "Flintstone-Slaghoople"}}::edge, {"id": 844424930131970, "label": "Person", "properties": {
 "gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::ve
 rtex]::path
- [{"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone", "first_name": "Fred", "given_name": "Flintstone"}}::vertex, {"id": 1125899906842626, "label": "MarriedTo", "end_id": 844424930131969, "start_id": 844424930131970, "properties": {"role": "wife", "family_name": "Flintstone-Slaghoople"}}::edge, {"id": 844424930131970, "label": "Person", "properties": {"gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::vertex]::path
+[{"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone", "first_name": "Fred", "given_name": "Flintstone"}}::vertex, {"id": 1125899906842626, "label": "MarriedTo", "end_id": 844424930131969, "start_id": 844424930131970, "properties": {"role": "wife", "family_name": "Flintstone-Slaghoople"}}::edge, {"id": 844424930131970, "label": "Person", "properties": {"gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::vertex]::path
  ...
 ```
 
@@ -341,8 +341,8 @@ $$) as (Employees agtype);
 
                         employees
 ----------------------------------------------------------
- [{"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone", "first_name": "Fred", "given_name": "Flintstone"}}::vertex, {"id": 1407374883553282, "label": "WorksAt", "end_id": 1688849860263937, "start_id": 844424930131969, "properties": {"role": "Crane Operator"}}::edge, {"id": 1688849860263937, "label": "company", "properties": {"name": "Bedrock Quarry"}}::vertex]::path
- [{"id": 844424930131970, "label": "Person", "properties": {"gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::vertex, {"id": 1407374883553283, "label": "WorksAt", "end_id": 1688849860263938, "start_id": 844424930131970, "properties": {"role": "News Anchor"}}::edge, {"id": 1688849860263938, "label": "company", "properties": {"name": "Bedrock News"}}::vertex]::path
+[{"id": 844424930131969, "label": "Person", "properties": {"gender": "male", "last_name": "Flintstone", "first_name": "Fred", "given_name": "Flintstone"}}::vertex, {"id": 1407374883553282, "label": "WorksAt", "end_id": 1688849860263937, "start_id": 844424930131969, "properties": {"role": "Crane Operator"}}::edge, {"id": 1688849860263937, "label": "company", "properties": {"name": "Bedrock Quarry"}}::vertex]::path
+[{"id": 844424930131970, "label": "Person", "properties": {"gender": "female", "last_name": "Flintstone", "first_name": "Wilma", "given_name": "Slaghoople"}}::vertex, {"id": 1407374883553283, "label": "WorksAt", "end_id": 1688849860263938, "start_id": 844424930131970, "properties": {"role": "News Anchor"}}::edge, {"id": 1688849860263938, "label": "company", "properties": {"name": "Bedrock News"}}::vertex]::path
  ...
 (4 rows)
 ```
@@ -459,7 +459,7 @@ $$) as (FamilyPath agtype);
                       familypath
 ----------------------------------------------------------
 [{"id": 844424930131975, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Chip", "given_name": "Rubble"}}::vertex, {"id": 2251799813685254, "label": "child_of", "end_id": 844424930131973, "start_id": 844424930131975, "properties": {"role": "Son"}}::edge, {"id": 844424930131973, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Bamm-Bamm", "given_name": "Rubble"}}::vertex]::path
- [{"id": 844424930131975, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Chip", "given_name": "Rubble"}}::vertex, {"id": 2251799813685253, "label": "child_of", "end_id": 844424930131974, "start_id": 844424930131975, "properties": {"role": "Son"}}::edge, {"id": 844424930131974, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Pebbles", "given_name": "Rubble"}}::vertex]::path
+[{"id": 844424930131975, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Chip", "given_name": "Rubble"}}::vertex, {"id": 2251799813685253, "label": "child_of", "end_id": 844424930131974, "start_id": 844424930131975, "properties": {"role": "Son"}}::edge, {"id": 844424930131974, "label": "Person", "properties": {"gender": "male", "last_name": "Rubble", "first_name": "Pebbles", "given_name": "Rubble"}}::vertex]::path
 (2 rows)
 ```
 
@@ -544,7 +544,7 @@ $$) as (Boss agtype);
 
                             boss
 -------------------------------------------------------
- [{"id": 844424930131977, "label": "Person", "properties": {"gender": "male", "last_name": "Slate", "first_name": "George", "given_name": "Slate"}}::vertex, {"id": 1407374883553285, "label": "WorksAt", "end_id": 1688849860263937, "start_id": 844424930131977, "properties": {"role": "Manager"}}::edge, {"id": 1688849860263937, "label": "company", "properties": {"name": "Bedrock Quarry"}}::vertex]::path
+[{"id": 844424930131977, "label": "Person", "properties": {"gender": "male", "last_name": "Slate", "first_name": "George", "given_name": "Slate"}}::vertex, {"id": 1407374883553285, "label": "WorksAt", "end_id": 1688849860263937, "start_id": 844424930131977, "properties": {"role": "Manager"}}::edge, {"id": 1688849860263937, "label": "company", "properties": {"name": "Bedrock Quarry"}}::vertex]::path
 (1 row)
 ```
 
