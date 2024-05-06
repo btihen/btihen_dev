@@ -9,7 +9,7 @@ tags: ['Ruby', 'Rails', 'Modules', 'Isolation', 'Injection']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-08-12T01:20:00+02:00
 lastmod: 2023-10-20T01:20:00+02:00
-featured: false
+featured: true
 draft: false
 
 # Featured image
