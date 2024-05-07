@@ -108,12 +108,86 @@ ageDB=# \dn
  public     | pg_database_owner
 ```
 
+### Basic Cypher Syntax
+
+The AGE cypher syntax is: `cypher(graph_name, query_string, parameters)`
+
+* `graph_name` is the graph for the Cypher query (in Postgres it is a `schema`).
+* `query_string` is the Cypher query the graph equivalent of SQL.
+* `parameters` OPTIONAL - (default is NULL) map of parameters for Prepared Statements - I have no need for this (so far), so will ignore it.
+
+NOTES:
+* Every Cypher query starts with the SQL `SELECT * FROM`
+* The SQL that ends with `AS (result1 agtype)` - which defines the (columns) returned.  This is important to include when the cypher query includes a `RETURN`
+
+Thus all the queries in this article will have the format of something like:
+```SQL
+SELECT * FROM cypher('age_schema', $$
+    CREATE (f:Person {first_name: "Fred", last_name: "Flintstone", given_name: "Flintstone", gender: "male"})
+    return f
+$$) as (person agtype);
+```
+
+or
+
+```SQL
+SELECT * FROM cypher('age_schema', $$
+    CREATE (f:Person {first_name: "Fred", last_name: "Flintstone", given_name: "Flintstone", gender: "male"})
+$$);
+```
+
+I generally like to return something, so will almost exclusively use the above format.
+
+### QUICK GraphDB
+
+A GraphDB has two main parts:
+* **Nodes** - (a vertex) a person, place, thing, etc. (usually noun is used)
+* **Edges** - (a relationship) connects Nodes with a relationship (usually a verb or connection type - likes, married_to, child_of, works_at) - EDGES CONTAIN A DIRECTION (in some DBs they can be bi-directional)
+* **Paths** a combination of Nodes, Edges and their relationship directions / pattern (patterns are mostly show via examples)
+
+All Graph Components can have:
+* **id** - unique identifier
+* **label** - (type) the node or edge type, i.e.
+  `:person`, `:works_at`, etc
+* **properties** - a hash of attributes, i.e.
+  `{ name: 'Bill', role: 'author' }`,
+  `{ role: 'employee' }`
+
+### QUICK Cypher
+
+* Nodes are found within `()`
+* Edges are found within `[]` (in AGE Edges are uni-directional, a bi-directional relationship thus requires to edges - one in each direction)
+* Labels start with `:`
+* Paths are a combination of Nodes, Edges and their relationship directions / pattern
+
+BASIC AGE Cypher KEYWORDS are:
+* MATCH - describes types and relationship patterns: a very basic match would be:
+  `(:Person)` match all Person Nodes or
+  `(:Likes)` match all Likes Edges
+  `(boss:Person { role: 'manager' })-[:WorkFor]->(firm:Company { industry: 'technology'})` this matches all People who work_for technology Companies
+* WHERE - similar to an SQL WHERE
+* CREATE - creates a new edge or node
+* SET - update
+* DELETE (generally use `DETACH DELETE` which will automatically delete edges along with a node - otherwise, explicitly delete associated edges, then a node)
+* RETURN - describe what to return (similar to a SQL SELECT)
+
+ALIASES: in cypher there is no `AS` like in SQL, there are **2 ways** for alias/ naming:
+* within a **MATCH** the name alias is made directly BEFORE the Label, ie:
+  `(boss:Person { role: 'manager' })-[r:WorkFor]->(firm:Company { industry: 'technology'})`
+  `boss` is an alias of all managers, `r` is an alias of WorkFor edges and `firm` is an alias of tech companies
+* with a **CREATE** we use `=`, ie:
+  `CREATE bill = (:Person {name: 'Bill', role: 'employee'})`
+  allows `bill` to be the alias of the created Node.
+
+Now with this Lightning Intro - on to examples.
+
+This article uses the Flintstone Characters, their workplaces and the associated relationships.
+
 ### Create a Node (Vertex)
 
 To create a single vertex (node) with label and properties, use the CREATE clause. Let's enter `Fred Flintstone`.  Given our schema `age_schema` the `CREATE` command in `psql` looks like:
 ```sql
-SELECT *
-FROM cypher('age_schema', $$
+SELECT * FROM cypher('age_schema', $$
     CREATE (f:Person {first_name: "Fred", last_name: "Flintstone", given_name: "Flintstone", gender: "male"})
     return f
 $$) as (person agtype);
