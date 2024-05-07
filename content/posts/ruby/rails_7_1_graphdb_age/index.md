@@ -192,6 +192,8 @@ NOTE: if you load `ag_catalog,age_schema` at our top level of yaml file (as the 
 
 ## Let Explore
 
+### First Exploration
+
 Before we create a Rails strategy, let's explore a bit using the Rails console by using:
 `bin/rails c`
 
@@ -243,7 +245,9 @@ result = create_person(zed)
 exit
 ```
 
-Let's drop our database and see if we can make a more useful Ruby class:
+### Second Exploration
+
+Let's drop our database and see if we can make a more useful Ruby class that might work better as an Entity (an Object with a unique ID):
 
 ```bash
 bin/rails db:drop
@@ -271,7 +275,7 @@ module Node
 
     AGE_TYPE = 'node'.freeze
     CLASS_NAME = 'Person'.freeze
-    SCHEMA_NAME = 'age_schema'.freeze
+    GRAPH_NAME = 'age_schema'.freeze
 
     def initialize(id: nil, first_name:, last_name:, given_name: nil, gender:)
       @id = id
@@ -314,7 +318,7 @@ module Node
     def create_sql
       <<-SQL
         SELECT *
-        FROM cypher('#{SCHEMA_NAME}', $$
+        FROM cypher('#{GRAPH_NAME}', $$
             CREATE (#{AGE_TYPE}#{self})
         RETURN #{AGE_TYPE}
         $$) as (#{AGE_TYPE} agtype);
@@ -332,6 +336,314 @@ zed.persisted?
 zed.to_h
 zed.to_age
 ```
+
+### Third Exploration
+
+Can we create some Abstractions to make it easier to write two different Nodes - for example `:Person` and `:Company` ?
+
+```bash
+bin/rails db:drop
+bin/rails db:create
+bin/rails db:migrate
+bin/rails c
+```
+
+Let's make an AGE Module and a Node class and maybe we can use some of ActiveModel so we can easily access our attributes.
+
+```ruby
+## Let's see if we can make some of the constants generic
+module ApacheAge
+  module Vertex
+    def age_type = 'vertex'
+    def age_label = self.class.name.split('::').last
+    def age_graph = self.class.name.split('::').first.underscore
+  end
+end
+
+module StoneAge
+  class Person
+    include ApacheAge::Vertex
+  end
+end
+
+zed = StoneAge::Person.new
+zed.age_label
+# 'Person'
+zed.age_graph
+# 'stone_age'
+zed.age_type
+# 'vertex'
+```
+
+# with this start we could expand Vertex and Person with ActiveModel:
+```ruby
+module ApacheAge
+  module Vertex
+    include ActiveModel::Model
+    include ActiveModel::Attributes
+    include ActiveModel::Validations
+
+    def age_type = 'vertex'
+    def age_label = self.class.name.split('::').last
+    def age_graph = self.class.name.split('::').first.underscore
+
+    def persisted? = @id.present?
+  end
+end
+
+module StoneAge
+  class Person
+    include ApacheAge::Vertex
+
+    attribute :id, :integer
+    attribute :first_name, :string
+    attribute :last_name, :string
+    attribute :given_name, :string
+    attribute :gender, :string
+
+    def initialize(id: nil, first_name:, last_name:, given_name: nil, gender:)
+      super # without this `@attributes` is nil and creates
+      self.id = id
+      self.given_name = given_name || last_name
+      self.first_name = first_name
+      self.last_name = last_name
+      self.gender = gender
+    end
+  end
+end
+
+zed = StoneAge::Person.new(first_name: 'Zed', last_name: 'Flintstone', gender: 'male')
+zed.attributes
+# {"id"=>nil, "first_name"=>"Zed", "last_name"=>"Flintstone", "given_name"=>"Flintstone", "gender"=>"male"}
+zed.attributes.symbolize_keys
+# {:id=>nil, :first_name=>"Zed", :last_name=>"Flintstone", :given_name=>"Flintstone", :gender=>"male"}
+zed.persisted?
+# false
+zed.age_label
+# 'Person'
+zed.age_graph
+# 'stone_age'
+zed.age_type
+# 'vertex'
+```
+
+With this basis let's see if we can add to_s, to_h and to_age generically
+```ruby
+module ApacheAge
+  module Vertex
+
+    def age_type = 'vertex'
+    def age_label = self.class.name.split('::').last
+    def age_graph = self.class.name.split('::').first.underscore
+
+    def persisted? = @id.present?
+    def to_h = attributes.symbolize_keys
+    def age_properties = attributes.except('id').symbolize_keys
+
+    def age_hash
+      {
+        id:,
+        label: age_label,
+        properties: age_properties
+      }
+    end
+
+    def properties_to_s
+      string_values =
+        age_properties.each_with_object([]) do |(key,val), array|
+          array << "#{key}: '#{val}'"
+        end
+      "{#{string_values.join(', ')}}"
+    end
+
+    def to_s
+      ":#{age_label} #{properties_to_s}"
+    end
+
+    def age_node(age_alias = nil)
+      age_alias ||=
+        if @id.present?
+          Digest::SHA256.hexdigest(@id.to_s).to_i(16).to_s(36).gsub(/[0-9]/,'')[0..9]
+        end
+      "(#{age_alias}:#{age_label} #{properties_to_s})"
+    end
+  end
+end
+
+module StoneAge
+  class Person
+    include ActiveModel::Model
+    include ActiveModel::Attributes
+    include ActiveModel::Validations
+    include ApacheAge::Vertex
+
+    attribute :id, :integer
+    attribute :first_name, :string
+    attribute :last_name, :string
+    attribute :given_name, :string
+    attribute :gender, :string
+
+    def initialize(id: nil, first_name:, last_name:, given_name: nil, gender:)
+      super # without this `@attributes` is nil and creates
+      self.id = id
+      self.given_name = given_name || last_name
+      self.first_name = first_name
+      self.last_name = last_name
+      self.gender = gender
+    end
+  end
+end
+
+zed = StoneAge::Person.new(first_name: 'Zed', last_name: 'Flintstone', gender: 'male')
+zed.age_hash
+# {:id=>nil,
+#  :label=>"Person",
+#  :properties=>{:first_name=>"Zed", :last_name=>"Flintstone", :given_name=>"Flintstone", :gender=>"male"}}
+zed.age_label
+# 'Person'
+zed.age_properties
+# {:first_name=>"Zed", :last_name=>"Flintstone", :given_name=>"Flintstone", :gender=>"male"}
+zed.age_node
+#"(:Person {first_name: 'Zed', last_name: 'Flintstone', given_name: 'Flintstone', gender: 'male'})"
+zed.age_node('zed')
+#"(zed:Person {first_name: 'Zed', last_name: 'Flintstone', given_name: 'Flintstone', gender: 'male'})"
+```
+
+Finally let's add `create` back in:
+```ruby
+
+module ApacheAge
+  module Vertex
+
+    def age_type = 'vertex'
+    def age_label = self.class.name.split('::').last
+    def age_graph = self.class.name.split('::').first.underscore
+
+    def persisted? = @id.present?
+    def to_h = attributes.symbolize_keys
+    def age_properties = attributes.except('id').symbolize_keys
+
+    def age_hash
+      {
+        id: @id,
+        label: age_label,
+        properties: age_properties
+      }
+    end
+
+    def properties_to_s
+      string_values =
+        age_properties.each_with_object([]) do |(key,val), array|
+          array << "#{key}: '#{val}'"
+        end
+      "{#{string_values.join(', ')}}"
+    end
+
+    def to_s
+      ":#{age_label} #{properties_to_s}"
+    end
+
+    def age_alias
+      return nil if @id.blank?
+
+      # we start the alias with a since we can't start with a number
+      'a' + Digest::SHA256.hexdigest(@id.to_s).to_i(16).to_s(36)[0..9]
+    end
+
+    def age_node(alias_name = nil)
+      alias_name = alias_name || age_alias
+      "(#{age_alias}:#{age_label} #{properties_to_s})"
+    end
+
+    def create
+      age_result = ActiveRecord::Base.connection.execute(create_sql)
+      json_data = age_result.to_a.first[age_label.downcase].split("::#{age_type}").first
+      json_data = age_result.to_a.first.values.first.split("::#{age_type}").first
+
+      hash = JSON.parse(json_data)
+
+      @id = hash['id']
+      hash
+    end
+
+    def create_sql
+      alias_name = age_alias || age_label.downcase
+      <<-SQL
+        SELECT *
+        FROM cypher('#{age_graph}', $$
+            CREATE (#{alias_name}#{self})
+        RETURN #{alias_name}
+        $$) as (#{age_label} agtype);
+      SQL
+    end
+  end
+end
+
+module AgeSchema
+  class Person
+    include ActiveModel::Model
+    include ActiveModel::Attributes
+    include ActiveModel::Validations
+    include ApacheAge::Vertex
+
+    attribute :id, :integer
+    attribute :first_name, :string
+    attribute :last_name, :string
+    attribute :given_name, :string
+    attribute :gender, :string
+
+    def initialize(id: nil, first_name:, last_name:, given_name: nil, gender:)
+      super # without this `@attributes` is nil and creates
+      self.id = id
+      self.given_name = given_name || last_name
+      self.first_name = first_name
+      self.last_name = last_name
+      self.gender = gender
+    end
+  end
+end
+zed = AgeSchema::Person.new(first_name: 'Zed', last_name: 'Flintstone', gender: 'male')
+zed.persisted?
+# false
+zed.create
+# {"id"=>844424930131980,
+#  "label"=>"Person",
+#  "properties"=>{"gender"=>"male", "last_name"=>"Flintstone", "first_name"=>"Zed", "given_name"=>"Flintstone"}}
+zed.persisted?
+# true
+zed.age_hash
+# {:id=>844424930131981,
+#  :label=>"Person",
+#  :properties=>{:first_name=>"Zed", :last_name=>"Flintstone", :given_name=>"Flintstone", :gender=>"male"}}
+```
+
+Now we can make a simple second Node `Company`
+```ruby
+module AgeSchema
+  class Company
+    include ActiveModel::Model
+    include ActiveModel::Attributes
+    include ActiveModel::Validations
+    include ApacheAge::Vertex
+
+    attribute :id, :integer
+    attribute :name, :string
+
+    def initialize(id: nil, name:)
+      super # without this `@attributes` is nil and creates
+      self.id = id
+      self.name = name
+    end
+  end
+end
+quarry = AgeSchema::Company.new(name: 'Bedrock Quarry')
+quarry.save
+# {"id"=>1125899906842625,
+#  "label"=>"Company",
+#  "properties"=>{"name"=>"Bedrock Quarry", "gender"=>"", "last_name"=>"", "first_name"=>"", "given_name"=>""}}
+```
+
+We probaly need to add `find` and `find_by`, but lets do that later.  Let's explore edges next.
 
 ## Seed File
 
