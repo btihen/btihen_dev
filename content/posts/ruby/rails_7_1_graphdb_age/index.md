@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Rails', "GraphDB", "Postgres AGE"]
 categories: ["Code", "GraphDB", "Ruby Language", "Rails Framework"]
 date: 2024-05-06T01:20:00+02:00
-lastmod: 2024-05-06T01:20:00+02:00
+lastmod: 2024-05-08T01:20:00+02:00
 featured: true
 draft: false
 
