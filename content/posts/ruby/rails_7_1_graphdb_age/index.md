@@ -511,7 +511,6 @@ zed.age_node('zed')
 
 Finally let's add `create` back in:
 ```ruby
-
 module ApacheAge
   module Vertex
 
@@ -637,13 +636,247 @@ module AgeSchema
   end
 end
 quarry = AgeSchema::Company.new(name: 'Bedrock Quarry')
-quarry.save
+quarry.create
 # {"id"=>1125899906842625,
 #  "label"=>"Company",
 #  "properties"=>{"name"=>"Bedrock Quarry", "gender"=>"", "last_name"=>"", "first_name"=>"", "given_name"=>""}}
 ```
 
 We probaly need to add `find` and `find_by`, but lets do that later.  Let's explore edges next.
+
+### Edges First Exploration
+```ruby
+module ApacheAge
+  module Vertex
+
+    def age_type = 'vertex'
+    def age_label = self.class.name.split('::').last
+    def age_graph = self.class.name.split('::').first.underscore
+
+    def persisted? = id.present?
+    def to_h = attributes.symbolize_keys.to_hash
+    def age_properties = attributes.except('id').symbolize_keys
+
+    def age_hash
+      {
+        id: id,
+        label: age_label,
+        properties: age_properties
+      }
+    end
+
+    def properties_to_s
+      string_values =
+        age_properties.each_with_object([]) do |(key,val), array|
+          array << "#{key}: '#{val}'"
+        end
+      "{#{string_values.join(', ')}}"
+    end
+
+    def to_s
+      ":#{age_label} #{properties_to_s}"
+    end
+
+    def age_alias
+      return nil if id.blank?
+
+      # we start the alias with a since we can't start with a number
+      'a' + Digest::SHA256.hexdigest(id.to_s).to_i(16).to_s(36)[0..9]
+    end
+
+    def age_node(alias_name = nil)
+      alias_name = alias_name || age_alias
+      "(#{age_alias}:#{age_label} #{properties_to_s})"
+    end
+
+    def create
+      return self if id.present?
+
+      age_result = ActiveRecord::Base.connection.execute(create_sql)
+      json_data = age_result.to_a.first[age_label.downcase].split("::#{age_type}").first
+      json_data = age_result.to_a.first.values.first.split("::#{age_type}").first
+
+      hash = JSON.parse(json_data)
+
+      self.id = hash['id']
+      # @id = hash['id']
+      self
+    end
+
+    def create_sql
+      alias_name = age_alias || age_label.downcase
+      <<-SQL
+        SELECT *
+        FROM cypher('#{age_graph}', $$
+            CREATE (#{alias_name}#{self})
+        RETURN #{alias_name}
+        $$) as (#{age_label} agtype);
+      SQL
+    end
+  end
+end
+
+module AgeSchema
+  class Person
+    include ActiveModel::Model
+    include ActiveModel::Attributes
+    include ActiveModel::Validations
+    include ApacheAge::Vertex
+
+    attribute :id, :integer
+
+    attribute :first_name, :string
+    attribute :last_name, :string
+    attribute :given_name, :string
+    attribute :gender, :string
+
+    def initialize(id: nil, first_name:, last_name:, given_name: nil, gender:)
+      super # without this `@attributes` is nil and creates
+      self.id = id
+      self.given_name = given_name || last_name
+      self.first_name = first_name
+      self.last_name = last_name
+      self.gender = gender
+    end
+  end
+end
+
+
+module AgeSchema
+  class Company
+    include ActiveModel::Model
+    include ActiveModel::Attributes
+    include ActiveModel::Validations
+    include ApacheAge::Vertex
+
+    attribute :id, :integer
+
+    attribute :name, :string
+
+    def initialize(id: nil, name:)
+      super # without this `@attributes` is nil and creates
+      self.id = id
+      self.name = name
+    end
+  end
+end
+
+module ApacheAge
+  module Edge
+    def age_type = 'edge'
+    def age_label = self.class.name.split('::').last
+    def age_graph = self.class.name.split('::').first.underscore
+
+    def persisted? = id.present?
+
+    def to_h
+      base_hash =  attributes.except('origin_node', 'target_node')
+      base_hash[:origin_node] = origin_node.to_h
+      base_hash[:target_node] = target_node.to_h
+      base_hash.symbolize_keys
+    end
+
+    def age_properties = attributes.except('id', 'origin_node', 'target_node', 'start_id', 'end_id').symbolize_keys
+
+    def age_hash
+      {
+        id: id,
+        end_id: end_id,
+        start_id: start_id,
+        label: age_label,
+        properties: age_properties
+      }
+    end
+
+    def properties_to_s
+      string_values =
+        age_properties.each_with_object([]) do |(key,val), array|
+          array << "#{key}: '#{val}'"
+        end
+      "{#{string_values.join(', ')}}"
+    end
+
+    def to_s
+      ":#{age_label} #{properties_to_s}"
+    end
+
+    def age_alias
+      return nil if id.blank?
+
+      # we start the alias with a since we can't start with a number
+      'a' + Digest::SHA256.hexdigest(id.to_s).to_i(16).to_s(36)[0..9]
+    end
+
+    def age_edge(alias_name = nil)
+      alias_name = alias_name || age_alias
+      "[#{age_alias}:#{age_label} #{properties_to_s}]"
+    end
+
+    def create
+      return self if id.present?
+
+      age_result = ActiveRecord::Base.connection.execute(create_sql)
+      # json_data = age_result.to_a.first[age_label.downcase].split("::#{age_type}").first
+      json_data = age_result.to_a.first.values.first.split("::#{age_type}").first
+
+      hash = JSON.parse(json_data)
+
+      self.id = hash['id']
+      self.end_id = hash['end_id']
+      self.start_id = hash['start_id']
+
+      self
+    end
+
+    def create_sql
+      self.origin_node = origin_node.create unless origin_node.persisted?
+      self.target_node = target_node.create unless target_node.persisted?
+      <<-SQL
+        SELECT *
+        FROM cypher('#{age_graph}', $$
+            MATCH (start_vertex:#{origin_node.age_label}), (end_vertex:#{target_node.age_label})
+            WHERE id(start_vertex) = #{origin_node.id} and id(end_vertex) = #{target_node.id}
+            CREATE (start_vertex)-[edge#{to_s}]->(end_vertex)
+            RETURN edge
+        $$) as (edge agtype);
+      SQL
+    end
+  end
+end
+
+module AgeSchema
+  class WorksAt
+    include ActiveModel::Model
+    include ActiveModel::Attributes
+    include ActiveModel::Validations
+    include ApacheAge::Edge
+
+    attribute :role, :string
+
+    attribute :id, :integer
+    attribute :end_id, :integer
+    attribute :start_id, :integer
+    attribute :target_node #, :vertex
+    attribute :origin_node #, :vertex
+
+    def initialize(id: nil, role:, origin_node:, target_node:)
+      super # without this `@attributes` is nil and creates
+      self.id = id
+      self.role = role
+      self.end_id = target_node.id
+      self.start_id = origin_node.id
+      self.origin_node = origin_node
+      self.target_node = target_node
+    end
+  end
+end
+
+fred = AgeSchema::Person.new(first_name: 'Fred', last_name: 'Flintstone', gender: 'male')
+quarry = AgeSchema::Company.new(name: 'Bedrock Quarry')
+crane_ops = AgeSchema::WorksAt.new(role: 'Crane Operator', origin_node: fred, target_node: quarry)
+crane_ops.create_sql
+crane_ops.create
+```
 
 ## Seed File
 
