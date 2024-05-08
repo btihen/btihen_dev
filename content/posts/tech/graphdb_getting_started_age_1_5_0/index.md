@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Rails', "GraphDB", "Postgres AGE"]
 categories: ["Code", "GraphDB", "Ruby Language", "Rails Framework"]
 date: 2024-05-05T01:20:00+02:00
-lastmod: 2024-05-06T01:20:00+02:00
+lastmod: 2024-05-08T01:20:00+02:00
 featured: true
 draft: false
 
@@ -161,15 +161,21 @@ All Graph Components can have:
 * Paths are a combination of Nodes, Edges and their relationship directions / pattern
 
 BASIC AGE Cypher KEYWORDS are:
-* MATCH - describes types and relationship patterns: a very basic match would be:
+* **MATCH** - describes types and relationship patterns to use. A very basic match would be:
   `(:Person)` match all Person Nodes or
   `(:Likes)` match all Likes Edges
   `(boss:Person { role: 'manager' })-[:WorkFor]->(firm:Company { industry: 'technology'})` this matches all People who work_for technology Companies
-* WHERE - similar to an SQL WHERE
-* CREATE - creates a new edge or node
-* SET - update
-* DELETE (generally use `DETACH DELETE` which will automatically delete edges along with a node - otherwise, explicitly delete associated edges, then a node)
-* RETURN - describe what to return (similar to a SQL SELECT)
+* **MERGE** - ensures that a pattern exists in the graph. It either matches existing nodes, or creates new data. It’s a combination of `MATCH` and `CREATE`.
+* **WHERE** - similar to an SQL WHERE
+* **CREATE** - creates a new edge or node
+* **SET** - used to update labels and properties on vertices and edges
+* **REMOVE** -  removes properties from nodes and edges.
+* **ORDER BY** - like in SQL determine the sort order to be returned
+* **SKIP** - SKIP defines from which record to start including the records in the output, ie `SKIP 3` will return starting with the 4th result of the query.
+* **LIMIT** - like SQL limit
+* **WITH** - Using WITH, you can manipulate the output before it is passed on to the next query part.
+* **DELETE** (generally use `DETACH DELETE` which will automatically delete edges along with a node - otherwise, explicitly delete associated edges, then a node)
+* **RETURN** - describe what to return (similar to a SQL SELECT)
 
 ALIASES: in cypher there is no `AS` like in SQL, there are **2 ways** for alias/ naming:
 * within a **MATCH** the name alias is made directly BEFORE the Label, ie:

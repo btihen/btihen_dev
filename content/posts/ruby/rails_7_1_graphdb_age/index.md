@@ -880,7 +880,7 @@ crane_ops.create
 
 Next, let's work with the similarities in both Vertex and Node code.  Let's see if we can resolve that next.
 
-### Vertex & Edge Exploration
+### Common Code Exploration
 
 ```ruby
 module ApacheAge
@@ -1106,11 +1106,27 @@ works_at.age_properties
 
 ### Graph App Example Resources
 
+* [Building a Real-Time Product Recommender System with Graph Databases: Leveraging Neo4j and BigQuery for E-commerce Data Analysis](https://medium.com/badal-io/building-a-real-time-product-recommender-system-with-graph-databases-leveraging-neo4j-and-bigquery-65b5b361d276)
+* [Recommendation System Using Graph Database](https://47billion.com/blog/recommendation-system-using-graph-database/)
+* [How to Build a Real-Time Recommendation Engine Using Graph Databases](https://www.kdnuggets.com/2023/08/build-realtime-recommendation-engine-graph-databases.html)
+* [Advanced Usage within multiple Graphs, Use Cases & Demo](https://apache-age.medium.com/webinar-demonstration-of-apache-age-a-graph-extension-for-postgresql-db82b0cfc5d8)
+* [Neo4j movies example](https://www.youtube.com/watch?v=YDWkPFijKQ4)
+* [Neo4j Recommendation Engine Example](https://www.youtube.com/watch?v=QIrxsNQ9JEs)
+* [Oracle Graph Recommendations](https://www.youtube.com/watch?v=eqQ5nEY5FEg)
+* [ArangoDB Better Recommendations Example](https://www.youtube.com/watch?v=G4KVAnZoyRg)
+* https://apache-age.medium.com/webinar-demonstration-of-apache-age-a-graph-extension-for-postgresql-db82b0cfc5d8
+* https://www.fabiomarini.net/postgresql-with-apache-age-playing-more-seriously-with-graph-databases/
+
+### Graph DB Design
+
+* https://apache-age.medium.com/what-is-data-modeling-graph-db-86ccd7b5989e
+
 ### Rails with Apache AGE
 
 * [Working with multi-schema database in Rails](https://learnitnow.medium.com/working-with-multi-schema-database-in-rails-7e60aef8ff86)
 * [Using multiple PostgreSQL schemas with Rails models](https://stackoverflow.com/questions/8806284/using-multiple-postgresql-schemas-with-rails-models)
 * [Rails Guides: Multiple Databases with Active Record](https://guides.rubyonrails.org/active_record_multiple_databases.html#connecting-to-databases-without-managing-schema-and-migrations)
+
 ### AGE Management
 
 * https://matheusfarias03.github.io/AGE-quick-guide/
@@ -1118,6 +1134,13 @@ works_at.age_properties
 ### AGE SQL
 
 * https://dev.to/danielwambo/exploring-apache-age-a-graph-database-built-on-postgresqlapache-age-cypher-postgres-346a
+* https://dev.to/danielwambo/apache-age-a-technical-deep-dive-48n
+
+### INTRESTSING UNTESTED RESOURCES
+
+* https://blog.howtoclicks.com/blog/apache-age-example/
+* https://dev.to/abhikmr2046/creating-new-function-in-apache-age-ioj
+* https://dev.to/k1hara/creating-user-defined-functions-in-apache-age-1hha
 
 
 ### AGE Resources
