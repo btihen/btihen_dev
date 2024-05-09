@@ -1,14 +1,14 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Rails 7.1.x - Graph App"
-subtitle: "Using a Postgres AGE GraphDB"
+title: "Rails 7.1.x - Graph AGE Integration Exploration"
+subtitle: "Explore Rails Integration with Postgres Apache AGE GraphDB"
 summary: ""
 authors: ['btihen']
 tags: ['Rails', "GraphDB", "Postgres AGE"]
 categories: ["Code", "GraphDB", "Ruby Language", "Rails Framework"]
 date: 2024-05-06T01:20:00+02:00
-lastmod: 2024-05-08T01:20:00+02:00
+lastmod: 2024-05-09T01:20:00+02:00
 featured: true
 draft: false
 
@@ -1096,10 +1096,32 @@ quarry.age_properties
 works_at.age_properties
 ```
 
-## Seed File
+### Explore Edge Auto-Queries
 
 
-## User Repository Pattern
+
+Things to consider.
+* Can we separate AGE `properties` from virtual `attributes`?
+* Can we support all the property data-types?, :string, :array, etc?
+Perhaps:
+```
+property :name, :string
+property :roles, :array
+```
+
+Can we Automate queries for relationships between nodes?  maybe something like:
+```
+# OUTGOING (within Person class)
+one_link :outgoing :company, via: works_at
+one_link :outgoing :employeer, node: Company, via: works_for, edge: WorksAt
+
+many_links :outgoing :companies, via: works_at
+many_links :outgoing :firms, node: Company, via: works_for, edge: WorksAt
+
+# INCOMING (within Company class)
+many_links :incoming :people, via: works_at
+many_links :incoming :employees, node: Person, via: works_for, edge: WorksAt
+```
 
 
 ## Resources
@@ -1119,6 +1141,7 @@ works_at.age_properties
 
 ### Graph DB Design
 
+* https://github.com/neo4jrb/activegraph
 * https://apache-age.medium.com/what-is-data-modeling-graph-db-86ccd7b5989e
 
 ### Rails with Apache AGE
@@ -1161,3 +1184,4 @@ works_at.age_properties
 * [Neo4J ActiveGraph Gem](https://github.com/neo4jrb/activegraph?tab=readme-ov-file)
 * [Getting Started with Neo4j and Ruby](https://neo4j.com/developer/ruby-course/)
 * [Neo4J Developer / Cypher Docs](https://neo4jrb.readthedocs.io/en/stable)
+

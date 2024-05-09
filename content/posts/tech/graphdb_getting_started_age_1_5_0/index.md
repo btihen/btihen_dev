@@ -142,7 +142,7 @@ I generally like to return something, so will almost exclusively use the above f
 
 A GraphDB has two main parts:
 * **Nodes** - (a vertex) a person, place, thing, etc. (usually noun is used)
-* **Edges** - (a relationship) connects Nodes with a relationship (usually a verb or connection type - likes, married_to, child_of, works_at) - EDGES CONTAIN A DIRECTION (in some DBs they can be bi-directional)
+* **Edges** - (a relationship) connects Nodes with a relationship (usually a verb or connection type - `purchased`, `likes`, `married_to`, `child_of`, `works_at`) - EDGES CONTAIN A DIRECTION (in some DBs they can be bi-directional)
 * **Paths** a combination of Nodes, Edges and their relationship directions / pattern (patterns are mostly show via examples)
 
 All Graph Components can have:
