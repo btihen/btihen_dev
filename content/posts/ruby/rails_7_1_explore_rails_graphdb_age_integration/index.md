@@ -1110,7 +1110,68 @@ property: social_security_umber, :integer, unique: true
 property :auth_roles, :array, required: true, default: ['user']
 ```
 
-RESEARCH:
+**Rails Code**
+
+https://github.com/neo4jrb/activegraph/blob/8e2ba4d117f5702633b0aa7099c71923a100c40d/lib/active_graph/shared/property.rb
+
+```ruby
+module ActiveGraph::Shared
+  module Property
+    extend ActiveSupport::Concern
+
+    include ActiveGraph::Shared::MassAssignment
+    include ActiveGraph::Shared::TypecastedAttributes
+    include ActiveModel::Dirty
+    ...
+    module ClassMethods
+      extend Forwardable
+
+      def_delegators :declared_properties, :serialized_properties, :serialized_properties=, :serialize, :declared_property_defaults
+
+      VALID_PROPERTY_OPTIONS = %w(type default index constraint serializer typecaster).map(&:to_sym)
+      # Defines a property on the class
+      #
+      # See active_attr gem for allowed options, e.g which type
+      # Notice, in ActiveGraph you don't have to declare properties before using them, see the ActiveGraph::Coree api.
+      #
+      # @example Without type
+      #    class Person
+      #      # declare a property which can have any value
+      #      property :name
+      #    end
+      #
+      # @example With type and a default value
+      #    class Person
+      #      # declare a property which can have any value
+      #      property :score, type: Integer, default: 0
+      #    end
+      #
+      # @example With an index
+      #    class Person
+      #      # declare a property which can have any value
+      #      property :name, index: :exact
+      #    end
+      #
+      # @example With a constraint
+      #    class Person
+      #      # declare a property which can have any value
+      #      property :name, constraint: :unique
+      #    end
+      def property(name, options = {})
+        invalid_option_keys = options.keys.map(&:to_sym) - VALID_PROPERTY_OPTIONS
+        fail ArgumentError, "Invalid options for property `#{name}` on `#{self.name}`: #{invalid_option_keys.join(', ')}" if invalid_option_keys.any?
+        build_property(name, options) do |prop|
+          attribute(prop)
+        end
+      end
+      ...
+    end
+  end
+end
+
+```
+
+**DB RESEARCH**
 
 https://stackoverflow.com/questions/75903997/how-can-i-declare-primary-key-in-apache-age
 
