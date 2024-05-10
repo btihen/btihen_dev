@@ -1102,11 +1102,31 @@ works_at.age_properties
 Things to consider.
 * Can we separate AGE `properties` from virtual `attributes`?
 * Can we support all the property data-types?, :string, :array, etc?
-Perhaps:
+
+I think its easiest to create a rails schema and declare properties:
+
+```ruby
+attribute :id, :integer
+attribute :nick_name, :string
+attribute :name, :string,
+attribute :social_security_number, :integer
+attribute :auth_roles, :array, default: ['user']
+
+validates :name, required: true
+validates :social_security_number, unique: true
+validates :auth_roles, required: true
+
+# class name is the label_name
+# id is stored, but not a property
+# nick_name is a virtal attribute
+properties [:name, :social_security_number, :auth_roles]
 ```
+
+Perhaps (how Neo4j works) - but that feels complicated:
+```ruby
 property :nick_name, :string
 property :name, :string, required: true
-property: social_security_umber, :integer, unique: true
+property :social_security_umber, :integer, unique: true
 property :auth_roles, :array, required: true, default: ['user']
 ```
 
