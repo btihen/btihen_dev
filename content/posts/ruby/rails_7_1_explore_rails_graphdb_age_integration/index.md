@@ -1096,18 +1096,209 @@ quarry.age_properties
 works_at.age_properties
 ```
 
-### Explore Edge Auto-Queries
 
-
+### Unique Property Constraints
 
 Things to consider.
 * Can we separate AGE `properties` from virtual `attributes`?
 * Can we support all the property data-types?, :string, :array, etc?
 Perhaps:
 ```
-property :name, :string
-property :roles, :array
+property :nick_name, :string
+property :name, :string, required: true
+property: social_security_umber, :integer, unique: true
+property :auth_roles, :array, required: true, default: ['user']
 ```
+
+RESEARCH:
+
+https://stackoverflow.com/questions/75903997/how-can-i-declare-primary-key-in-apache-age
+
+
+Only allow 1 SSN entry in `SoftwareEngineer`
+
+Use this query:
+```sql
+CREATE OR REPLACE FUNCTION create_pk(properties agtype)
+RETURNS agtype AS
+$BODY$
+SELECT agtype_access_operator($1, '"SocialSecurityNumber"');
+$BODY$
+LANGUAGE sql IMMUTABLE;
+
+CREATE UNIQUE INDEX person_pk_idx ON staff_details."SoftwareEngineer"
+(create_pk(properties));
+```
+
+**Trigger A**
+
+n Apache AGE, you can achieve the uniqueness of the property SocialSecurityNumber using triggers. You will need to create the trigger function at first:
+```sql
+CREATE OR REPLACE FUNCTION check_unique_ssn()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM SoftwareEngineer
+        WHERE SocialSecurityNumber = NEW.SocialSecurityNumber
+    ) THEN
+        RAISE EXCEPTION 'A SoftwareEngineer with the same SocialSecurityNumber already exists';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+Then, you need to create the trigger and insert the values into it:
+
+```sql
+CREATE TRIGGER enforce_unique_ssn
+BEFORE INSERT ON SoftwareEngineer
+FOR EACH ROW
+EXECUTE FUNCTION check_unique_ssn();
+
+INSERT INTO SoftwareEngineer (name, SocialSecurityNumber, date)
+VALUES ('Muneeb', '12345', NOW());
+```
+
+**Using MERGE & COALESCE**
+
+```sql
+SELECT * FROM cypher('staff_details', $$
+    MERGE (e:SoftwareEngineer {
+        social_security_umber: '12345'
+    })
+    SET e.name = 'Muneeb', e.date = COALESCE(e.date, timestamp())
+    RETURN e
+$$) as (e agtype);
+
+SELECT * FROM staff_details."SoftwareEngineer";
+```
+
+[MERGE documentation](https://age.apache.org/age-manual/master/clauses/merge.html)
+[COALESCE documentation](https://age.apache.org/age-manual/master/functions/scalar_functions.html#coalesce)
+
+**Trigger B**
+
+There is a discussion on a similar issue on Github. Kindly check it out. From what I have tried and that works for your situation is:
+
+Create vertex label (if it is not created already) before running the above CREATE INDEX query as
+
+`SELECT * FROM create_vlabel('staff_details', 'SoftwareEngineer');`
+
+Create Function "get_ssn" that will return the property SocialSecurityNumber from the "properties" column
+
+```sql
+CREATE OR REPLACE FUNCTION get_ssn(properties agtype)
+RETURNS agtype
+AS
+$BODY$
+select agtype_access_operator($1, '"SocialSecurityNumber"');
+$BODY$
+LANGUAGE sql
+IMMUTABLE;
+Create a unique index on the property "SocialSecurityNumber"
+
+CREATE UNIQUE INDEX person_ssn_idx ON staff_details."SoftwareEngineer"(get_ssn(properties)) ;
+```
+
+Now when you try to add another node with the same SocialSecurityNumber, you get the error:
+
+ERROR:  `duplicate key value violates unique constraint "person_ssn_idx" DETAIL:  Key (get_ssn(properties))=("12345") already exists.`
+
+* https://github.com/apache/age/issues/45
+
+`JoshInnis` commented on Nov 29, 2021
+
+A graph name is a schema and a label name is a table. Id and properties are columns in vertex table. Id, start_id, end_id, and properties are columns in the edge tables. Use the agtype_access_operator(properties, key) to get to get a property value.
+
+Knowing all that you can use Postges' standard DDL language to implement constraints, indices and unique values.
+
+```sql
+ALTER TABLE graph_name.label_name
+ADD CONSTRAINT constraint_name
+CHECK(agtype_access_operator(properties, "name_of_property") != '"Check against here"'::agtype);
+```
+
+`pdpotter` commented on Nov 30, 2021
+Since indices require an immutable function, an additional function will still need to be created for them. When I create a get_id function with
+
+```sql
+CREATE OR REPLACE FUNCTION get_id(properties agtype)
+  RETURNS agtype
+AS
+$BODY$
+    select agtype_access_operator($1, '"id"');
+$BODY$
+LANGUAGE sql
+IMMUTABLE;
+```
+
+and use it in an index with
+```sql
+CREATE UNIQUE INDEX person_id_idx ON mygraph.person(get_id(properties));
+```
+
+the creation of vertices with the same id will be prevented
+
+ERROR:  `duplicate key value violates unique constraint "person_id_idx"`
+DETAIL:  `Key (get_id(properties))=(2250) already exists.`
+but the index will still not be used when trying to match vertices with a specific id:
+```sql
+SELECT * FROM ag_catalog.cypher('mygraph', $$EXPLAIN ANALYZE MATCH (a:person {id:2250}) return a$$) as (a agtype);
+```
+
+Is there a way to use indices when matching?
+
+`JoshInnis` commented on Nov 30, 2021
+Indices cannot currently be used while matching. There will need to be some re factoring done to allow the planner to realize opportunities where the indices can be used.
+
+
+**Constraints**: You can create a uniqueness constraint on the SocialSecurityNumber property of the SoftwareEngineer label. This will enforce uniqueness and prevent duplicate nodes with the same SocialSecurityNumber from being created. Here's an example of how to create a uniqueness constraint using Cypher:
+
+```sql
+CREATE CONSTRAINT ON (se:SoftwareEngineer) ASSERT se.SocialSecurityNumber IS UNIQUE;
+```
+
+**Triggers**: You can also use triggers to enforce the uniqueness constraint at the database level. A trigger can be created to check if a SoftwareEngineer node with the same SocialSecurityNumber already exists before inserting a new node. Here's an example of how to create a trigger using Cypher:
+
+```sql
+CREATE TRIGGER check_unique_social_security_number
+BEFORE INSERT ON SoftwareEngineer
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        MATCH (se:SoftwareEngineer {SocialSecurityNumber: NEW.SocialSecurityNumber})
+        RETURN se
+    )
+    THEN
+        RAISE EXCEPTION 'A SoftwareEngineer with the same SocialSecurityNumber already exists.';
+    END IF;
+END;
+```
+
+With these constraints and triggers in place, if you try to insert a SoftwareEngineer node with a duplicate SocialSecurityNumber, it will result in an exception being raised, preventing the creation of the duplicate node.
+
+**Note**: The examples provided assume that you have already created the SoftwareEngineer label and relevant properties in your graph schema. Adjust the Cypher statements accordingly based on your schema design.
+
+### Migration Exploration
+
+* Create a Node/Edge Label ('Table')
+
+staff_details - Graph Name
+SoftwareEngineer - Label Name
+SocialSecurityNumber - Unique Property Name
+
+`SELECT * FROM create_vlabel('staff_details', 'SoftwareEngineer');`
+
+* Create Unique Fields
+
+`CREATE CONSTRAINT ON (se:SoftwareEngineer) ASSERT se.SocialSecurityNumber IS UNIQUE;`
+
+* Create Required Fields
+
+Can this be done on a DB Level (or just within Rails)?
+
+
+### Relationship Explorations
 
 Can we Automate queries for relationships between nodes?  maybe something like:
 ```
@@ -1121,6 +1312,41 @@ many_links :outgoing :firms, node: Company, via: works_for, edge: WorksAt
 # INCOMING (within Company class)
 many_links :incoming :people, via: works_at
 many_links :incoming :employees, node: Person, via: works_for, edge: WorksAt
+```
+
+**Create code**
+
+From 'Neo4j/ActiveGraph'
+
+https://github.com/neo4jrb/activegraph/blob/8e2ba4d117f5702633b0aa7099c71923a100c40d/lib/active_graph/node/has_n.rb#L409
+
+```ruby
+module ActiveGraph::Node
+  module HasN
+
+    extend ActiveSupport::Concern
+    ...
+    module ClassMethod
+      ...
+      def has_many(direction, name, options = {})
+        name = name.to_sym
+        build_association(:has_many, direction, name, options)
+
+        define_has_many_methods(name, options)
+      end
+
+      def has_one(direction, name, options = {})
+        name = name.to_sym
+        build_association(:has_one, direction, name, options)
+
+        define_has_one_methods(name, options)
+      end
+
+      private
+      ...
+    end
+  end
+end
 ```
 
 
@@ -1143,6 +1369,12 @@ many_links :incoming :employees, node: Person, via: works_for, edge: WorksAt
 
 * https://github.com/neo4jrb/activegraph
 * https://apache-age.medium.com/what-is-data-modeling-graph-db-86ccd7b5989e
+
+### Apache AGE SQL / Migration / Indexes
+
+* https://github.com/apache/age/issues/45
+* https://stackoverflow.com/questions/75903997/how-can-i-declare-primary-key-in-apache-age
+
 
 ### Rails with Apache AGE
 
