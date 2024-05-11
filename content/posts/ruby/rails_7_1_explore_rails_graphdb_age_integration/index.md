@@ -770,13 +770,13 @@ module ApacheAge
     def persisted? = id.present?
 
     def to_h
-      base_hash =  attributes.except('origin_node', 'target_node')
-      base_hash[:origin_node] = origin_node.to_h
-      base_hash[:target_node] = target_node.to_h
+      base_hash =  attributes.except('start_node', 'end_node')
+      base_hash[:start_node] = start_node.to_h
+      base_hash[:end_node] = end_node.to_h
       base_hash.symbolize_keys
     end
 
-    def age_properties = attributes.except('id', 'origin_node', 'target_node', 'start_id', 'end_id').symbolize_keys
+    def age_properties = attributes.except('id', 'start_node', 'end_node', 'start_id', 'end_id').symbolize_keys
 
     def age_hash
       {
@@ -829,13 +829,13 @@ module ApacheAge
     end
 
     def create_sql
-      self.origin_node = origin_node.create unless origin_node.persisted?
-      self.target_node = target_node.create unless target_node.persisted?
+      self.start_node = start_node.create unless start_node.persisted?
+      self.end_node = end_node.create unless end_node.persisted?
       <<-SQL
         SELECT *
         FROM cypher('#{age_graph}', $$
-            MATCH (start_vertex:#{origin_node.age_label}), (end_vertex:#{target_node.age_label})
-            WHERE id(start_vertex) = #{origin_node.id} and id(end_vertex) = #{target_node.id}
+            MATCH (start_vertex:#{start_node.age_label}), (end_vertex:#{end_node.age_label})
+            WHERE id(start_vertex) = #{start_node.id} and id(end_vertex) = #{end_node.id}
             CREATE (start_vertex)-[edge#{to_s}]->(end_vertex)
             RETURN edge
         $$) as (edge agtype);
@@ -856,24 +856,24 @@ module AgeSchema
     attribute :id, :integer
     attribute :end_id, :integer
     attribute :start_id, :integer
-    attribute :target_node #, :vertex
-    attribute :origin_node #, :vertex
+    attribute :end_node #, :vertex
+    attribute :start_node #, :vertex
 
-    def initialize(id: nil, role:, origin_node:, target_node:)
+    def initialize(id: nil, role:, start_node:, end_node:)
       super # without this `@attributes` is nil and creates
       self.id = id
       self.role = role
-      self.end_id = target_node.id
-      self.start_id = origin_node.id
-      self.origin_node = origin_node
-      self.target_node = target_node
+      self.end_id = end_node.id
+      self.start_id = start_node.id
+      self.start_node = start_node
+      self.end_node = end_node
     end
   end
 end
 
 fred = AgeSchema::Person.new(first_name: 'Fred', last_name: 'Flintstone', gender: 'male')
 quarry = AgeSchema::Company.new(name: 'Bedrock Quarry')
-crane_ops = AgeSchema::WorksAt.new(role: 'Crane Operator', origin_node: fred, target_node: quarry)
+crane_ops = AgeSchema::WorksAt.new(role: 'Crane Operator', start_node: fred, end_node: quarry)
 crane_ops.create_sql
 crane_ops.create
 ```
@@ -963,12 +963,12 @@ module ApacheAge
 
     def age_type = 'edge'
     def age_hash = base_hash.merge(end_id:, start_id:)
-    def age_properties = base_properties.except('origin_node', 'target_node', 'start_id', 'end_id').symbolize_keys
+    def age_properties = base_properties.except('start_node', 'end_node', 'start_id', 'end_id').symbolize_keys
 
     def to_h
-      base_h = base_to_h.except('origin_node', 'target_node')
-      base_h['origin_node'] = origin_node.to_h
-      base_h['target_node'] = target_node.to_h
+      base_h = base_to_h.except('start_node', 'end_node')
+      base_h['start_node'] = start_node.to_h
+      base_h['end_node'] = end_node.to_h
       base_h.with_indifferent_access
     end
 
@@ -984,13 +984,13 @@ module ApacheAge
     end
 
     def create_sql
-      self.origin_node = origin_node.create unless origin_node.persisted?
-      self.target_node = target_node.create unless target_node.persisted?
+      self.start_node = start_node.create unless start_node.persisted?
+      self.end_node = end_node.create unless end_node.persisted?
       <<-SQL
         SELECT *
         FROM cypher('#{age_graph}', $$
-            MATCH (start_vertex:#{origin_node.age_label}), (end_vertex:#{target_node.age_label})
-            WHERE id(start_vertex) = #{origin_node.id} and id(end_vertex) = #{target_node.id}
+            MATCH (start_vertex:#{start_node.age_label}), (end_vertex:#{end_node.age_label})
+            WHERE id(start_vertex) = #{start_node.id} and id(end_vertex) = #{end_node.id}
             CREATE (start_vertex)-[edge#{to_s}]->(end_vertex)
             RETURN edge
         $$) as (edge agtype);
@@ -1056,17 +1056,17 @@ module AgeSchema
     attribute :id, :integer
     attribute :end_id, :integer
     attribute :start_id, :integer
-    attribute :target_node #, :vertex
-    attribute :origin_node #, :vertex
+    attribute :end_node #, :vertex
+    attribute :start_node #, :vertex
 
-    def initialize(id: nil, role:, origin_node:, target_node:)
+    def initialize(id: nil, role:, start_node:, end_node:)
       super # without this `@attributes` is nil and creates
       self.id = id
       self.role = role
-      self.end_id = target_node.id
-      self.start_id = origin_node.id
-      self.origin_node = origin_node
-      self.target_node = target_node
+      self.end_id = end_node.id
+      self.start_id = start_node.id
+      self.start_node = start_node
+      self.end_node = end_node
     end
   end
 end
@@ -1079,7 +1079,7 @@ quarry = AgeSchema::Company.new(name: 'Bedrock Quarry')
 # quarry.create
 # quarry.id
 
-works_at = AgeSchema::WorksAt.new(role: 'Crane Operator', origin_node: fred, target_node: quarry)
+works_at = AgeSchema::WorksAt.new(role: 'Crane Operator', start_node: fred, end_node: quarry)
 works_at.create
 works_at.id
 
