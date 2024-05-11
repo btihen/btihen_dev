@@ -1118,7 +1118,7 @@ validates :auth_roles, required: true
 
 # class name is the label_name
 # id is stored, but not a property
-# nick_name is a virtal attribute
+# nick_name is a virtual attribute
 properties [:name, :social_security_number, :auth_roles]
 ```
 
