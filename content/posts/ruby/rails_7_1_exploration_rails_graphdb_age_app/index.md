@@ -42,8 +42,7 @@ I will assume you have the AGE extension already installed in your Postgres inst
 As we have done in a few apps, we will build a Flintstone's App.
 Let's create our rails app:
 ```
-rails _7.1.3.2_ new graphdb_age -T -d postgresql \
-      --css=bootstrap
+rails _7.1.3.2_ new graphdb_age -T -d postgresql
 cd graphdb_age
 ```
 
@@ -294,6 +293,19 @@ module Nodes
       self.given_name = last_name unless given_name.present?
     end
   end
+end
+```
+
+## Router
+
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  resources :people
+
+  get 'up' => 'rails/health#show', as: :rails_health_check
+
+  root 'people#index'
 end
 ```
 
