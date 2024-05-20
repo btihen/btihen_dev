@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Rails', "GraphDB", "Postgres AGE"]
 categories: ["Code", "GraphDB", "Ruby Language", "Rails Framework"]
 date: 2024-05-06T01:20:00+02:00
-lastmod: 2024-05-09T01:20:00+02:00
+lastmod: 2024-05-20T01:20:00+02:00
 featured: true
 draft: false
 
@@ -33,7 +33,7 @@ Graph Databases are very interesting technologies for managing social networks, 
 
 In this article, I want to explore using Apache AGE within a Rails Application.  This article assumes a working knowledge of OpenCypher and Apache AGE.  If you want to get started you can find an Intro and further resources at: https://btihen.dev/posts/tech/graphdb_getting_started_age_1_5_0/
 
-This code can be found at: https://github.com/btihen-dev/rails_graphdb_age
+Rails code can be found at: https://github.com/btihen-dev/rails_graphdb_age_app
 
 NO CODE YET AVAILABLE - this is a Document in PROGRESS!
 
@@ -1152,7 +1152,7 @@ module ActiveGraph::Shared
       # Defines a property on the class
       #
       # See active_attr gem for allowed options, e.g which type
-      # Notice, in ActiveGraph you don't have to declare properties before using them, see the ActiveGraph::Coree api.
+      # Notice, in ActiveGraph you don't have to declare properties before using them, see the ActiveGraph::Core api.
       #
       # @example Without type
       #    class Person
@@ -1430,6 +1430,464 @@ module ActiveGraph::Node
 end
 ```
 
+## Testing
+
+In order to run tests we need a valid schema.rb file.
+It turns out in out case rails builds an incorrect `db/schema.rb` file.
+
+To fix it just copy the migration into the schema - so it should look like:
+```ruby
+ActiveRecord::Schema[7.1].define(version: 20_240_505_183_043) do
+  # Allow age extension
+  execute('CREATE EXTENSION IF NOT EXISTS age;')
+
+  # Load the age code
+  execute("LOAD 'age';")
+
+  # Load the ag_catalog into the search path
+  execute('SET search_path = ag_catalog, "$user", public;')
+
+  # Create age_schema graph if it doesn't exist
+  execute("SELECT create_graph('age_schema');")
+end
+```
+
+Now commit this - as rails will keep changing it back and if its committed you can now restore you fix after each migration.
+
+## Code
+
+The up-tp-date code is at: https://github.com/btihen-dev/rails_graphdb_age_app
+
+A quick summary of the working code within rails:
+
+### Library Code
+
+```ruby
+# app/lib/apache_age/vertex.rb
+module ApacheAge
+  module Vertex
+    extend ActiveSupport::Concern
+    # include ApacheAge::Entity
+
+    included do
+      include ActiveModel::Model
+      include ActiveModel::Dirty
+      include ActiveModel::Attributes
+
+      attribute :id, :integer
+
+      extend ApacheAge::ClassMethods
+      include ApacheAge::CommonMethods
+    end
+
+    def age_type = 'vertex'
+
+    # AgeSchema::Nodes::Company.create(company_name: 'Bedrock Quarry')
+    # SELECT *
+    # FROM cypher('age_schema', $$
+    #     CREATE (company:Company {company_name: 'Bedrock Quarry'})
+    # RETURN company
+    # $$) as (Company agtype);
+    def create_sql
+      alias_name = age_alias || age_label.downcase
+      <<-SQL
+        SELECT *
+        FROM cypher('#{age_graph}', $$
+            CREATE (#{alias_name}#{self})
+        RETURN #{alias_name}
+        $$) as (#{age_label} agtype);
+      SQL
+    end
+
+    # So far just properties of string type with '' around them
+    def update_sql
+      alias_name = age_alias || age_label.downcase
+      set_caluse =
+        age_properties.map { |k, v| v ? "#{alias_name}.#{k} = '#{v}'" : "#{alias_name}.#{k} = NULL" }.join(', ')
+      <<-SQL
+        SELECT *
+        FROM cypher('#{age_graph}', $$
+            MATCH (#{alias_name}:#{age_label})
+            WHERE id(#{alias_name}) = #{id}
+            SET #{set_caluse}
+            RETURN #{alias_name}
+        $$) as (#{age_label} agtype);
+      SQL
+    end
+  end
+end
+```
+
+```ruby
+# app/lib/apache_age/edge.rb
+module ApacheAge
+  module Edge
+    extend ActiveSupport::Concern
+
+    included do
+      include ActiveModel::Model
+      include ActiveModel::Dirty
+      include ActiveModel::Attributes
+
+      attribute :id, :integer
+      attribute :end_id, :integer
+      attribute :start_id, :integer
+      attribute :end_node # :vertex
+      attribute :start_node # :vertex
+
+      validates :end_node, :start_node, presence: true
+
+      extend ApacheAge::ClassMethods
+      include ApacheAge::CommonMethods
+    end
+
+    def age_type = 'edge'
+
+    # AgeSchema::Edges::WorksAt.create(
+    #   start_node: fred, end_node: quarry, employee_role: 'Crane Operator'
+    # )
+    # SELECT *
+    # FROM cypher('age_schema', $$
+    #     MATCH (start_vertex:Person), (end_vertex:Company)
+    #     WHERE id(start_vertex) = 1125899906842634 and id(end_vertex) = 844424930131976
+    #     CREATE (start_vertex)-[edge:WorksAt {employee_role: 'Crane Operator'}]->(end_vertex)
+    #     RETURN edge
+    # $$) as (edge agtype);
+    def create_sql
+      self.start_node = start_node.save unless start_node.persisted?
+      self.end_node = end_node.save unless end_node.persisted?
+      <<-SQL
+        SELECT *
+        FROM cypher('#{age_graph}', $$
+            MATCH (from_node:#{start_node.age_label}), (to_node:#{end_node.age_label})
+            WHERE id(from_node) = #{start_node.id} and id(to_node) = #{end_node.id}
+            CREATE (from_node)-[edge#{self}]->(to_node)
+            RETURN edge
+        $$) as (edge agtype);
+      SQL
+    end
+
+    # So far just properties of string type with '' around them
+    def update_sql
+      alias_name = age_alias || age_label.downcase
+      set_caluse =
+        age_properties.map { |k, v| v ? "#{alias_name}.#{k} = '#{v}'" : "#{alias_name}.#{k} = NULL" }.join(', ')
+      <<-SQL
+        SELECT *
+        FROM cypher('#{age_graph}', $$
+            MATCH ()-[#{alias_name}:#{age_label}]->()
+            WHERE id(#{alias_name}) = #{id}
+            SET #{set_caluse}
+            RETURN #{alias_name}
+        $$) as (#{age_label} agtype);
+      SQL
+    end
+  end
+end
+```
+
+```ruby
+# app/lib/apache_age/entity.rb
+module ApacheAge
+  class Entity
+    class << self
+      def find_by(attributes)
+        where_clause = attributes.map { |k, v| "find.#{k} = '#{v}'" }.join(' AND ')
+        handle_find(where_clause)
+      end
+
+      def find(id)
+        where_clause = "id(find) = #{id}"
+        handle_find(where_clause)
+      end
+
+      private
+
+      def age_graph = 'age_schema'
+
+      def handle_find(where_clause)
+        # try to find a vertex
+        match_node = '(find)'
+        cypher_sql = find_sql(match_node, where_clause)
+        age_response = execute_find(cypher_sql)
+
+        if age_response.nil?
+          # if not a vertex try to find an edge
+          match_edge = '()-[find]->()'
+          cypher_sql = find_sql(match_edge, where_clause)
+          age_response = execute_find(cypher_sql)
+          return nil if age_response.nil?
+        end
+
+        instantiate_result(age_response)
+      end
+
+      def execute_find(cypher_sql)
+        age_result = ActiveRecord::Base.connection.execute(cypher_sql)
+        return nil if age_result.values.first.nil?
+
+        age_result
+      end
+
+      def instantiate_result(age_response)
+        age_type = age_response.values.first.first.split('::').last
+        json_string = age_response.values.first.first.split('::').first
+        json_data = JSON.parse(json_string)
+
+        age_label = json_data['label']
+        attribs = json_data.except('label', 'properties')
+                           .merge(json_data['properties'])
+                           .symbolize_keys
+
+        "#{json_data['label'].gsub('__', '::')}".constantize.new(**attribs)
+      end
+
+      def find_sql(match_clause, where_clause)
+        <<-SQL
+          SELECT *
+          FROM cypher('#{age_graph}', $$
+              MATCH #{match_clause}
+              WHERE #{where_clause}
+              RETURN find
+          $$) as (found agtype);
+        SQL
+      end
+    end
+  end
+end
+```
+
+```ruby
+# app/lib/apache_age/class_methods.rb
+module ApacheAge
+  module ClassMethods
+    # for now we only allow one predestined graph
+    def create(attributes) = new(**attributes).save
+
+    def find_by(attributes)
+      where_clause = attributes.map { |k, v| "find.#{k} = '#{v}'" }.join(' AND ')
+      cypher_sql = find_sql(where_clause)
+      execute_find(cypher_sql)
+    end
+
+    def find(id)
+      where_clause = "id(find) = #{id}"
+      cypher_sql = find_sql(where_clause)
+      execute_find(cypher_sql)
+    end
+
+    def all
+      age_results = ActiveRecord::Base.connection.execute(all_sql)
+      return [] if age_results.values.count.zero?
+
+      age_results.values.map do |result|
+        json_string = result.first.split('::').first
+        hash = JSON.parse(json_string)
+        attribs = hash.except('label', 'properties').merge(hash['properties']).symbolize_keys
+
+        new(**attribs)
+      end
+    end
+
+    # Private stuff
+
+    def age_graph = 'age_schema'
+    def age_label = name.gsub('::', '__')
+    def age_type = name.constantize.new.age_type
+
+    def match_clause
+      age_type == 'vertex' ? "(find:#{age_label})" : "()-[find:#{age_label}]->()"
+    end
+
+    def execute_find(cypher_sql)
+      age_result = ActiveRecord::Base.connection.execute(cypher_sql)
+      return nil if age_result.values.count.zero?
+
+      age_type = age_result.values.first.first.split('::').last
+      json_data = age_result.values.first.first.split('::').first
+
+      hash = JSON.parse(json_data)
+      attribs = hash.except('label', 'properties').merge(hash['properties']).symbolize_keys
+
+      new(**attribs)
+    end
+
+    def all_sql
+      <<-SQL
+      SELECT *
+      FROM cypher('#{age_graph}', $$
+          MATCH #{match_clause}
+          RETURN find
+      $$) as (#{age_label} agtype);
+      SQL
+    end
+
+    def find_sql(where_clause)
+      <<-SQL
+        SELECT *
+        FROM cypher('#{age_graph}', $$
+            MATCH #{match_clause}
+            WHERE #{where_clause}
+            RETURN find
+        $$) as (#{age_label} agtype);
+      SQL
+    end
+  end
+end
+```
+
+```ruby
+# app/lib/apache_age/common_methods.rb
+module ApacheAge
+  module CommonMethods
+    def initialize(**attributes)
+      super
+      return self unless age_type == 'edge'
+
+      self.end_id ||= end_node.id if end_node
+      self.start_id ||= start_node.id if start_node
+      self.end_node ||= Entity.find(end_id) if end_id
+      self.start_node ||= Entity.find(start_id) if start_id
+    end
+
+    # for now we just can just use one schema
+    def age_graph = 'age_schema'
+    def age_label = self.class.name.gsub('::', '__')
+    def persisted? = id.present?
+    def to_s = ":#{age_label} #{properties_to_s}"
+
+    def to_h
+      base_h = attributes.to_hash
+      if age_type == 'edge'
+        # remove the nodes (in attribute form and re-add in hash form)
+        base_h = base_h.except('start_node', 'end_node')
+        base_h[:end_node] = end_node.to_h if end_node
+        base_h[:start_node] = start_node.to_h if start_node
+      end
+      base_h.symbolize_keys
+    end
+
+    def update_attributes(attribs)
+      attribs.except(id:).each do |key, value|
+        send("#{key}=", value) if respond_to?("#{key}=")
+      end
+    end
+
+    def update(attribs)
+      update_attributes(attribs)
+      save
+    end
+
+    def save
+      return false unless valid?
+
+      cypher_sql = (persisted? ? update_sql : create_sql)
+      response_hash = execute_sql(cypher_sql)
+
+      self.id = response_hash['id']
+
+      if age_type == 'edge'
+        self.end_id = response_hash['end_id']
+        self.start_id = response_hash['start_id']
+        # reload the nodes? (can we change the nodes?)
+        # self.end_node = ApacheAge::Entity.find(end_id)
+        # self.start_node = ApacheAge::Entity.find(start_id)
+      end
+
+      self
+    end
+
+    def destroy
+      match_clause = (age_type == 'vertex' ? "(done:#{age_label})" : "()-[done:#{age_label}]->()")
+      delete_clause = (age_type == 'vertex' ? 'DETACH DELETE done' : 'DELETE done')
+      cypher_sql =
+        <<-SQL
+        SELECT *
+        FROM cypher('#{age_graph}', $$
+            MATCH #{match_clause}
+            WHERE id(done) = #{id}
+ 	          #{delete_clause}
+            return done
+        $$) as (deleted agtype);
+        SQL
+
+      hash = execute_sql(cypher_sql)
+      return nil if hash.blank?
+
+      self.id = nil
+      self
+    end
+    alias destroy! destroy
+    alias delete destroy
+
+    # private
+
+    def age_properties
+      attrs = attributes.except('id')
+      attrs = attrs.except('end_node', 'start_node', 'end_id', 'start_id') if age_type == 'edge'
+      attrs.symbolize_keys
+    end
+
+    def age_hash
+      hash =
+        {
+          id:,
+          label: age_label,
+          properties: age_properties
+        }
+      hash.merge!(end_id:, start_id:) if age_type == 'edge'
+      hash.transform_keys(&:to_s)
+    end
+
+    def properties_to_s
+      string_values =
+        age_properties.each_with_object([]) do |(key, val), array|
+          array << "#{key}: '#{val}'"
+        end
+      "{#{string_values.join(', ')}}"
+    end
+
+    def age_alias
+      return nil if id.blank?
+
+      # we start the alias with a since we can't start with a number
+      'a' + Digest::SHA256.hexdigest(id.to_s).to_i(16).to_s(36)[0..9]
+    end
+
+    def execute_sql(cypher_sql)
+      age_result = ActiveRecord::Base.connection.execute(cypher_sql)
+      age_type = age_result.values.first.first.split('::').last
+      json_data = age_result.values.first.first.split('::').first
+      # json_data = age_result.to_a.first.values.first.split("::#{age_type}").first
+
+      JSON.parse(json_data)
+    end
+  end
+end
+```
+
+### Implantation Classes
+
+```ruby
+# app/graphs/nodes/company.rb
+module Nodes
+  class Company
+    include ApacheAge::Vertex
+
+    attribute :company_name, :string
+    validates :company_name, presence: true
+  end
+end
+```
+
+### Usage
+
+This will be described in detail in the article:
+
+but here is a simple usage example:
+```ruby
+bedrock_quarry = Nodes::Company.create(company_name: 'Bedrock Quarry Company')
+```
 
 ## Resources
 
