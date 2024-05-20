@@ -35,8 +35,6 @@ In this article, I want to explore using Apache AGE within a Rails Application. 
 
 Rails code can be found at: https://github.com/btihen-dev/rails_graphdb_age_app
 
-NO CODE YET AVAILABLE - this is a Document in PROGRESS!
-
 ## Getting Started
 
 I will assume you have the AGE extension already installed in your Postgres instance and you understand OpenCypher at least casually.  If not please first visit: https://btihen.dev/posts/tech/graphdb_getting_started_age_1_5_0/
