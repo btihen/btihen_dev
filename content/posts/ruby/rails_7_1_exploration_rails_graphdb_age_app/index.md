@@ -33,7 +33,7 @@ Graph Databases are very interesting technologies for managing social networks, 
 
 In this article, I want to explore using Apache AGE within a Rails Application.  This article assumes a working knowledge of OpenCypher and Apache AGE.  If you want to get started you can find an Intro and further resources at: https://btihen.dev/posts/tech/graphdb_getting_started_age_1_5_0/
 
-This code can be found at: https://github.com/btihen-dev/rails_graphdb_age
+This code can be found at: https://github.com/btihen-dev/rails_graphdb_age_app
 
 ## Getting Started
 
