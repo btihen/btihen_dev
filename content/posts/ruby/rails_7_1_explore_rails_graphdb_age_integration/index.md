@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Rails', "GraphDB", "Postgres AGE"]
 categories: ["Code", "GraphDB", "Ruby Language", "Rails Framework"]
 date: 2024-05-06T01:20:00+02:00
-lastmod: 2024-05-20T01:20:00+02:00
+lastmod: 2024-05-21T01:20:00+02:00
 featured: true
 draft: false
 
@@ -98,6 +98,45 @@ default: &default
 now lets check our setup with:
 ```
 bin/rails db:setup
+```
+
+## Test Postgres Connections
+
+No matter how you installed Apache Age - lets access postgresql:
+```bash
+# simplify the login if you wish
+export PGPASSWORD=postgresPW
+
+# now access the database
+psql -d myPostgresDb -U postgresUser -h localhost -p 5455
+```
+
+you now can test with the following cypher / SQL commands:
+```sql
+--- ensure age extension is installed
+CREATE EXTENSION IF NOT EXISTS age;
+
+--- load the extension
+LOAD 'age';
+
+--- load ag_catalog to the search path
+SET search_path = ag_catalog, "$user", public;
+
+--- create the graph schema
+SELECT create_graph('age_schema');
+
+--- create a node
+SELECT *
+FROM cypher('graph_name', $$
+    CREATE (a {name: 'Andres'})
+    RETURN a
+$$) as (a agtype);
+
+--- select the node
+SELECT * FROM cypher('graph_name', $$
+MATCH (v)
+RETURN v
+$$) as (v agtype);
 ```
 
 ### Migration for the Schema
@@ -1864,7 +1903,7 @@ module ApacheAge
 end
 ```
 
-### Implantation Classes
+### Implementation Classes
 
 ```ruby
 # app/graphs/nodes/company.rb
