@@ -30,7 +30,11 @@ projects: []
 
 Creating a simple Rails Engine despite the variety of documentation was confusing, so here is what I learned.
 
-It's important to set up a dummy app from the beginning (to enable testing)
+Source Code: https://github.com/marpori/rails_age
+RubyGem Link: https://rubygems.org/gems/rails_age
+AGE Demo App: https://github.com/marpori/rails_age_demo_app
+
+It's important to set up a dummy app from the beginning (to simplify testing)
 
 So after several starts I found the following worked to start the project (in my case the database must be `postgresql`):
 ```
