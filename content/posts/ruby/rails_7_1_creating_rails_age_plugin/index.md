@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Rails', "GraphDB", "Postgres AGE", "Rails Engine", "Rails Plugin", "Rails Gem"]
 categories: ["Code", "GraphDB", "Ruby Language", "Rails Framework"]
 date: 2024-05-21T01:20:00+02:00
-lastmod: 2024-05-21T01:20:00+02:00
+lastmod: 2024-05-22T01:20:00+02:00
 featured: true
 draft: false
 
@@ -251,11 +251,18 @@ Now I can test with:
 or better yet using the binstub:
 `bin/rspec spec`
 
+## Optional Dummy App Testing
+
 Now if you want you can go into `spec/dummy` and write / execute tests within the dummy rails app:
 
 Add the Graph App files:
 ```bash
+mkdir -p spec/dummy/app/graphs/edges
+mkdir -p spec/dummy/app/graphs/nodes
 
+spec/dummy/app/graphs/edges/works_at.rb
+spec/dummy/app/graphs/nodes/company.rb
+spec/dummy/app/graphs/nodes/person.rb
 ```
 
 generate a controller and views:
@@ -265,10 +272,15 @@ bin/rails g scaffold_controller Person
 
 Now we can add tests:
 ```bash
+mkdir -p spec/dummy/spec/graphs/edges
+mkdir -p spec/dummy/spec/graphs/nodes
 
+spec/dummy/spec/graphs/edges/works_at_spec.rb
+spec/dummy/spec/graphs/nodes/company_spec.rb
+spec/dummy/spec/graphs/nodes/person_spec.rb
 ```
 
-We need to run update `schema.rb` in the dummy app with the same data as in the gem `db/schema.rb` so do:
+We need to run update the dummy app `schema.rb` with the same data as in the gem `db/schema.rb` so do:
 ```bash
 cp db/schema.rb spec/dummy/db/schema.rb
 ```
@@ -279,9 +291,34 @@ spec/dummy/
 bundle exec rspec spec
 ```
 
-Now that we are happy with what our gem does and tests pass we can commit - I made a repository at:
+cool it works within a dummy app too!
+
+## Gem Usage Testing
+assuming the tests are green, then we can build the gem with:
+```bash
+gem build rails_age.gemspec
+```
+
+add `*.gem` to the end of `.gitignore` file.
+
+Now we can build a new project and try out our gem:
+```bash
+rails new graphdb_age_app -T -d=postgresql
+```
+
+now at the end of the `Gemfile` add:
+```ruby
+# Gemfile
+gem 'rails_age', path: '../rails_age'
+```
+and of course run `bundle` and test the new app with the plugin.
+
+## Gem Repo Publishing & Usage
+
+Assuming this works, we can now push the repo live (first make a repo on github) in my case at:
 `https://github.com/marpori/rails_age`
-then I did:
+
+then:
 
 ```bash
 git add .
@@ -291,22 +328,16 @@ git branch -M main
 git push -u origin main
 ```
 
-Now that I have the repo centrally posted I can test in a 'real rails app using with:
-```bash
-rails new graphdb_age_app -T -d=postgresql
-```
-
-now at the end of the `Gemfile` add:
+Now we can change how we access the gem using:
 ```ruby
 # Gemfile
 gem 'rails_age', git: 'https://github.com/marpori/rails_age.git'
 ```
-and of course run `bundle`
+and of course run `bundle` and test.
 
-now create the files needed to test or use the gem and it should work!
+## RubyGem Publishing & Usage
 
-
-now we can publish the gem using - assuming you already have an account on [rubygems](https://rubygems.org/)
+Assuming this still works well, we can publish the gem using - assuming you already have an account on [rubygems](https://rubygems.org/)
 
 ```bash
 # be sure to update the version number before building a new version!
@@ -315,9 +346,11 @@ gem signin
 gem push rails_age-0.1.0.gem
 ```
 
-Now the gem should also be usable with by just adding:
+Now the gem should also be usable with just
+`gem 'rails_age'`
+in the `Gemfile`:
 ```ruby
 # Gemfile
 gem 'rails_age'
 ```
-to the `Gemfile` & of course running: `bundle`
+to the `Gemfile` & of course running: `bundle` all should still work and be published on rubygems at: `https://rubygems.org/gems/rails_age`
