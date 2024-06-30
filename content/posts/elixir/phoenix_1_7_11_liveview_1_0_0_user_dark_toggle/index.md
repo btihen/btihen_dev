@@ -1,11 +1,11 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
-title: "Phoenix 1.7.14 - System Darkmode Toggle"
-subtitle: "Implement a simple System Darkmode Toggle using Tailwind CSS"
+title: "Phoenix 1.7.14 - User Info within Darkmode Toggle"
+subtitle: "Implement Manual Darkmode Toggle using Tailwind CSS and include User Information"
 # Summary for listings and search engines
-summary: "Allowing to Toggle between Dark and Light Modes in Phoenix (with the system settings)"
+summary: "Include User Info in navbar and  manually toggle between Dark and Light Modes in a Phoenix project"
 authors: ["btihen"]
-tags: ["Elixir", "Phoenix", "Tailwind", "Darkmode"]
+tags: ["Elixir", "Phoenix", "Tailwind", "Darkmode", "Components"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "Tailwind"]
 date: 2024-06-30T01:01:53+02:00
 lastmod: 2024-06-30T01:01:53+02:00
