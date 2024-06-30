@@ -7,8 +7,8 @@ summary: "Allow users to toggle between Dark and Light Modes in a Phoenix projec
 authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "Tailwind", "Darkmode"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "Tailwind"]
-date: 2024-06-09T29:01:53+02:00
-lastmod: 2024-06-29T01:01:53+02:00
+date: 2024-06-30T01:01:53+02:00
+lastmod: 2024-06-30T01:01:53+02:00
 featured: true
 draft: false
 
@@ -29,9 +29,12 @@ projects: []
 ---
 
 This article assume you have first followed the post:
-[Phoenix System Dark Toggle](https://btihen.dev/posts/elixir/phoenix_1_7_11_liveview_1_0_0_system_dark_toggle/) in summary:
+[Phoenix System Dark Toggle](https://btihen.dev/posts/elixir/phoenix_1_7_11_liveview_1_0_0_system_dark_toggle/)
 
-## System Toggle
+Code for this article can be found at: 
+https://github.com/btihen-dev/phoenix_toggle_theme
+
+## System Toggle Summary
 
 Let's install a default Phoenix project - using the newest version as of `2024-06-29`
 
@@ -76,16 +79,26 @@ Let's start by simplifying the home / landing page `home.html.heex` I'll use the
 <div class="relative isolate px-6 pt-10 lg:px-8">
   <div class="mx-auto max-w-2xl py-12 sm:py-24 lg:py-36">
     <div class="text-center">
-      <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-slate-100 sm:text-6xl">
+      <h1 class="text-4xl font-bold tracking-tight text-gray-900 dark:text-slate-200 sm:text-6xl">
         The Dark Toggle
       </h1>
-      <p class="mt-6 text-lg leading-8 text-gray-600">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc sed nisi nulla.
-        <a href="#" class="font-semibold text-indigo-600">
-          <span class="absolute inset-0" aria-hidden="true"></span>Read more
-          <span aria-hidden="true">&rarr;</span>
-        </a>
+      <p class="mt-6 text-lg leading-8 text-gray-600 dark:text-stone-400">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc sed nisi nulla. 
       </p>
+    </div>
+    <div class="text-center mt-8">
+      <amix
+        phx.gen.auth
+        Accounts
+        User
+        users
+        email:string
+        href="#"
+        class="font-semibold text-orange-600 hover:bg-gray-100 dark:text-orange-500 dark:hover:text-orange-500 dark:hover:bg-gray-700 rounded-lg p-2.5"
+      >
+        <span class="absolute inset-0" aria-hidden="true"></span>Read more
+        <span aria-hidden="true">&rarr;</span>
+      </amix>
     </div>
   </div>
 </div>

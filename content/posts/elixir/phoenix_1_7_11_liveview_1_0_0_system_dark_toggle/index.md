@@ -7,7 +7,7 @@ summary: "Allowing to Toggle between Dark and Light Modes in Phoenix (with the s
 authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "Tailwind", "Darkmode"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "Tailwind"]
-date: 2024-06-09T30:01:53+02:00
+date: 2024-06-29T01:01:53+02:00
 lastmod: 2024-06-30T01:01:53+02:00
 featured: true
 draft: false
@@ -31,6 +31,10 @@ projects: []
 I've been interested in a simple darkmode with Tailwind.  We will start with the config and changes for system settings control.  Then we will implement a user toggle button.
 
 Here is what I discovered.
+
+Code for this article can be found at:
+https://github.com/btihen-dev/phoenix_toggle_theme
+
 
 ## Install a Default Phoenix Project
 
