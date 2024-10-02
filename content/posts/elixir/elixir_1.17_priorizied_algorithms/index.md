@@ -1,9 +1,9 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 title: "Elixir - Prioritized Algorithms"
-subtitle: "Simple Clean Priorizied Algorithms"
+subtitle: "Simple Clean Prioritized Algorithms"
 # Summary for listings and search engines
-summary: "Novel use of 'with' to create a simple priorized strategy that stops on success and continues on failure"
+summary: "Novel use of 'with' to create a simple prioritized strategy that stops on success and continues on failure"
 authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "with", "Prioritized With", "Reverse With"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "Prioritized Algorithms", , "Prioritized Pattern"]
