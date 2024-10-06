@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "Ecto", "Fuzzy", "Postgres"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "PostgreSQL"]
 date: 2024-10-04T01:01:53+02:00
-lastmod: 2024-10-04T01:01:53+02:00
+lastmod: 2024-10-06T01:01:53+02:00
 featured: true
 draft: false
 
@@ -129,7 +129,8 @@ mix phx.gen.schema Person people last_name:string first_name:string job_title:st
 mix phx.gen.schema Account accounts status:enum:active:inactive username:string:unique password:string:redact person_id:references:people
 ```
 
-**Migration Update**
+**Update Migration**
+
 now let's ensure that username is case insensitive (using the `citext` extension). We change `:username` column's type from `:string` to `:citext`.
 
 ```elixir
@@ -783,7 +784,7 @@ Now the queries are more complicated, but also more useful.
 
 ### Fuzzy Search without Threshold
 
-using limit.
+**using limit**
 
 ```elixir
 iex -S mix phx.server
@@ -829,6 +830,7 @@ from(p in Person,
     ],
   limit: 2
 ) |> Repo.all()
+
 [
   %{
     score: 0.5,
@@ -859,8 +861,19 @@ from(p in Person,
     }
   }
 ]
+```
 
+**Only Sort & Limit**
 
+```elixir
+iex -S mix phx.server
+
+import Ecto.Query
+alias Fuzzy.Repo
+alias Fuzzy.Person
+
+# if ewe lower the threshold we get more results
+search_string = "john an engineer in product"
 
 # or just in sorting
 from(p in Person,
@@ -883,10 +896,63 @@ from(p in Person,
     ],
   limit: 2
 ) |> Repo.all()
+
+[
+  %Fuzzy.Person{
+    __meta__: #Ecto.Schema.Metadata<:loaded, "people">,
+    id: 1,
+    last_name: "Smith",
+    first_name: "John",
+    title: "Software Engineer",
+    department: "Product",
+    account: #Fuzzy.Account<
+      __meta__: #Ecto.Schema.Metadata<:loaded, "accounts">,
+      id: 1,
+      status: :active,
+      username: "johnsmith",
+      person_id: 1,
+      person: #Ecto.Association.NotLoaded<association :person is not loaded>,
+      inserted_at: ~U[2024-10-04 09:31:56Z],
+      updated_at: ~U[2024-10-04 09:31:56Z],
+      ...
+    >,
+    inserted_at: ~U[2024-10-04 09:31:56Z],
+    updated_at: ~U[2024-10-04 09:31:56Z]
+  },
+  %Fuzzy.Person{
+    __meta__: #Ecto.Schema.Metadata<:loaded, "people">,
+    id: 11,
+    last_name: "Davis",
+    first_name: "Ava",
+    title: "Software Engineer",
+    department: "Product",
+    account: #Fuzzy.Account<
+      __meta__: #Ecto.Schema.Metadata<:loaded, "accounts">,
+      id: 11,
+      status: :active,
+      username: "avadavis",
+      person_id: 11,
+      person: #Ecto.Association.NotLoaded<association :person is not loaded>,
+      inserted_at: ~U[2024-10-04 09:31:56Z],
+      updated_at: ~U[2024-10-04 09:31:56Z],
+      ...
+    >,
+    inserted_at: ~U[2024-10-04 09:31:56Z],
+    updated_at: ~U[2024-10-04 09:31:56Z]
+  }
+]
 ```
 
 Or if you only every want the top response:
 ```elixir
+iex -S mix phx.server
+
+import Ecto.Query
+alias Fuzzy.Repo
+alias Fuzzy.Person
+
+# if ewe lower the threshold we get more results
+search_string = "john an engineer in product"
 
 from(p in Person,
   join: a in assoc(p, :account), # with associations defined in the schema
@@ -908,6 +974,28 @@ from(p in Person,
     ],
   limit: 1
 ) |> Repo.one()
+
+%Fuzzy.Person{
+  __meta__: #Ecto.Schema.Metadata<:loaded, "people">,
+  id: 1,
+  last_name: "Smith",
+  first_name: "John",
+  title: "Software Engineer",
+  department: "Product",
+  account: #Fuzzy.Account<
+    __meta__: #Ecto.Schema.Metadata<:loaded, "accounts">,
+    id: 1,
+    status: :active,
+    username: "johnsmith",
+    person_id: 1,
+    person: #Ecto.Association.NotLoaded<association :person is not loaded>,
+    inserted_at: ~U[2024-10-04 09:31:56Z],
+    updated_at: ~U[2024-10-04 09:31:56Z],
+    ...
+  >,
+  inserted_at: ~U[2024-10-04 09:31:56Z],
+  updated_at: ~U[2024-10-04 09:31:56Z]
+}
 ```
 
 I personally prefer at least returning the score to assess the match quality even when I set the threshold.
