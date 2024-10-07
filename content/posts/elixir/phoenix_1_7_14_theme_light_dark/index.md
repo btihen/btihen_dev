@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Elixir", "Phoenix", "LiveView", "Tailwind Theme"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "Frontend", "Theme"]
 date: 2024-10-06T01:01:53+02:00
-lastmod: 2024-10-06T01:01:53+02:00
+lastmod: 2024-10-76T01:01:53+02:00
 featured: true
 draft: false
 
@@ -35,6 +35,43 @@ I've been been looking to add a theme to Phoenix - in this way simplifying the c
 Here is my current solution.
 
 ## Configure Tailwind Color Variables
+
+### using CSS & HSL
+
+Define Colors in CSS using HSL (Hue, Saturation, Lightness)
+
+```scss
+// assets/css/app.css
+:root {
+  --border-standard: 220 13% 91%; /* Light mode: a very light blue-gray */
+  --background-primary: 240 25% 97%; /* Light mode: almost white */
+  --text-standard: 220 39% 11%; /* Light mode: dark blue-gray */
+}
+
+.dark {
+  --border-standard: 220 13% 30%; /* Dark mode: much darker blue-gray */
+  --background-primary: 220 27% 13%; /* Dark mode: very dark */
+  --text-standard: 210 20% 98%; /* Dark mode: nearly white text */
+}
+```
+
+You can use the HSL color picker to find the values you want. To convert from RGB to HSL, you can use an online converter like [this one](https://www.rapidtables.com/convert/color/rgb-to-hsl.html).
+
+Reference in Tailwind with hsl(var(--...)):
+
+In tailwind.config.js, you are telling Tailwind to use the CSS variables and then combining them with hsl() to make them usable:
+
+```js
+// config/tailwind.config.js
+Copy code
+extend: {
+  colors: {
+    'border-standard': 'hsl(var(--border-standard))', // Tailwind uses this to generate utility classes
+  },
+},
+```
+
+### using Tailwind colors
 
 In order to use the existing tailwind, but allow light and dark mode.
 
@@ -236,6 +273,48 @@ module.exports = {
 }
 ```
 
+## Alternative Solution
+
+Define Colors in CSS (`assets/css/app.css`) using HSL colors - this is simpler and easier to manage, but requires using HSL 0 which is not as intuitive (for me).
+
+```css
+/* at the end of assets/css/app.css (or in another CSS file) */
+:root {
+  --standard-border: 220 13% 91%; /* Light mode: a very light blue-gray */
+  --background-primary: 240 25% 97%; /* Light mode: almost white */
+  --text-standard: 220 39% 11%; /* Light mode: dark blue-gray */
+}
+
+.dark {
+  --standard-border: 220 13% 30%; /* Dark mode: much darker blue-gray */
+  --background-primary: 220 27% 13%; /* Dark mode: very dark */
+  --standard-text: 210 20% 98%; /* Dark mode: nearly white text */
+}
+```
+Reference in Tailwind with hsl(var(--...)):
+
+In `tailwind.config.js`, you are telling Tailwind to use the CSS variables and then combining them with hsl() to make them usable:
+
+```js
+// tailwind.config.js
+extend: {
+  colors: {
+    'standard-border': 'hsl(var(--border-standard))', // Tailwind uses this to generate utility classes
+  },
+},
+```
+
+Usage in HTML:
+
+You can now use the Tailwind utility classes like border-border-standard, and they will adapt based on the mode:
+
+```html
+Copy code
+<div class="border border-standard-border p-4">
+  <h1 class="text-standard-text">Hello, World!</h1>
+</div>
+```
+
 ## Rename in-line colors
 
 now we can rename colors in the components like:
@@ -277,6 +356,31 @@ See the article:
 
 * [automatic light/dark mode](https://btihen.dev/posts/elixir/phoenix_1_7_11_liveview_1_0_0_system_dark_toggle/)
 * [manual light/dark mode](https://btihen.dev/posts/elixir/phoenix_1_7_11_liveview_1_0_0_manual_dark_toggle/)
+
+**TLDR** Example JavaScript to toggle dark mode:
+
+```js
+// Toggles the 'dark' class on the root HTML element
+const toggleDarkMode = () => {
+  document.documentElement.classList.toggle('dark');
+};
+```
+Storing User Preference:
+
+You can store the user’s preference (light or dark) in localStorage and use JavaScript to apply it on page load.
+
+```js
+const userPrefersDark = localStorage.getItem('theme') === 'dark';
+if (userPrefersDark) {
+  document.documentElement.classList.add('dark');
+}
+
+const toggleDarkMode = () => {
+  const htmlElement = document.documentElement;
+  htmlElement.classList.toggle('dark');
+  localStorage.setItem('theme', htmlElement.classList.contains('dark') ? 'dark' : 'light');
+};
+```
 
 ## Conclusion
 
