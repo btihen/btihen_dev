@@ -1,6 +1,6 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
-title: "Phoenix - Migrating to a Theme"
+title: "Phoenix - Using a Theme - simplifies Light/Dark Mode"
 subtitle: "Relatively easily migrate the Core Components to a Theme and allow light and dark mode"
 # Summary for listings and search engines
 summary: "Replacing given colors with named colors and allow dark-mode settings"
