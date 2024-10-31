@@ -372,27 +372,19 @@ The following list consists of the features that the extension comes with, which
 
 from the [docs](https://www.postgresql.org/docs/12/pgtrgm.html):
 
-Function	| Returns	| Description
-`similarity(text, text)` | real |	Returns a number that indicates how similar the two arguments are. The range of the result is zero (indicating that the two strings are completely dissimilar) to one (indicating that the two strings are identical).
-`show_trgm(text)` |	text[] | Returns an array of all the trigrams in the given string. (In practice this is seldom useful except for debugging.)
-`word_similarity(text, text)`	| real | Returns a number that indicates the greatest similarity between the set of trigrams in the first string and any continuous extent of an ordered set of trigrams in the second string. For details, see the explanation below.
-`strict_word_similarity(text, text)` | real | Same as word_similarity(text, text), but forces extent boundaries to match word boundaries. Since we don't have cross-word trigrams, this function actually returns greatest similarity between first string and any continuous extent of words of the second string.
-`show_limit()` | real | Returns the current similarity threshold used by the % operator. This sets the minimum similarity between two words for them to be considered similar enough to be misspellings of each other, for example (deprecated).
-`set_limit(real)` | real | Sets the current similarity threshold that is used by the % operator. The threshold must be between 0 and 1 (default is 0.3). Returns the same value passed in (deprecated).
+* *`similarity(text, text)` - **real** -	Returns a number that indicates how similar the two arguments are. The range of the result is zero (indicating that the two strings are completely dissimilar) to one (indicating that the two strings are identical).
+* `word_similarity(text, text)`	- **real** - Returns a number that indicates the greatest similarity between the set of trigrams in the first string and any continuous extent of an ordered set of trigrams in the second string. For details, see the explanation below.
+* `strict_word_similarity(text, text)` - **real** - Same as word_similarity(text, text), but forces extent boundaries to match word boundaries. Since we don't have cross-word trigrams, this function actually returns greatest similarity between first string and any continuous extent of words of the second string.
+
+**Debuggin**
+* `show_trgm(text)` -	**text[]** - Returns an array of all the trigrams in the given string. (In practice this is seldom useful except for debugging.)
+
+**Shows / Sets Default Threshold**
+* `show_limit()` - **real** - Returns the current similarity threshold used by the % operator. This sets the minimum similarity between two words for them to be considered similar enough to be misspellings of each other, for example (deprecated).
+* `set_limit(real)` - **real** - Sets the current similarity threshold that is used by the % operator. The threshold must be between 0 and 1 (default is 0.3). Returns the same value passed in (deprecated).
 
 ### SQL Examples
 
-Let's focus on `similarity(text1, text2)` - this calculates a trigram similarity index from 0 (no tri-gram matches) to 1 (all trigram matches), with 0 being the least similar.  Here is a basic example (building block toward more useful searches):
-
-```sql
-bin/rails db
-
-SELECT word_similarity('word', 'two words');
-
- word_similarity
--------------
-     0.8
-```
 
 Trigrams are substrings of three consecutive characters. For example, the word "Johns" has the following trigrams: "  j"," jo", "joh", "ohn", "hns", "ns ".  We can use `show_trgm('Johns')` to see the trigrams used by pg_trgm.
 ```sql
@@ -401,6 +393,29 @@ SELECT show_trgm('Johns') AS trigrams;
             trigrams
 ------------------------------
 {"  j"," jo","hns","joh","ns ","ohn"}
+(1 row)
+```
+Lets try out the various functions this extension gives us:
+
+```sql
+bin/rails db
+
+-- trying our 3 methods of similarity
+
+SELECT similarity('word', 'two words');
+ similarity
+----------
+ 0.36363637
+
+SELECT word_similarity('word', 'two words');
+ word_similarity
+-------------
+      0.8
+
+SELECT strict_word_similarity('word', 'two words');
+ strict_word_similarity
+-------------------
+       0.5714286
 (1 row)
 ```
 
