@@ -1,6 +1,6 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
-job_title: "ActiveRecord - Postgres Fuzzy Search using SIMILARITY"
+title: "ActiveRecord - Postgres Fuzzy Search using SIMILARITY"
 subjob_title: "Simple Effective Scored Fuzzy Searches"
 # Summary for listings and search engines
 summary: "With PostgreSQL we have a simple and powerful way to do scored fuzzy searches"
