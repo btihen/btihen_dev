@@ -498,7 +498,7 @@ The following list consists of the features that the extension comes with, which
 
 from the [docs](https://www.postgresql.org/docs/12/pgtrgm.html):
 
-* *`similarity(text, text)` - **real** -	Returns a number that indicates how similar the two arguments are. The range of the result is zero (indicating that the two strings are completely dissimilar) to one (indicating that the two strings are identical).
+* `similarity(text, text)` - **real** -	Returns a number that indicates how similar the two arguments are. The range of the result is zero (indicating that the two strings are completely dissimilar) to one (indicating that the two strings are identical).
 * `word_similarity(text, text)`	- **real** - Returns a number that indicates the greatest similarity between the set of trigrams in the first string and any continuous extent of an ordered set of trigrams in the second string. For details, see the explanation below.
 * `strict_word_similarity(text, text)` - **real** - Same as word_similarity(text, text), but forces extent boundaries to match word boundaries. Since we don't have cross-word trigrams, this function actually returns greatest similarity between first string and any continuous extent of words of the second string.
 
