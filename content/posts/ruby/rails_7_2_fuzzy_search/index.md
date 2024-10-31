@@ -7,8 +7,8 @@ summary: "With PostgreSQL we have a simple and powerful way to do scored fuzzy s
 authors: ["btihen"]
 tags: ["Rails", "Ruby", "ActiveRecord", "Fuzzy", "Similarity", "PostgreSQL", "Postgres", "PG"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "PostgreSQL"]
-date: 2024-10-04T01:01:53+02:00
-lastmod: 2024-10-06T01:01:53+02:00
+date: 2024-10-31T01:01:53+02:00
+lastmod: 2024-10-31T01:01:53+02:00
 featured: true
 draft: false
 

@@ -1,6 +1,6 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
-title: "ActiveRecord - PG Fuzzy Postgres Search using SIMILARITY"
+title: "Phoenix / Ecto - Fuzzy Postgres Search using SIMILARITY"
 subtitle: "Simple Effective Scored Fuzzy Searches"
 # Summary for listings and search engines
 summary: "With PostgreSQL we have a simple and powerful way to do scored fuzzy searches"
