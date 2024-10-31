@@ -1,11 +1,11 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
-title: "Phoenix / Ecto - Fuzzy Postgres Search using SIMILARITY"
+title: "ActiveRecord - PG Fuzzy Postgres Search using SIMILARITY"
 subtitle: "Simple Effective Scored Fuzzy Searches"
 # Summary for listings and search engines
-summary: "Elixir, Ecto and Phoenix have a simple and powerful way to do scored fuzzy searches"
+summary: "With PostgreSQL we have a simple and powerful way to do scored fuzzy searches"
 authors: ["btihen"]
-tags: ["Elixir", "Phoenix", "Ecto", "Fuzzy", "Postgres"]
+tags: ["Rails", "Ruby", "ActiveRecord", "Fuzzy", "Similarity", "PostgreSQL", "Postgres", "PG"]
 categories: ["Code", "Elixir Language", "Phoenix Framework", "PostgreSQL"]
 date: 2024-10-04T01:01:53+02:00
 lastmod: 2024-10-06T01:01:53+02:00
@@ -32,7 +32,7 @@ projects: []
 
 Recently I was working on a project at work that required finding the appropriate record with incomplete information (that might be either mispelled or within multiple columns - thus `LIKE` and `ILIKE` are insufficient).
 
-My co-worker [Gernot Kogler](https://www.linkedin.com/in/gernot-kogler-075513162/), introduced me to the trigram scoring searches using `similarity` and `word_similarity` - this is a simple and very effective way to do fuzzy searches.
+My co-worker [Gernot Kogler](https://www.linkedin.com/in/gernot-kogler-075513162/), introduced me to the trigram scoring searches using `similarity` and `word_similarity` - this is a simple and very effective way to do **fuzzy** searches.
 
 If interested, a good article [Optimizing Postgres Text Search with Trigrams](https://alexklibisz.com/2022/02/18/optimizing-postgres-trigram-search) that explains the details of the scoring and optimizing the search speed.
 
@@ -53,41 +53,29 @@ In this article, we will only explore `similarity` and `word_similarity`.
 
 Let's create a test project that finds the best matching person in our database, from a 'description'.
 
-### Requirements
-
-Let's get the newest [erlang](https://www.erlang.org/downloads), [elixir](https://github.com/elixir-lang/elixir/releases) and [phoenix](https://hexdocs.pm/phoenix/releases.html).
+### Simple Rails Project
 
 ```bash
 # macos 15 seems to need this
 ulimit -n 10240
 
-# install the newest erlang found at: https://www.erlang.org/downloads
-asdf install erlang 27.1
-asdf global erlang 27.1
+rbenv istall 3.3.5
+rbenv local 3.3.5
+rails new fuzzy -d postgresql
 
-# install the newest elixir (with a matching erlang release) https://github.com/elixir-lang/elixir/releases
-asdf install elixir 1.17.3-otp-27
-asdf global elixir 1.17.3-otp-27
+# let's check the gem file to be sure we are using PG,
+# we expect to find:
+gem "pg", "~> 1.1"
 
-# install the newest phoenix
-elixir -v
-mix local.hex
-mix archive.install hex phx_new # 1.7.14
-```
-
-### Phoenix Project
-
-Now that we have the requirements installed, let's create a new phoenix project (with ecto!).
-
-```bash
-# create a new phoenix project
-mix phx.new fuzzy
-
+# lets be sure we are using uptodate gems:
 cd fuzzy
-mix ecto.create
+bundle update
 
-# test phoenix
-iex -S mix phx.server
+# currently if we check Gemfile.lock we will see:
+rails (7.2.2)
+
+# setup the database with
+bin/rails db:create
 
 # assuming all went well
 git init
@@ -97,10 +85,10 @@ git commit -m "initial commit"
 
 ### Add DB extensions
 
-I always add `citext` and for this article we also need the `pg_trgm` extension.
+To do similarity searches we need the extension: `pg_trgm`
 
 ```bash
-mix ecto.gen.migration add_pg_extensions
+bin/rails generate migration AddPgTrgmExtensionToDb
 ```
 
 ```elixir
