@@ -39,6 +39,101 @@ If interested, a good article [Optimizing Postgres Text Search with Trigrams](ht
 
 In fact, there are several ways to do fuzzy searches in Postgres, this this article covers `pg_trgrm` (trigram) extension - efficient scored partial matches. In the coclusion there is a list of alternatives to pg_trgrm.
 
+## TLDR
+
+Fuzzy Search Summary
+
+### SQL - Single Table - Single-Column
+
+```sql
+bin/rails db
+
+SELECT id, last_name, first_name,
+       similarity(last_name, 'Johns') AS score
+  FROM people
+  WHERE similarity(last_name, 'Johns') > 0.1
+  ORDER BY score DESC;
+
+ id | last_name | first_name |  score
+---+---------+---------+---------
+ 2  | Johnson   | John      | 0.5555556
+ 6  | Johnson   | Emma      | 0.5555556
+ 7  | Johnston  | Emilia    |       0.5
+ 3  | Johanson  | Jonathan  |      0.25
+ 9  | Jones     | Olivia    |       0.2
+(5 rows)
+```
+
+### Single Table - Single-Column
+
+```ruby
+threshold = 0.2
+compare_string = 'Johns'
+compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
+
+Person.select(Arel.sql("*, similarity(last_name, #{compare_quoted}) AS score"))
+      .where("similarity(last_name, ?) > ?", compare_string, threshold)
+      .order(Arel.sql("similarity(last_name, #{compare_quoted}) DESC"))
+      .limit(5)
+
+# or easier to read
+
+compare_string = 'Johns'
+compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
+similarity_calc = "similarity(last_name, #{compare_quoted})"
+
+Person.select("*, #{similarity_calc} AS score")
+      .where("last_name % ?", compare_string)
+      .order("score DESC")
+      .limit(5)
+```
+
+### Single Table - Multi-Column
+
+use `CONCAT_WS` to build a single text from the db fields:
+
+```ruby
+threshold = 0.2
+compare_string = 'Emily Johns'
+compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
+concat_fields = "CONCAT_WS(' ', first_name, last_name)"
+similarity_calc = "similarity(#{concat_fields}, #{compare_quoted})"
+
+Person.select("*, #{similarity_calc} AS score")
+      .where("#{similarity_calc} > ?", threshold)
+      .order("score DESC")
+      .limit(5)
+
+# or
+
+Person.select("*, #{similarity_calc} AS score")
+      .where("#{concat_fields} % #{compare_quoted}")
+      .order("score DESC")
+      .limit(5)
+```
+
+### Multi-Table - Multi-Column
+
+```ruby
+compare_string = 'Emily, a research scientist'
+compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
+concat_fields = "CONCAT_WS(' ', first_name, last_name, job_title, department)"
+similarity_calc = "similarity(#{concat_fields}, #{compare_quoted})"
+
+Person.joins(:roles)
+      .select("*, #{similarity_calc} AS score")
+      .order("score DESC")
+      .limit(3)
+
+# or
+
+Person.joins(:roles)
+      .select("*, #{similarity_calc} AS score")
+      .where("#{concat_fields} % #{compare_quoted}")
+      .order("score DESC")
+      .limit(3)
+```
+
 ## Getting Started
 
 Let's create a test project that finds the best matching person in our database, from a 'description'.
