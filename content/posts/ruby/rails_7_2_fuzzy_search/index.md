@@ -47,18 +47,28 @@ Fuzzy Search Summary
 
 
 ```bash
-in/rails new fuzzy -d postgresql -T
+bin/rails new fuzzy -d postgresql -T
 
 cd fuzzy
 bin/rails db:create
 
 bin/rails generate migration AddPgTrgmExtensionToDb
 
+# update migration with `enable_extension "pg_trgm"`
+# db/migrate/20241031122103_add_pg_trgm_extension_to_db.rb
+class AddPgTrgmExtensionToDb < ActiveRecord::Migration[7.2]
+  def change
+    enable_extension "pg_trgm"
+  end
+end
+
 bin/rails generate model Person last_name:string:index first_name:string:index birthdate:date
 
 bin/rails generate model Role job_title:string department:string person:references
 
 bin/rails db:migrate
+
+# see `Seeding` section for a seed file
 bin/rails db:seed
 ```
 
