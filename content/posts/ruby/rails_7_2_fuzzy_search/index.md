@@ -6,7 +6,7 @@ subjob_title: "Simple Effective Scored Fuzzy Searches"
 summary: "With PostgreSQL we have a simple and powerful way to do scored fuzzy searches"
 authors: ["btihen"]
 tags: ["Rails", "Ruby", "ActiveRecord", "Fuzzy", "Similarity", "PostgreSQL", "Postgres", "PG"]
-categories: ["Code", "Elixir Language", "Phoenix Framework", "PostgreSQL"]
+categories: ["Code", "Ruby Language", "Ruby on Rails", "PostgreSQL"]
 date: 2024-10-31T01:01:53+02:00
 lastmod: 2024-10-31T01:01:53+02:00
 featured: true
