@@ -43,6 +43,25 @@ In fact, there are several ways to do fuzzy searches in Postgres, this this arti
 
 Fuzzy Search Summary
 
+### Context
+
+
+```bash
+in/rails new fuzzy -d postgresql -T
+
+cd fuzzy
+bin/rails db:create
+
+bin/rails generate migration AddPgTrgmExtensionToDb
+
+bin/rails generate model Person last_name:string:index first_name:string:index birthdate:date
+
+bin/rails generate model Role job_title:string department:string person:references
+
+bin/rails db:migrate
+bin/rails db:seed
+```
+
 ### SQL - Single Table - Single-Column
 
 ```sql
@@ -134,6 +153,8 @@ Person.joins(:roles)
       .limit(3)
 ```
 
+Read the rest of article for an explanation and code setup that handles these queries.
+
 ## Getting Started
 
 Let's create a test project that finds the best matching person in our database, from a 'description'.
@@ -144,7 +165,7 @@ Let's create a test project that finds the best matching person in our database,
 # macos 15 seems to need this
 ulimit -n 10240
 
-rbenv istall 3.3.5
+rbenv install 3.3.5
 rbenv local 3.3.5
 # create a new rails project (with PG & without minitest)
 rails new fuzzy -d postgresql -T
