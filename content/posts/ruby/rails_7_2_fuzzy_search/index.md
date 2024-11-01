@@ -8,7 +8,7 @@ authors: ["btihen"]
 tags: ["Rails", "Ruby", "ActiveRecord", "Fuzzy", "Similarity", "PostgreSQL", "Postgres", "PG"]
 categories: ["Code", "Ruby Language", "Ruby on Rails", "PostgreSQL"]
 date: 2024-10-31T01:01:53+02:00
-lastmod: 2024-10-31T01:01:53+02:00
+lastmod: 2024-11-01T01:01:53+02:00
 featured: true
 draft: false
 
@@ -506,8 +506,8 @@ from the [docs](https://www.postgresql.org/docs/12/pgtrgm.html):
 * `show_trgm(text)` -	**text[]** - Returns an array of all the trigrams in the given string. (In practice this is seldom useful except for debugging.)
 
 **Shows / Sets Default Threshold**
-* `show_limit()` - **real** - Returns the current similarity threshold used by the % operator. This sets the minimum similarity between two words for them to be considered similar enough to be misspellings of each other, for example (deprecated).
-* `set_limit(real)` - **real** - Sets the current similarity threshold that is used by the % operator. The threshold must be between 0 and 1 (default is 0.3). Returns the same value passed in (deprecated).
+* `show_limit()` - **real** - Returns the current similarity threshold used by the `%` operator. This sets the minimum similarity between two words for them to be considered similar enough to be misspellings of each other, for example (deprecated).
+* `set_limit(real)` - **real** - Sets the current similarity threshold that is used by the `%` operator. The threshold must be between 0 and 1 (default is 0.3). Returns the same value passed in (deprecated).
 
 ### SQL Examples
 
@@ -686,9 +686,43 @@ Person.where("similarity(last_name, ?) > ?", similarity_string, threshold)
       .limit(5)
 #  Dangerous query method (method whose arguments are used as raw SQL) called with non-attribute argument(s): "similarity(last_name, 'Emily Johns') DESC".This method should not be called with user-provided values, such as request parameters or model attributes. Known-safe values can be passed by wrapping them in Arel.sql(). (ActiveRecord::UnknownAttributeReference)
 
-Person.select(Arel.sql("*, similarity(last_name, #{similarity_quoted}) AS score"))
-      .where("similarity(last_name, ?) > ?", similarity_string, threshold)
+Person.where("similarity(last_name, ?) > ?", similarity_string, threshold)
       .order(Arel.sql("similarity(last_name, #{similarity_quoted}) DESC"))
+      .limit(5)
+
+[#<Person:0x000000011dfce108
+  id: 2,
+  last_name: "Johnson",
+  first_name: "John",
+  birthdate: "1970-01-01",
+  created_at: "2024-10-31 13:42:15.380507000 +0000",
+  updated_at: "2024-10-31 13:42:15.380507000 +0000">,
+ #<Person:0x000000011dfcdfc8
+  id: 6,
+  last_name: "Johnson",
+  first_name: "Emma",
+  birthdate: "1962-01-01",
+  created_at: "2024-10-31 13:42:15.456393000 +0000",
+  updated_at: "2024-10-31 13:42:15.456393000 +0000">,
+ #<Person:0x000000011dfcde88
+  id: 7,
+  last_name: "Johnston",
+  first_name: "Emilia",
+  birthdate: "1966-01-01",
+  created_at: "2024-10-31 13:42:15.473551000 +0000",
+  updated_at: "2024-10-31 13:42:15.473551000 +0000">]
+```
+
+We only see three because other results are below the threshold, to see this we can  use `select` to add the score to the results (now that we have an alias `score` for the `similarity` function we can simplify the `ORDER BY`):
+
+```ruby
+threshold = 0.3
+similarity_string = 'Emily Johns'
+similarity_quoted = ActiveRecord::Base.connection.quote(similarity_string)
+
+Person.select("*, similarity(last_name, #{similarity_quoted}) AS score")
+      .where("similarity(last_name, ?) > ?", similarity_string, threshold)
+      .order("score DESC")
       .limit(5)
 
 [#<Person:0x000000011dfce108
@@ -717,8 +751,66 @@ Person.select(Arel.sql("*, similarity(last_name, #{similarity_quoted}) AS score"
   score: 0.3125>]
 ```
 
+### Boolean Search Operators (shortens where clauses)
 
-Which can be simplified to:
+Using `%` operator we can further simplify the query by replacing:
+`where("similarity(last_name, ?) > ?", similarity_string, threshold)`
+with the boolean operator:
+`where("? % ?", last_name, similarity_string)`
+
+The difference is that the `%` operator ONLY uses the default threshold of 0.3 or whatever what last set using `set_limit(0.3)` so if you want to dynamically change the threshold its probably easier and clearer to use the similarity function as used above.
+
+Here is an example using the `%` operator:
+
+```ruby
+compare_string = 'Emily Johns'
+compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
+similarity_string = "similarity(last_name, #{compare_quoted})"
+
+Person.select("*, #{similarity_string} AS score, show_limit() as threshold")
+      .where("last_name % ?", compare_quoted)
+      .order("score DESC")
+      .limit(5)
+
+[#<Person:0x000000015305a510
+  id: 2,
+  last_name: "Johnson",
+  first_name: "John",
+  birthdate: "1970-01-01",
+  created_at: "2024-10-31 18:30:08.640962000 +0000",
+  updated_at: "2024-10-31 18:30:08.640962000 +0000",
+  score: 0.33333334,
+  threshold: 0.3>,
+ #<Person:0x000000015305a3d0
+  id: 6,
+  last_name: "Johnson",
+  first_name: "Emma",
+  birthdate: "1962-01-01",
+  created_at: "2024-10-31 18:30:08.757941000 +0000",
+  updated_at: "2024-10-31 18:30:08.757941000 +0000",
+  score: 0.33333334,
+  threshold: 0.3>,
+ #<Person:0x000000015305a290
+  id: 7,
+  last_name: "Johnston",
+  first_name: "Emilia",
+  birthdate: "1966-01-01",
+  created_at: "2024-10-31 18:30:08.773495000 +0000",
+  updated_at: "2024-10-31 18:30:08.773495000 +0000",
+  score: 0.3125,
+  threshold: 0.3>]
+```
+
+Here is a summary of all the **boolean** operators:
+
+* `text % text` → Returns true if its arguments have a similarity that is greater than the current similarity threshold set by pg_trgm.similarity_threshold.
+* `text <% text` → Returns true if the similarity between the trigram set in the first argument and a continuous extent of an ordered trigram set in the second argument is greater than the current word similarity threshold set by pg_trgm.word_similarity_threshold parameter. (`text %> text` → Commutator of the <% operator)
+* `text <<% text` → Returns true if its second argument has a continuous extent of an ordered trigram set that matches word boundaries, and its similarity to the trigram set of the first argument is greater than the current strict word similarity threshold set by the pg_trgm.strict_word_similarity_threshold parameter. (`text %>> text` → Commutator of the <<% operator)
+
+### Without `with`
+
+If we only want a few top results back and not all values above the threshold we can simply drop the `where` clause and use `limit` to limit the results:
+
 ```ruby
 compare_string = 'Emily Johns'
 compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
@@ -727,14 +819,61 @@ similarity_string = "similarity(last_name, #{compare_quoted})"
 Person.select("*, #{similarity_string} AS score")
       .order("score DESC")
       .limit(5)
+[#<Person:0x000000015313a7a0
+  id: 2,
+  last_name: "Johnson",
+  first_name: "John",
+  birthdate: "1970-01-01",
+  created_at: "2024-10-31 18:30:08.640962000 +0000",
+  updated_at: "2024-10-31 18:30:08.640962000 +0000",
+  score: 0.33333334>,
+ #<Person:0x000000015313a660
+  id: 6,
+  last_name: "Johnson",
+  first_name: "Emma",
+  birthdate: "1962-01-01",
+  created_at: "2024-10-31 18:30:08.757941000 +0000",
+  updated_at: "2024-10-31 18:30:08.757941000 +0000",
+  score: 0.33333334>,
+ #<Person:0x000000015313a520
+  id: 7,
+  last_name: "Johnston",
+  first_name: "Emilia",
+  birthdate: "1966-01-01",
+  created_at: "2024-10-31 18:30:08.773495000 +0000",
+  updated_at: "2024-10-31 18:30:08.773495000 +0000",
+  score: 0.3125>,
+ #<Person:0x000000015313a3e0
+  id: 3,
+  last_name: "Johanson",
+  first_name: "Jonathan",
+  birthdate: "1972-01-01",
+  created_at: "2024-10-31 18:30:08.674588000 +0000",
+  updated_at: "2024-10-31 18:30:08.674588000 +0000",
+  score: 0.16666667>,
+ #<Person:0x000000015313a2a0
+  id: 9,
+  last_name: "Jones",
+  first_name: "Olivia",
+  birthdate: "1976-01-01",
+  created_at: "2024-10-31 18:30:08.820875000 +0000",
+  updated_at: "2024-10-31 18:30:08.820875000 +0000",
+  score: 0.125>]
 ```
+
 That's much more readable!
 
-Note: only searching the last name doesn't fully help us narrow our choices.  let's try searching the first and last name together:
 
 ### Two Fields Example
 
-This is where it gets a little tricky, but at the same time much more useful.  We can use `CONCAT_WS` to consolidate multiple fields into a single value (and compare that to the given string):
+Only searching the `last_name` doesn't fully help us narrow our choices. Let's try searching the `first_name` and `last_name` together:
+
+We can use `CONCAT_WS` to consolidate multiple fields into a single value (and compare that to the given string) so the similarity function would look like:
+`similarity(CONCAT_WS(' ', last_name, first_name), 'Emily Johns')`
+where `CONCAT_WS(' ', last_name, first_name)` is our first argument compared to
+`'Emily Johns'` which is our second argument.
+
+Here is an example:
 
 ```ruby
 Person
@@ -774,10 +913,10 @@ Again, this is hard to read - let's try making it a bit more readable:
 ```ruby
 compare_string = 'Emily Johns'
 compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
-similarity_string =
-  "similarity(CONCAT_WS(' ', last_name, first_name), #{compare_quoted})"
+db_fields_concat = "CONCAT_WS(' ', last_name, first_name)"
+similarity_calc = "similarity(#{db_fields_concat}, #{compare_quoted})"
 
-Person.select("*, #{similarity_string} AS score")
+Person.select("*, #{similarity_calc} AS score")
       .order("score DESC")
       .limit(3)
 
@@ -807,6 +946,8 @@ Person.select("*, #{similarity_string} AS score")
   score: 0.3125>]
 ```
 
+Whew, that's pretty readable again!
+
 ### Multi-Table Fuzzy Search
 
 Lets say we want to search for a person by last_name, first_name, title and department (we aren't sure what data we have available).
@@ -814,13 +955,11 @@ Lets say we want to search for a person by last_name, first_name, title and depa
 ```ruby
 compare_string = 'Emily, a research scientist'
 compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
-similarity_string =
-  "similarity(" \
-    "CONCAT_WS(' ', first_name, first_name, job_title, department), " \
-    "#{compare_quoted})"
+db_fields_concat = "CONCAT_WS(' ', first_name, first_name, job_title, department)"
+similarity_calc = "similarity(#{db_fields_concat}, #{compare_quoted})"
 
 Person.joins(:roles)
-      .select("*, #{similarity_string} AS score")
+      .select("*, #{similarity_calc} AS score")
       .order("score DESC")
       .limit(3)
 
@@ -859,9 +998,11 @@ Person.joins(:roles)
   score: 0.22916667>]
 ```
 
-Sweet, this works amayingly well!
+Sweet, this works well!
 
-## Efficiency & Performance with indexing
+## EXTRAS
+
+### Efficiency & Performance Ideas
 
 * **Trigram Indexes** using (`gist_trgm_ops`) - approximates a set of trigrams as a bitmap signature.
   - `CREATE INDEX trgm_idx ON people USING GIST (last_name gist_trgm_ops);`
@@ -881,7 +1022,7 @@ NOTES:
 * **Beginning in PostgreSQL 9.3**, these index types also support index searches for regular-expression matches (~ and ~* operators), for example:
 `SELECT * FROM people WHERE first_name ~ '(Emily|John)';`
 
-## Distance Searching (instead of similarity)
+### Distance Searching (instead of similarity)
 
 Use `distance` instead of `similarity`, we can use the `<->` operator instead of `(1.0 - similarity(last_name, 'Johns'))` to compare a db field to a string - using:
 
@@ -913,21 +1054,12 @@ SELECT id, last_name, first_name,
   6 | Johnson   | Emma       | 0.44444442
 ```
 
-Here is a summary of the short-cut **distance** operators:
-* `text <-> text` → real - Returns the “distance” between the arguments, that is one minus the similarity() value.
-* `text <<-> text` → real - Returns the “distance” between the arguments, that is one minus the word_similarity() value.
-* `text <->> text` → real - Commutator of the <<-> operator.
-* `text <<<-> text` → real - Returns the “distance” between the arguments, that is one minus the strict_word_similarity() value.
-* `text <->>> text` → real - Commutator of the <<<-> operator.
-
-## Boolean Search Operators (shortens where clauses)
-
-Here is a summary of short-cut **boolean** operators (which can be used in the where clauses):
-* `text % text` → Returns true if its arguments have a similarity that is greater than the current similarity threshold set by pg_trgm.similarity_threshold.
-* `text <% text` → Returns true if the similarity between the trigram set in the first argument and a continuous extent of an ordered trigram set in the second argument is greater than the current word similarity threshold set by pg_trgm.word_similarity_threshold parameter.
-* `text %> text` → Commutator of the <% operator.
-* `text <<% text` → Returns true if its second argument has a continuous extent of an ordered trigram set that matches word boundaries, and its similarity to the trigram set of the first argument is greater than the current strict word similarity threshold set by the pg_trgm.strict_word_similarity_threshold parameter.
-* `text %>> text` → Commutator of the <<% operator.
+Here is a summary of the short-cut **distance** operators (`1.0 - similarity()`):
+* `text <-> text` → real - distance using **similarity()**
+* `text <<-> text` → real - distance using **word_similarity()**
+  `text <->> text` → real - Commutator of the <<-> operator
+* `text <<<-> text` → real - distance using **strict_word_similarity()**
+  `text <->>> text` → real - Commutator of the <<<-> operator.
 
 ## Conclusion
 
