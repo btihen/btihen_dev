@@ -39,12 +39,20 @@ If interested, a good article [Optimizing Postgres Text Search with Trigrams](ht
 
 In fact, there are several ways to do fuzzy searches in Postgres, this this article covers `pg_trgrm` (trigram) extension - efficient scored partial matches. In the coclusion there is a list of alternatives to pg_trgrm.
 
-## TLDR
+## TLDR - setup
 
-Fuzzy Search Summary
+You can find the code for this project at [rails_pg_fuzzy_search](https://github.com/btihen-dev/rails_pg_fuzzy_search)
+so you can just do:
+```
 
-### Context
+git clone https://github.com/btihen-dev/rails_pg_fuzzy_search
+cd rails_pg_fuzzy_search
+bin/rails db:create
+bin/rails db:migrate
+bin/rails db:seed
+```
 
+Or you can create the environment yourself using the following commands:
 
 ```bash
 bin/rails new fuzzy -d postgresql -T
@@ -72,6 +80,8 @@ bin/rails db:migrate
 bin/rails db:seed
 ```
 
+## TLDR - Examples
+
 ### SQL - Single Table - Single-Column
 
 ```sql
@@ -96,6 +106,8 @@ SELECT id, last_name, first_name,
 ### Single Table - Single-Column
 
 ```ruby
+bin/rails c
+
 threshold = 0.2
 compare_string = 'Johns'
 compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
@@ -122,6 +134,8 @@ Person.select("*, #{similarity_calc} AS score")
 use `CONCAT_WS` to build a single text from the db fields:
 
 ```ruby
+bin/rails c
+
 threshold = 0.2
 compare_string = 'Emily Johns'
 compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
@@ -144,6 +158,8 @@ Person.select("*, #{similarity_calc} AS score")
 ### Multi-Table - Multi-Column
 
 ```ruby
+bin/rails c
+
 compare_string = 'Emily, a research scientist'
 compare_quoted = ActiveRecord::Base.connection.quote(compare_string)
 concat_fields = "CONCAT_WS(' ', first_name, last_name, job_title, department)"
