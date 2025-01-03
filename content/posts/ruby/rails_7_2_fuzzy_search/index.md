@@ -70,7 +70,7 @@ class AddPgTrgmExtensionToDb < ActiveRecord::Migration[7.2]
   end
 end
 
-bin/rails generate model Person last_name:string:index first_name:string:index birthdate:date
+bin/rails generate model Person last_name:string:index first_name:string:index
 
 bin/rails generate model Role job_title:string department:string person:references
 
@@ -250,7 +250,7 @@ bin/rails db:migrate
 Let's create a simple person schema and learn to do a fuzzy search.
 
 ```bash
-bin/rails generate model Person last_name:string:index first_name:string:index birthdate:date
+bin/rails generate model Person last_name:string:index first_name:string:index
 
 bin/rails generate model Role job_title:string department:string person:references
 ```
@@ -264,12 +264,11 @@ class CreatePeople < ActiveRecord::Migration[7.2]
     create_table :people do |t|
       t.string :last_name, null: false
       t.string :first_name, null: false
-      t.date :birthdate, null: false
 
       t.timestamps
     end
 
-    add_index :people, [:last_name, :first_name, :birthdate], unique: true
+    add_index :people, [:last_name, :first_name], unique: true
   end
 end
 
@@ -293,7 +292,7 @@ end
 now we can migrate:
 
 ```bash
-mix ecto.migrate
+bin/rails db:migrate
 ```
 
 **Add Relationships**
@@ -307,9 +306,8 @@ class Person < ApplicationRecord
 
   validates :first_name, presence: true
   validates :last_name, presence: true
-  validates :birthdate, presence: true
 
-  validates :birthdate, uniqueness: { scope: [:first_name, :last_name] }
+  validates :first_name, uniqueness: { scope: [:last_name] }
 end
 
 # and
@@ -337,126 +335,110 @@ people_data = [
   {
     last_name: "Smith",
     first_name: "John",
-    birthdate: Date.new(1980, 1, 1),
     job_title: "Software Engineer",
     department: "Product"
   },
   {
     last_name: "Johnson",
     first_name: "John",
-    birthdate: Date.new(1970, 1, 1),
     job_title: "Network Engineer",
     department: "Operations"
   },
   {
     last_name: "Johanson",
     first_name: "Jonathan",
-    birthdate: Date.new(1972, 1, 1),
     job_title: "QA Engineer",
     department: "Quality"
   },
   {
     last_name: "Smithers",
     first_name: "Charles",
-    birthdate: Date.new(1974, 1, 1),
     job_title: "Tester",
     department: "Quality"
   },
   {
     last_name: "Brown",
     first_name: "Charlie",
-    birthdate: Date.new(1960, 1, 1),
     job_title: "Designer",
     department: "Product"
   },
   {
     last_name: "Johnson",
     first_name: "Emma",
-    birthdate: Date.new(1962, 1, 1),
-    job_title: "Data Scientist",
-    department: "Research"
-  },
+    job_title: "Network Engineer",
+    username: "emmajohnson",
+    email: "Emma.Johnson@example.com",
+    department: "Operations"
+    },
   {
     last_name: "Johnston",
     first_name: "Emilia",
-    birthdate: Date.new(1966, 1, 1),
     job_title: "Data Scientist",
     department: "Research"
   },
   {
     last_name: "Williams",
     first_name: "Liam",
-    birthdate: Date.new(1968, 1, 1),
     job_title: "DevOps Engineer",
     department: "Operations"
   },
   {
     last_name: "Jones",
     first_name: "Olivia",
-    birthdate: Date.new(1976, 1, 1),
     job_title: "UX Researcher",
     department: "Research"
   },
   {
     last_name: "Miller",
     first_name: "Noah",
-    birthdate: Date.new(1978, 1, 1),
     job_title: "Software Engineer",
     department: "Product"
   },
   {
     last_name: "Davis",
     first_name: "Ava",
-    birthdate: Date.new(1982, 1, 1),
     job_title: "Software Engineer",
     department: "Product"
   },
   {
     last_name: "Garcia",
     first_name: "Sophia",
-    birthdate: Date.new(1984, 1, 1),
     job_title: "QA Engineer",
     department: "Quality"
   },
   {
     last_name: "Rodriguez",
     first_name: "Isabella",
-    birthdate: Date.new(1986, 1, 1),
     job_title: "Tech Support",
     department: "Customers"
   },
   {
     last_name: "Martinez",
     first_name: "Mason",
-    birthdate: Date.new(1988, 1, 1),
     job_title: "Business Analyst",
     department: "Research"
   },
   {
     last_name: "Hernandez",
     first_name: "Lucas",
-    birthdate: Date.new(1958, 1, 1),
     job_title: "Systems Administrator",
     department: "Operations"
   },
   {
     last_name: "Lopez",
     first_name: "Amelia",
-    birthdate: Date.new(1956, 1, 1),
     job_title: "Product Manager",
     department: "Business"
   },
   {
     last_name: "Gonzalez",
     first_name: "James",
-    birthdate: Date.new(1990, 1, 1),
     job_title: "Network Engineer",
     department: "Operations"
   },
   {
     last_name: "Wilson",
     first_name: "Elijah",
-    birthdate: Date.new(1992, 1, 1),
     job_title: "Cloud Architect",
     department: "Operations"
   }
@@ -468,10 +450,7 @@ people_data.each do |person_data|
   person =
     Person.create(
       first_name: person_data[:first_name],
-      last_name: person_data[:last_name],
-      birthdate: person_data[:birthdate],
-      job_title: person_data[:job_title],
-      department: person_data[:department]
+      last_name: person_data[:last_name]
     )
 
   # Insert the corresponding Account record
@@ -710,21 +689,18 @@ Person.where("similarity(last_name, ?) > ?", similarity_string, threshold)
   id: 2,
   last_name: "Johnson",
   first_name: "John",
-  birthdate: "1970-01-01",
   created_at: "2024-10-31 13:42:15.380507000 +0000",
   updated_at: "2024-10-31 13:42:15.380507000 +0000">,
  #<Person:0x000000011dfcdfc8
   id: 6,
   last_name: "Johnson",
   first_name: "Emma",
-  birthdate: "1962-01-01",
   created_at: "2024-10-31 13:42:15.456393000 +0000",
   updated_at: "2024-10-31 13:42:15.456393000 +0000">,
  #<Person:0x000000011dfcde88
   id: 7,
   last_name: "Johnston",
   first_name: "Emilia",
-  birthdate: "1966-01-01",
   created_at: "2024-10-31 13:42:15.473551000 +0000",
   updated_at: "2024-10-31 13:42:15.473551000 +0000">]
 ```
@@ -745,7 +721,6 @@ Person.select("*, similarity(last_name, #{similarity_quoted}) AS score")
   id: 2,
   last_name: "Johnson",
   first_name: "John",
-  birthdate: "1970-01-01",
   created_at: "2024-10-31 13:42:15.380507000 +0000",
   updated_at: "2024-10-31 13:42:15.380507000 +0000",
   score: 0.33333334>,
@@ -753,7 +728,6 @@ Person.select("*, similarity(last_name, #{similarity_quoted}) AS score")
   id: 6,
   last_name: "Johnson",
   first_name: "Emma",
-  birthdate: "1962-01-01",
   created_at: "2024-10-31 13:42:15.456393000 +0000",
   updated_at: "2024-10-31 13:42:15.456393000 +0000",
   score: 0.33333334>,
@@ -761,7 +735,6 @@ Person.select("*, similarity(last_name, #{similarity_quoted}) AS score")
   id: 7,
   last_name: "Johnston",
   first_name: "Emilia",
-  birthdate: "1966-01-01",
   created_at: "2024-10-31 13:42:15.473551000 +0000",
   updated_at: "2024-10-31 13:42:15.473551000 +0000",
   score: 0.3125>]
@@ -792,7 +765,6 @@ Person.select("*, #{similarity_string} AS score, show_limit() as threshold")
   id: 2,
   last_name: "Johnson",
   first_name: "John",
-  birthdate: "1970-01-01",
   created_at: "2024-10-31 18:30:08.640962000 +0000",
   updated_at: "2024-10-31 18:30:08.640962000 +0000",
   score: 0.33333334,
@@ -801,7 +773,6 @@ Person.select("*, #{similarity_string} AS score, show_limit() as threshold")
   id: 6,
   last_name: "Johnson",
   first_name: "Emma",
-  birthdate: "1962-01-01",
   created_at: "2024-10-31 18:30:08.757941000 +0000",
   updated_at: "2024-10-31 18:30:08.757941000 +0000",
   score: 0.33333334,
@@ -810,7 +781,6 @@ Person.select("*, #{similarity_string} AS score, show_limit() as threshold")
   id: 7,
   last_name: "Johnston",
   first_name: "Emilia",
-  birthdate: "1966-01-01",
   created_at: "2024-10-31 18:30:08.773495000 +0000",
   updated_at: "2024-10-31 18:30:08.773495000 +0000",
   score: 0.3125,
@@ -839,7 +809,6 @@ Person.select("*, #{similarity_string} AS score")
   id: 2,
   last_name: "Johnson",
   first_name: "John",
-  birthdate: "1970-01-01",
   created_at: "2024-10-31 18:30:08.640962000 +0000",
   updated_at: "2024-10-31 18:30:08.640962000 +0000",
   score: 0.33333334>,
@@ -847,7 +816,6 @@ Person.select("*, #{similarity_string} AS score")
   id: 6,
   last_name: "Johnson",
   first_name: "Emma",
-  birthdate: "1962-01-01",
   created_at: "2024-10-31 18:30:08.757941000 +0000",
   updated_at: "2024-10-31 18:30:08.757941000 +0000",
   score: 0.33333334>,
@@ -855,7 +823,6 @@ Person.select("*, #{similarity_string} AS score")
   id: 7,
   last_name: "Johnston",
   first_name: "Emilia",
-  birthdate: "1966-01-01",
   created_at: "2024-10-31 18:30:08.773495000 +0000",
   updated_at: "2024-10-31 18:30:08.773495000 +0000",
   score: 0.3125>,
@@ -863,7 +830,6 @@ Person.select("*, #{similarity_string} AS score")
   id: 3,
   last_name: "Johanson",
   first_name: "Jonathan",
-  birthdate: "1972-01-01",
   created_at: "2024-10-31 18:30:08.674588000 +0000",
   updated_at: "2024-10-31 18:30:08.674588000 +0000",
   score: 0.16666667>,
@@ -871,7 +837,6 @@ Person.select("*, #{similarity_string} AS score")
   id: 9,
   last_name: "Jones",
   first_name: "Olivia",
-  birthdate: "1976-01-01",
   created_at: "2024-10-31 18:30:08.820875000 +0000",
   updated_at: "2024-10-31 18:30:08.820875000 +0000",
   score: 0.125>]
@@ -902,7 +867,6 @@ Person
   id: 7,
   last_name: "Johnston",
   first_name: "Emilia",
-  birthdate: "1966-01-01",
   created_at: "2024-10-31 18:30:08.773495000 +0000",
   updated_at: "2024-10-31 18:30:08.773495000 +0000",
   score: 0.47368422>,
@@ -910,7 +874,6 @@ Person
   id: 6,
   last_name: "Johnson",
   first_name: "Emma",
-  birthdate: "1962-01-01",
   created_at: "2024-10-31 18:30:08.757941000 +0000",
   updated_at: "2024-10-31 18:30:08.757941000 +0000",
   score: 0.3888889>,
@@ -918,7 +881,6 @@ Person
   id: 2,
   last_name: "Johnson",
   first_name: "John",
-  birthdate: "1970-01-01",
   created_at: "2024-10-31 18:30:08.640962000 +0000",
   updated_at: "2024-10-31 18:30:08.640962000 +0000",
   score: 0.3125>]
@@ -940,7 +902,6 @@ Person.select("*, #{similarity_calc} AS score")
   id: 7,
   last_name: "Johnston",
   first_name: "Emilia",
-  birthdate: "1966-01-01",
   created_at: "2024-10-31 18:30:08.773495000 +0000",
   updated_at: "2024-10-31 18:30:08.773495000 +0000",
   score: 0.47368422>,
@@ -948,7 +909,6 @@ Person.select("*, #{similarity_calc} AS score")
   id: 6,
   last_name: "Johnson",
   first_name: "Emma",
-  birthdate: "1962-01-01",
   created_at: "2024-10-31 18:30:08.757941000 +0000",
   updated_at: "2024-10-31 18:30:08.757941000 +0000",
   score: 0.3888889>,
@@ -956,7 +916,6 @@ Person.select("*, #{similarity_calc} AS score")
   id: 2,
   last_name: "Johnson",
   first_name: "John",
-  birthdate: "1970-01-01",
   created_at: "2024-10-31 18:30:08.640962000 +0000",
   updated_at: "2024-10-31 18:30:08.640962000 +0000",
   score: 0.3125>]
@@ -983,7 +942,6 @@ Person.joins(:roles)
   id: 7,
   last_name: "Johnston",
   first_name: "Emilia",
-  birthdate: "1966-01-01",
   created_at: "2024-10-31 18:30:08.788015000 +0000",
   updated_at: "2024-10-31 18:30:08.788015000 +0000",
   job_title: "Data Scientist",
@@ -994,7 +952,6 @@ Person.joins(:roles)
   id: 6,
   last_name: "Johnson",
   first_name: "Emma",
-  birthdate: "1962-01-01",
   created_at: "2024-10-31 18:30:08.765276000 +0000",
   updated_at: "2024-10-31 18:30:08.765276000 +0000",
   job_title: "Data Scientist",
@@ -1005,7 +962,6 @@ Person.joins(:roles)
   id: 14,
   last_name: "Martinez",
   first_name: "Mason",
-  birthdate: "1988-01-01",
   created_at: "2024-10-31 18:30:08.910685000 +0000",
   updated_at: "2024-10-31 18:30:08.910685000 +0000",
   job_title: "Business Analyst",
