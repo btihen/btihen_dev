@@ -1068,13 +1068,22 @@ Depending on your use case, you may want to consider the following other methods
 
 ## Resources & Articles
 
-* [Postgres Fuzzy Search](https://dev.to/moritzrieger/build-a-fuzzy-search-with-postgresql-2029)
+* [pg_trgm docs](https://www.postgresql.org/docs/current/pgtrgm.html)
+* [Postgres Fuzzy Search (Trigrams)](https://dev.to/moritzrieger/build-a-fuzzy-search-with-postgresql-2029)
 * [Optimizing Postgres Text Search with Trigrams](https://alexklibisz.com/2022/02/18/optimizing-postgres-trigram-search)
 * [Awesome Autocomplete: Trigram Search in Rails and PostgreSQL](https://www.sitepoint.com/awesome-autocomplete-trigram-search-in-rails-and-postgresql/)
 
 
-## Docs
+## Alternatives
 
-* [pg_trgm](https://www.postgresql.org/docs/12/pgtrgm.html)
-* [Full Text Search](https://www.postgresql.org/docs/12/textsearch.html)
-* [fuzzy string match](https://www.postgresql.org/docs/current/fuzzystrmatch.html)
+* [Pattern Matching](https://www.postgresql.org/docs/current/functions-matching.html)
+  - **LIKE/ILIKE** - returns true if the string matches the supplied pattern
+  - **Regular Expressions (Regex)** - returns true if the regex pattern is matched
+  - **SIMILAR TO** - a cross between LIKE and REGEX
+* [FuzzyStrMatch](https://www.postgresql.org/docs/current/fuzzystrmatch.html)
+  - **Soundex** - matching similar-sounding names by converting them to the same code (best for English)
+  - **Daitch-Mokotoff Soundex** - matching similar-sounding names by converting them to the same code (good for non-English)
+  - **Levenshtein** - the distance between two strings (number of edits to make them the same)
+  - **Metaphone** - like Soundex, creates a representative 'sound' code for an input string and matches 'sounds'
+  - **Double Metaphone** -  creates two 'sounds like' strings for a given input string — a 'primary' and an 'alternate' - espescially helpful with non-English texts
+* [Full-Text / Document Search](https://www.postgresql.org/docs/current/textsearch.html)
