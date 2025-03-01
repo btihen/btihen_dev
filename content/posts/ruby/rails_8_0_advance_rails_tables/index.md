@@ -589,7 +589,7 @@ Now trigger a sort. We should remain at the bottom of the page:
 Let's make a little form to filter accept values to match:
 
 ```ruby
-# app/views/characters/_filter_form.html.erb
+# app/views/characters/_form_match_filter.html.erb
 <%= form_with url: characters_path, method: :get,
     data: { controller: "characters-filter", turbo_action: 'replace' } do |form| %>
   <%= form.text_field(
@@ -628,7 +628,7 @@ export default class extends Controller {
 
 let's add partial filter to the company filter using:
 
-`<%= render "filter_form", field_name: :company_filter, placeholder: "partial name" %>`
+`<%= render "form_match_filter", field_name: :company_filter, placeholder: "partial name" %>`
 
 within the table header - thus it would look like:
 
@@ -641,7 +641,7 @@ within the table header - thus it would look like:
 
 <h1>Characters</h1>
 
-<div id="characters" class="container text-center" data-controller="characters-filter">
+<div id="characters" class="container text-center">
 
   <table class="table table-striped table-hover">
     <thead class="sticky-top">
@@ -663,7 +663,7 @@ within the table header - thus it would look like:
         </th>
         <th scope="col">
           Company <%= sort_link(column: 'companies.company_name') %>
-          <%= render "filter_form", field_name: :company_filter, placeholder: "partial name" %>
+          <%= render "form_match_filter", field_name: :company_filter, placeholder: "partial name" %>
         </th>
       </tr>
     </thead>
@@ -757,10 +757,10 @@ Let's add the params to our form(s) using:
   <% end %>
 ```
 
-now the _filter_form.html.erb should look like:
+now the `_form_match_filter.html.erb` should look like:
 
 ```ruby
-# app/views/characters/_filter_form.html.erb
+# app/views/characters/_form_match_filter.html.erb
 <%= form_with url: characters_path, method: :get,
     data: { controller: "characters-filter", turbo_action: 'replace' } do |form| %>
 
@@ -821,7 +821,7 @@ Now we should be able to add this filter to other columns:
 
 <h1>Characters</h1>
 
-<div id="characters" class="container text-center" data-controller="characters-filter">
+<div id="characters" class="container text-center">
 
   <table class="table table-striped table-hover">
     <thead class="sticky-top">
@@ -832,11 +832,11 @@ Now we should be able to add this filter to other columns:
         </th>
         <th scope="col">
           Last Name <%= sort_link(column: "last_name") %>
-          <%= render "filter_form", field_name: :last_name_filter, placeholder: "partial last name" %>
+          <%= render "form_match_filter", field_name: :last_name_filter, placeholder: "partial last name" %>
         </th>
         <th scope="col">
           First Name <%= sort_link(column: "first_name") %>
-          <%= render "filter_form", field_name: :first_name_filter, placeholder: "partial first name" %>
+          <%= render "form_match_filter", field_name: :first_name_filter, placeholder: "partial first name" %>
         </th>
         <th scope="col">
           Gender <%= sort_link(column: "gender") %>
@@ -846,7 +846,7 @@ Now we should be able to add this filter to other columns:
         </th>
         <th scope="col">
           Company <%= sort_link(column: 'companies.company_name') %>
-          <%= render "filter_form", field_name: :company_filter, placeholder: "partial company name" %>
+          <%= render "form_match_filter", field_name: :company_filter, placeholder: "partial company name" %>
         </th>
       </tr>
     </thead>
@@ -887,7 +887,6 @@ class CharactersController < ApplicationController
               query
             end
 
-
     # execute query
     @characters = query.all
   end
@@ -905,6 +904,142 @@ git commit -m "allow multipe filters and sorting"
 ```
 
 ## Add Dropdown Filter
+
+Now lets add some dropdown filters.
+
+we can make a dropdown partial - adding the url params to the form:
+
+```ruby
+# app/views/characters/_dropdown_form_filter.html.erb
+<%= form_with url: characters_path, method: :get,
+    data: { controller: "characters-filter", turbo_action: 'replace' } do |form| %>
+
+  <!-- Preserve existing sort parameters -->
+  <% if params[:column].present? %>
+    <%= form.hidden_field :column, value: params[:column] %>
+  <% end %>
+  <% if params[:direction].present? %>
+    <%= form.hidden_field :direction, value: params[:direction] %>
+  <% end %>
+
+  <!-- Include all other filter parameters except the current one -->
+  <% params.each do |key, value| %>
+    <% next if key == field_name || key == 'column' || key == 'direction' || key == 'controller' || key == 'action' %>
+    <%= form.hidden_field key, value: value %>
+  <% end %>
+
+  <%= form.select(field_name,
+    options_for_select([['All', '']] + options, params[field_name]),
+    {},
+    class: "form-select form-select-sm",
+    data: { action: "change->characters-filter#filter" }) %>
+<% end %>
+```
+
+Now add the dropdowns into the template:
+```ruby
+# app/views/characters/index.html.erb
+<%= turbo_refreshes_with method: :morph, scroll: :preserve %>
+<p style="color: green"><%= notice %></p>
+
+<% content_for :title, "Characters" %>
+
+<h1>Characters</h1>
+
+<div id="characters" class="container text-center">
+
+  <table class="table table-striped table-hover">
+    <thead class="sticky-top">
+      <tr class="table-primary">
+        <th scope="col">Select</th>
+        <th scope="col">
+          ID <%= sort_link(column: "characters.id") %>
+        </th>
+        <th scope="col">
+          Last Name <%= sort_link(column: "last_name") %>
+          <%= render "form_match_filter", field_name: :last_name_filter, placeholder: "partial last name" %>
+        </th>
+        <th scope="col">
+          First Name <%= sort_link(column: "first_name") %>
+          <%= render "form_match_filter", field_name: :first_name_filter, placeholder: "partial first name" %>
+        </th>
+        <th scope="col">
+          Gender <%= sort_link(column: "gender") %>
+          <%= render "dropdown_form_filter", field_name: :gender_selection, options: Character.distinct.pluck(:gender).compact %>
+        </th>
+        <th scope="col">
+          Species <%= sort_link(column: 'species.species_name') %>
+          <%= render "dropdown_form_filter", field_name: :species_selection, options: Species.pluck(:species_name, :id) %>
+        </th>
+        <th scope="col">
+          Company <%= sort_link(column: 'companies.company_name') %>
+          <%= render "form_match_filter", field_name: :company_filter, placeholder: "partial company name" %>
+        </th>
+      </tr>
+    </thead>
+```
+
+And of course we need to add the new filters in the controller
+```ruby
+    # Dropdown selections
+    @gender_selection = params[:gender_selection]
+    @species_selection = params[:species_selection]
+    query = query.where(gender: @gender_selection) if @gender_selection.present?
+    query = query.where(species_id: @species_selection) if @species_selection.present?
+```
+
+now the characters_controller should look like:
+
+```ruby
+# app/controllers/characters_controller.rb
+class CharactersController < ApplicationController
+  before_action :set_character, only: %i[ show edit update destroy ]
+
+  def index
+    # query with sorting
+    column = params[:column]
+    direction = params[:direction]
+
+    # base query
+    query = Character
+            .includes(:species)
+            .includes(character_jobs: { job: :company })
+
+    # add sort if direction is given
+    query = if direction == 'none' || column.blank?
+              query.order('characters.id')
+            else
+              query.order("#{column} #{direction}")
+            end
+
+    # partial match filters
+    @first_name_filter = params[:first_name_filter]
+    @last_name_filter = params[:last_name_filter]
+    @company_filter = params[:company_filter]
+    query = query.where('characters.first_name ilike ?', "%#{@first_name_filter}%") if @first_name_filter.present?
+    query = query.where('characters.last_name ilike ?', "%#{@last_name_filter}%") if @last_name_filter.present?
+    query = if @company_filter.present?
+              query.joins(character_jobs: { job: :company }).where('companies.company_name ilike ?', "%#{@company_filter}%")
+            else
+              query
+            end
+
+    # Dropdown selections
+    @gender_selection = params[:gender_selection]
+    @species_selection = params[:species_selection]
+    query = query.where(gender: @gender_selection) if @gender_selection.present?
+    query = query.where(species_id: @species_selection) if @species_selection.present?
+
+    # execute query
+    @characters = query.all
+  end
+```
+
+![sort_filter_match](sort_filter_match.png)
+
+
+## Multi-Row Selection Form
+
 
 ## Add Pagination
 
