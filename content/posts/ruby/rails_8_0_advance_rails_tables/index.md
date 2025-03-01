@@ -277,8 +277,7 @@ Let's change `app/views/characters/index.html.erb` into a table using:
             <%= check_box_tag "selected_rows[]",
                 character.id,
                 false,
-                id: "selected_rows_#{character.id}",  # required Explicitly set the ID
-                data: { action: "change->filter-form#handleRowSelection" }
+                id: "selected_rows_#{character.id}" # required we need to set the ID
             %>
           </td>
           <th scope="row"><%= link_to character.id, edit_character_path(character) %></th>
@@ -436,7 +435,6 @@ We will add the sort_link to the header in each column.  With ID we need to use 
                 character.id,
                 false,
                 id: "selected_rows_#{character.id}",  # required Explicitly set the ID
-                data: { action: "change->filter-form#handleRowSelection" }
             %>
           </td>
           <th scope="row"><%= link_to character.id, edit_character_path(character) %></th>
@@ -561,11 +559,11 @@ Finally we need to add `data: { turbo_action: 'replace' }` to our sort_links to 
 # app/helpers/characters_helper.rb
 module CharactersHelper
   def sort_link(column:)
-    next_sort = column == params[:column] ? future_direction : 'asc'
+    next_direction = column == params[:column] ? future_direction : 'asc'
     display_arrow = params[:column] == column ? current_sort_arrow : tag.i(class: "bi bi-arrow-down-up")
     link_to(
       display_arrow.html_safe,
-      characters_path(column: column, direction: next_sort),
+      characters_path(column: column, direction: next_direction),
       data: { turbo_action: 'replace' }
     )
   end
@@ -585,6 +583,326 @@ Now trigger a sort. We should remain at the bottom of the page:
 
 
 ## Add Partial Match Filter
+
+### Single Field Filter
+
+Let's make a little form to filter accept values to match:
+
+```ruby
+# app/views/characters/_filter_form.html.erb
+<%= form_with url: characters_path, method: :get,
+    data: { controller: "characters-filter", turbo_action: 'replace' } do |form| %>
+  <%= form.text_field(
+    field_name,
+    placeholder: placeholder,
+    value: params[field_name],
+    class: "form-control form-control-sm",
+    autocomplete: "off",
+    data: { action: "input->characters-filter#filter" }) %>
+<% end %>
+```
+
+To make a form that accepts values as they are typed we need a stimulus controller that matches the name `characters-filter` with a function called `filter`.
+
+To make this javascript controller (& integrate it into our project use:.
+
+```bash
+bin/rails g stimulus characters_filter
+```
+
+Now we can add the following code:
+
+```js
+// app/javascript/controllers/characters_filter_controller.js
+import { Controller } from "@hotwired/stimulus";
+
+export default class extends Controller {
+  filter() {
+    clearTimeout(this.timeout);
+    this.timeout = setTimeout(() => {
+      this.element.requestSubmit();
+    }, 200);
+  }
+}
+```
+
+let's add partial filter to the company filter using:
+
+`<%= render "filter_form", field_name: :company_filter, placeholder: "partial name" %>`
+
+within the table header - thus it would look like:
+
+```ruby
+# app/views/characters/index.html.erb
+<%= turbo_refreshes_with method: :morph, scroll: :preserve %>
+<p style="color: green"><%= notice %></p>
+
+<% content_for :title, "Characters" %>
+
+<h1>Characters</h1>
+
+<div id="characters" class="container text-center" data-controller="characters-filter">
+
+  <table class="table table-striped table-hover">
+    <thead class="sticky-top">
+      <tr class="table-primary">
+        <th scope="col">Select</th>
+        <th scope="col">
+          ID <%= sort_link(column: "characters.id") %>
+        </th>
+        <th scope="col">
+          Last Name <%= sort_link(column: "last_name") %></th>
+        <th scope="col">
+          First Name <%= sort_link(column: "first_name") %>
+        </th>
+        <th scope="col">
+          Gender <%= sort_link(column: "gender") %>
+        </th>
+        <th scope="col">
+          Species <%= sort_link(column: 'species.species_name') %>
+        </th>
+        <th scope="col">
+          Company <%= sort_link(column: 'companies.company_name') %>
+          <%= render "filter_form", field_name: :company_filter, placeholder: "partial name" %>
+        </th>
+      </tr>
+    </thead>
+
+...
+```
+
+Now if we test it, we should see the following:
+
+![added_company_filter](added_company_filter.png)
+
+let's update the rails controller to use the filter using:
+
+```ruby
+    company_filter = params[:company_filter]
+    query = if company_filter.present?
+              query.joins(character_jobs: { job: :company }).where('companies.company_name ilike ?', "%#{company_filter}%")
+            else
+              query
+            end
+```
+
+now the controller should look like:
+
+```ruby
+# app/controllers/characters_controller.rb
+class CharactersController < ApplicationController
+  before_action :set_character, only: %i[ show edit update destroy ]
+
+  # GET /characters or /characters.json
+  def index
+    # query with sorting
+    column = params[:column]
+    direction = params[:direction]
+
+    # base query
+    query = Character
+            .includes(:species)
+            .includes(character_jobs: { job: :company })
+
+    # add sort if direction is given
+    query = if direction == 'none' || column.blank?
+              query.order('characters.id')
+            else
+              query.order("#{column} #{direction}")
+            end
+
+    # partial match filters
+    @company_filter = params[:company_filter]
+    query = if @company_filter.present?
+              query.joins(character_jobs: { job: :company }).where('companies.company_name ilike ?', "%#{@company_filter}%")
+            else
+              query
+            end
+
+    # execute query
+    @characters = query.all
+  end
+...
+```
+
+Now if we test (enter part of a company name and hit <enter>) we should see the following:
+
+![basic_company_filter](basic_company_filter.png)
+
+Assuming this work let's merge.
+
+```bash
+git add .
+git commit -m "added simple company filter"
+```
+
+### Allow Multiple Filters with Sorting
+
+This simple filter is a bit limited since currently we can only filter one column and we can't sort and filter at the same.
+
+Let's add the params to our form(s) using:
+```ruby
+  <!-- Preserve existing sort parameters -->
+  <% if params[:column].present? %>
+    <%= form.hidden_field :column, value: params[:column] %>
+  <% end %>
+  <% if params[:direction].present? %>
+    <%= form.hidden_field :direction, value: params[:direction] %>
+  <% end %>
+
+  <!-- add all other filter parameters except the current one -->
+  <% params.each do |key, value| %>
+    <% next if key == field_name || key == 'column' || key == 'direction' || key == 'controller' || key == 'action' %>
+    <%= form.hidden_field key, value: value %>
+  <% end %>
+```
+
+now the _filter_form.html.erb should look like:
+
+```ruby
+# app/views/characters/_filter_form.html.erb
+<%= form_with url: characters_path, method: :get,
+    data: { controller: "characters-filter", turbo_action: 'replace' } do |form| %>
+
+  <!-- Preserve existing sort parameters -->
+  <% if params[:column].present? %>
+    <%= form.hidden_field :column, value: params[:column] %>
+  <% end %>
+  <% if params[:direction].present? %>
+    <%= form.hidden_field :direction, value: params[:direction] %>
+  <% end %>
+
+  <!-- Include all other filter parameters except the current one -->
+  <% params.each do |key, value| %>
+    <% next if key == field_name || key == 'column' || key == 'direction' || key == 'controller' || key == 'action' %>
+    <%= form.hidden_field key, value: value %>
+  <% end %>
+
+  <%= form.text_field(
+    field_name,
+    placeholder: placeholder,
+    value: params[field_name],
+    class: "form-control form-control-sm",
+    autocomplete: "off",
+    data: { action: "input->characters-filter#filter" }) %>
+<% end %>
+```
+
+Now update the sort_link helper:
+```ruby
+module CharactersHelper
+  def sort_link(column:)
+    next_direction = column == params[:column] ? future_direction : 'asc'
+    display_arrow = params[:column] == column ? current_sort_arrow : tag.i(class: "bi bi-arrow-down-up")
+    link_to_params = params.permit!.to_h.merge(column: column, direction: next_direction)
+    link_to(
+      display_arrow.html_safe,
+      characters_path(link_to_params),
+      data: { turbo_action: 'replace' }
+    )
+  end
+  ...
+```
+
+Now when we test we should be able to sort and filter at the same time.
+
+![sort_and_filter](sort_and_filter.png)
+
+### Allowing Multiple Filters
+
+Now we should be able to add this filter to other columns:
+
+```ruby
+# app/views/characters/index.html.erb
+<%= turbo_refreshes_with method: :morph, scroll: :preserve %>
+<p style="color: green"><%= notice %></p>
+
+<% content_for :title, "Characters" %>
+
+<h1>Characters</h1>
+
+<div id="characters" class="container text-center" data-controller="characters-filter">
+
+  <table class="table table-striped table-hover">
+    <thead class="sticky-top">
+      <tr class="table-primary">
+        <th scope="col">Select</th>
+        <th scope="col">
+          ID <%= sort_link(column: "characters.id") %>
+        </th>
+        <th scope="col">
+          Last Name <%= sort_link(column: "last_name") %>
+          <%= render "filter_form", field_name: :last_name_filter, placeholder: "partial last name" %>
+        </th>
+        <th scope="col">
+          First Name <%= sort_link(column: "first_name") %>
+          <%= render "filter_form", field_name: :first_name_filter, placeholder: "partial first name" %>
+        </th>
+        <th scope="col">
+          Gender <%= sort_link(column: "gender") %>
+        </th>
+        <th scope="col">
+          Species <%= sort_link(column: 'species.species_name') %>
+        </th>
+        <th scope="col">
+          Company <%= sort_link(column: 'companies.company_name') %>
+          <%= render "filter_form", field_name: :company_filter, placeholder: "partial company name" %>
+        </th>
+      </tr>
+    </thead>
+```
+
+And of course we need to update the controller:
+```ruby
+# app/controllers/characters_controller.rb
+class CharactersController < ApplicationController
+  before_action :set_character, only: %i[ show edit update destroy ]
+
+  def index
+    # query with sorting
+    column = params[:column]
+    direction = params[:direction]
+
+    # base query
+    query = Character
+            .includes(:species)
+            .includes(character_jobs: { job: :company })
+
+    # add sort if direction is given
+    query = if direction == 'none' || column.blank?
+              query.order('characters.id')
+            else
+              query.order("#{column} #{direction}")
+            end
+
+    # partial match filters
+    @first_name_filter = params[:first_name_filter]
+    @last_name_filter = params[:last_name_filter]
+    @company_filter = params[:company_filter]
+    query = query.where('characters.first_name ilike ?', "%#{@first_name_filter}%") if @first_name_filter.present?
+    query = query.where('characters.last_name ilike ?', "%#{@last_name_filter}%") if @last_name_filter.present?
+    query = if @company_filter.present?
+              query.joins(character_jobs: { job: :company }).where('companies.company_name ilike ?', "%#{@company_filter}%")
+            else
+              query
+            end
+
+
+    # execute query
+    @characters = query.all
+  end
+```
+
+Now it should look like:
+
+![multiple_filters_and_sort](multiple_filters_and_sort.png)
+
+Let's commit this change.
+
+```bash
+git add .
+git commit -m "allow multipe filters and sorting"
+```
 
 ## Add Dropdown Filter
 
