@@ -1,9 +1,9 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Rails 8.0.1 - Advanced Rails Table Filtering & Sorting"
-subtitle: "Article 1 of 2: Dynamic Table Sorting and Filtering with minimal JavaScript"
-summary: "Build a powerful frontend table using Turbo 8 (with Morph Dom feature) to build an efficient table with sorting, filtering, and matching - with minimal javascript"
+title: "Rails: Table Filtering & Sorting"
+subtitle: "Article 1 of 2: Easy Dynamic Table Sorting and Filtering with minimal JavaScript"
+summary: "Build a powerful frontend table using Turbo 8 (with Morph Dom feature) to build an efficient table with sorting and filtering - with minimal javascript and network traffic"
 authors: ['btihen']
 tags: ['Rails', 'Tables', 'Turbo', 'Turbo 8', 'Morph', 'Morph Dom', 'Stimulus']
 categories: ["Code", "Ruby Language", "Rails Framework", "Simulus JS"]
@@ -28,16 +28,17 @@ image:
 projects: []
 ---
 
-I recently learned that Rails 8 (actually 7.1+) has delightful features that make it easy to render dynamic tables without JavaScript.  This is an exploration of using these new features.  This article is an extension of: https://www.colby.so/posts/turbo-8-refresh-sorting
+I recently learned that Rails 8 (actually 7.1+) has delightful features that make it easy to render dynamic tables without (or minimal) JavaScript and efficient network traffic.  This is an exploration of using these new features.  This article is an extension of: https://www.colby.so/posts/turbo-8-refresh-sorting
 
 The cool thing is that morph updates without a full page reload - so its fast! and very easy to setup.
 
 This article will go further and build sorting, filtering, and dropdown matching that all work together.
 
-The code for this article and the commits can be found at: https://github.com/btihen-dev/rails_advanced_tables_filtering_sorting
+The code for this article and the commits can be found at: https://github.com/btihen-dev/rails_table_filtering_sorting
 
 
-Followup article: https://btihen.dev/posts/ruby/rails_8_0_advance_rails_tables_selection_form
+Aticle 1 of 2: [Modern Rails: Table Filtering & Sorting](https://btihen.dev/posts/ruby/rails_8_0_rails_tables_filtering_sorting)
+Article 2 of 2: [Modern Rails: Table Selection Form](https://btihen.dev/posts/ruby/rails_8_0_rails_tables_selection_form)
 
 ## Basic Rails App Setup
 
