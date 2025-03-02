@@ -1,8 +1,8 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Rails 8.0.1 - Advanced Rails Tables"
-subtitle: "Dynamic Table Sorting, Filtering, and Matching using Rails 7.1+"
+title: "Rails 8.0.1 - Advanced Rails Table Filtering & Sorting"
+subtitle: "Dynamic Table Sorting and Filtering with minimal JavaScript"
 summary: "Build a powerful frontend table using Turbo 8 (with Morph Dom feature) to build an efficient table with sorting, filtering, and matching - with minimal javascript"
 authors: ['btihen']
 tags: ['Rails', 'Tables', 'Turbo', 'Turbo 8', 'Morph', 'Morph Dom', 'Stimulus']
@@ -34,16 +34,16 @@ The cool thing is that morph updates without a full page reload - so its fast! a
 
 This article will go further and build sorting, filtering, and dropdown matching that all work together.
 
-The code for this article and the commits can be found at: https://github.com/btihen-dev/rails_advanced_tables
+The code for this article and the commits can be found at: https://github.com/btihen-dev/rails_advanced_tables_filtering_sorting
 
 
-## Basic Application
+## Basic Rails App Setup
 
 ### Create the App
 
-Initially, I am a bit more comfortable using `esbuild` instead of `import-maps`, but feel free to use `import-maps` if you wish.
+I am a bit more comfortable using `esbuild` instead of `import-maps`, but feel free to use either.
 
-NOTE: when using **esbuild** be sure to use `bin/dev` to start rails, I am not sure of the best practices, but I believe with **import-maps** you can use `bin/rails s` or `bin/dev`.
+NOTE: when using **esbuild** be sure to use `bin/dev` to start rails (or build your own integration with JS).
 
 Create a new rails app:
 
@@ -1038,10 +1038,69 @@ class CharactersController < ApplicationController
 ![sort_filter_match](sort_filter_match.png)
 
 
-## Multi-Row Selection Form
+### Refactor hidden parameters
 
+Let's add an other partial _form_hidden_params.html.erb as now we need to add this a 3rd time:
 
-## Add Pagination
+```ruby
+# app/views/characters/_form_hidden_params.html.erb
+<!-- Preserve existing sort parameters -->
+<% if params[:column].present? %>
+  <%= form.hidden_field :column, value: params[:column] %>
+<% end %>
+<% if params[:direction].present? %>
+  <%= form.hidden_field :direction, value: params[:direction] %>
+<% end %>
+
+<!-- Include all other filter parameters except the current one -->
+<% params.each do |key, value| %>
+  <% next if key == field_name || key == 'column' || key == 'direction' || key == 'controller' || key == 'action' %>
+  <%= form.hidden_field key, value: value %>
+<% end %>
+```
+
+Now we can simplify the other form_partials to:
+```ruby
+# app/views/characters/_form_match_filter.html.erb
+<%= form_with url: characters_path, method: :get,
+    data: { controller: "characters-filter", turbo_action: 'replace' } do |form| %>
+
+  <%= render "form_hidden_params", form: form, field_name: field_name %>
+
+  <%= form.text_field(
+    field_name,
+    placeholder: placeholder,
+    value: params[field_name],
+    class: "form-control form-control-sm",
+    autocomplete: "off",
+    data: { action: "input->characters-filter#filter" }) %>
+<% end %>
+```
+
+And
+```ruby
+# app/views/characters/_form_dropdown_filter.html.erb
+<%= form_with url: characters_path, method: :get,
+    data: { controller: "characters-filter", turbo_action: 'replace' } do |form| %>
+
+  <%= render "form_hidden_params", form: form, field_name: field_name %>
+
+  <%= form.select(field_name,
+    options_for_select([['All', '']] + options, params[field_name]),
+    {},
+    class: "form-select form-select-sm",
+    data: { action: "change->characters-filter#filter" }) %>
+<% end %>
+```
+
+Everything should still look and work as before
+![featured_image](featured.png)
+
+now let's commit:
+```bash
+git add .
+git commit -m "refactor to unify hidden params into a shared partial"
+```
 
 ## Resources
 
