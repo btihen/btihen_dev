@@ -2,13 +2,13 @@
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
 title: "Rails 8.0.1 - Advanced Rails Table Filtering & Sorting"
-subtitle: "Dynamic Table Sorting and Filtering with minimal JavaScript"
+subtitle: "Article 1 of 2: Dynamic Table Sorting and Filtering with minimal JavaScript"
 summary: "Build a powerful frontend table using Turbo 8 (with Morph Dom feature) to build an efficient table with sorting, filtering, and matching - with minimal javascript"
 authors: ['btihen']
 tags: ['Rails', 'Tables', 'Turbo', 'Turbo 8', 'Morph', 'Morph Dom', 'Stimulus']
 categories: ["Code", "Ruby Language", "Rails Framework", "Simulus JS"]
 date: 2025-03-01T01:20:00+02:00
-lastmod: 2025-03-01T01:20:00+02:00
+lastmod: 2025-03-02T01:20:00+02:00
 featured: true
 draft: false
 
@@ -36,6 +36,8 @@ This article will go further and build sorting, filtering, and dropdown matching
 
 The code for this article and the commits can be found at: https://github.com/btihen-dev/rails_advanced_tables_filtering_sorting
 
+
+Followup article: https://btihen.dev/posts/ruby/rails_8_0_advance_rails_tables_selection_form
 
 ## Basic Rails App Setup
 
