@@ -1,7 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Rails: Table Selection Form"
+title: "Rails: Table Selection Form (Article 2 of 2)"
 subtitle: "Article 2 of 2: Dynamic Table Selection in combination with Filtering and Sorting"
 summary: "Build a powerful frontend table using Turbo 8 (with Morph Dom feature) to build an efficient table with sorting, filtering and selection"
 authors: ['btihen']

@@ -1,7 +1,7 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 
-title: "Rails: Table Filtering & Sorting"
+title: "Rails: Table Filtering & Sorting (Article 1 of 2)"
 subtitle: "Article 1 of 2: Easy Dynamic Table Sorting and Filtering with minimal JavaScript"
 summary: "Build a powerful frontend table using Turbo 8 (with Morph Dom feature) to build an efficient table with sorting and filtering - with minimal javascript and network traffic"
 authors: ['btihen']
