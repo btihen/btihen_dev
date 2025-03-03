@@ -28,6 +28,8 @@ image:
 projects: []
 ---
 
+**NOTE**: this article has been rewritten with more features in https://btihen.dev/posts/ruby/rails_8_0_rails_table_filtering_sorting/
+
 I recently learned that Rails 7.1+ has some delightful features that make it easy to render dynamic tables without JavaScript.  This is an exploration of using these new features.  This article is an adaptation of the article: https://www.colby.so/posts/turbo-8-refresh-sorting and https://www.colby.so/posts/filtering-tables-with-rails-and-hotwire
 
 This code can be found at: https://github.com/btihen-dev/rails_dynamic_table

@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Rails', 'Tables', 'Turbo', 'Turbo 8', 'Morph', 'Morph Dom', 'Stimulus']
 categories: ["Code", "Ruby Language", "Rails Framework", "Simulus JS"]
 date: 2025-03-01T01:20:00+02:00
-lastmod: 2025-03-02T01:20:00+02:00
+lastmod: 2025-03-03T01:20:00+02:00
 featured: true
 draft: false
 
@@ -34,11 +34,11 @@ The cool thing is that morph updates without a full page reload - so its fast! a
 
 This article will go further and build sorting, filtering, and dropdown matching that all work together.
 
+Aticle 1 of 2: [**Modern Rails: Table Filtering & Sorting**](https://btihen.dev/posts/ruby/rails_8_0_rails_tables_filtering_sorting)
+Article 2 of 2: [Modern Rails: Table Selection Form](https://btihen.dev/posts/ruby/rails_8_0_rails_tables_selection_form)
+
 The code for this article and the commits can be found at: https://github.com/btihen-dev/rails_table_filtering_sorting
 
-
-Aticle 1 of 2: [Modern Rails: Table Filtering & Sorting](https://btihen.dev/posts/ruby/rails_8_0_rails_tables_filtering_sorting)
-Article 2 of 2: [Modern Rails: Table Selection Form](https://btihen.dev/posts/ruby/rails_8_0_rails_tables_selection_form)
 
 ## Basic Rails App Setup
 
@@ -263,26 +263,18 @@ Let's change `app/views/characters/index.html.erb` into a table using:
   <table class="table table-striped table-hover">
     <thead class="sticky-top">
       <tr class="table-primary">
-        <th scope="col">Select</th>
-        <th scope="col">ID</th>
-        <th scope="col">Last Name</th>
-        <th scope="col">First Name</th>
-        <th scope="col">Gender</th>
-        <th scope="col">Species</th>
-        <th scope="col">Company</th>
+        <th scope="col" class="align-top">ID</th>
+        <th scope="col" class="align-top">Last Name</th>
+        <th scope="col" class="align-top">First Name</th>
+        <th scope="col" class="align-top">Gender</th>
+        <th scope="col" class="align-top">Species</th>
+        <th scope="col" class="align-top">Company</th>
       </tr>
     </thead>
 
     <tbody class="scrollable-table">
       <% @characters.each do |character| %>
         <tr id="<%= dom_id(character) %>">
-          <td>
-            <%= check_box_tag "selected_rows[]",
-                character.id,
-                false,
-                id: "selected_rows_#{character.id}" # required we need to set the ID
-            %>
-          </td>
           <th scope="row"><%= link_to character.id, edit_character_path(character) %></th>
           <td><%= character.last_name %></td>
           <td><%= character.first_name %></td>
@@ -409,22 +401,21 @@ We will add the sort_link to the header in each column.  With ID we need to use 
   <table class="table table-striped table-hover">
     <thead class="sticky-top">
       <tr class="table-primary">
-        <th scope="col">Select</th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           ID <%= sort_link(column: "characters.id") %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Last Name <%= sort_link(column: "last_name") %></th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           First Name <%= sort_link(column: "first_name") %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Gender <%= sort_link(column: "gender") %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Species <%= sort_link(column: "species.species_name") %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Company <%= sort_link(column: "companies.company_name") %>
         </th>
       </tr>
@@ -433,13 +424,6 @@ We will add the sort_link to the header in each column.  With ID we need to use 
     <tbody class="scrollable-table">
       <% @characters.each do |character| %>
         <tr id="<%= dom_id(character) %>">
-          <td>
-            <%= check_box_tag "selected_rows[]",
-                character.id,
-                false,
-                id: "selected_rows_#{character.id}",  # required Explicitly set the ID
-            %>
-          </td>
           <th scope="row"><%= link_to character.id, edit_character_path(character) %></th>
           <td><%= character.last_name %></td>
           <td><%= character.first_name %></td>
@@ -649,22 +633,21 @@ within the table header - thus it would look like:
   <table class="table table-striped table-hover">
     <thead class="sticky-top">
       <tr class="table-primary">
-        <th scope="col">Select</th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           ID <%= sort_link(column: "characters.id") %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Last Name <%= sort_link(column: "last_name") %></th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           First Name <%= sort_link(column: "first_name") %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Gender <%= sort_link(column: "gender") %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Species <%= sort_link(column: 'species.species_name') %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Company <%= sort_link(column: 'companies.company_name') %>
           <%= render "form_match_filter", field_name: :company_filter, placeholder: "partial name" %>
         </th>
@@ -829,25 +812,24 @@ Now we should be able to add this filter to other columns:
   <table class="table table-striped table-hover">
     <thead class="sticky-top">
       <tr class="table-primary">
-        <th scope="col">Select</th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           ID <%= sort_link(column: "characters.id") %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Last Name <%= sort_link(column: "last_name") %>
           <%= render "form_match_filter", field_name: :last_name_filter, placeholder: "partial last name" %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           First Name <%= sort_link(column: "first_name") %>
           <%= render "form_match_filter", field_name: :first_name_filter, placeholder: "partial first name" %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Gender <%= sort_link(column: "gender") %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Species <%= sort_link(column: 'species.species_name') %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Company <%= sort_link(column: 'companies.company_name') %>
           <%= render "form_match_filter", field_name: :company_filter, placeholder: "partial company name" %>
         </th>
@@ -954,27 +936,26 @@ Now add the dropdowns into the template:
   <table class="table table-striped table-hover">
     <thead class="sticky-top">
       <tr class="table-primary">
-        <th scope="col">Select</th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           ID <%= sort_link(column: "characters.id") %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Last Name <%= sort_link(column: "last_name") %>
           <%= render "form_match_filter", field_name: :last_name_filter, placeholder: "partial last name" %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           First Name <%= sort_link(column: "first_name") %>
           <%= render "form_match_filter", field_name: :first_name_filter, placeholder: "partial first name" %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Gender <%= sort_link(column: "gender") %>
           <%= render "dropdown_form_filter", field_name: :gender_selection, options: Character.distinct.pluck(:gender).compact %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Species <%= sort_link(column: 'species.species_name') %>
           <%= render "dropdown_form_filter", field_name: :species_selection, options: Species.pluck(:species_name, :id) %>
         </th>
-        <th scope="col">
+        <th scope="col" class="align-top">
           Company <%= sort_link(column: 'companies.company_name') %>
           <%= render "form_match_filter", field_name: :company_filter, placeholder: "partial company name" %>
         </th>
