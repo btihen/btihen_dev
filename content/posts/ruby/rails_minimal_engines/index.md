@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Ruby', 'Rails', 'Engines', 'Organizations']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-07-11T01:20:00+02:00
-lastmod: 2023-10-20T01:20:00+02:00
+lastmod: 2025-07-20T01:20:00+02:00
 featured: false
 draft: false
 
@@ -42,7 +42,7 @@ The code in this article available on [rails_mingine](https://github.com/btihen/
 
 note: I like rspec so - I'll skip the tests
 
-```
+```bash
 rails new rails_mingines --javascript=esbuild --css=tailwind --skip-test
 cd classrooms
 bin/rails db:create
@@ -53,7 +53,7 @@ mkdir mingines
 
 ## lets create a rails core engine
 
-```
+```bash
 # we will make a landing folder:
 mkdir -p mingines/core
 
@@ -85,7 +85,7 @@ EOF
 ```
 
 now lets move our rails files into this engine
-```
+```bash
 mv app/* mingines/core/app/.
 
 # however assets and js are easiest to leave in place
@@ -98,7 +98,7 @@ now we need to update `confg/application.rb` with:
 * `config.paths['db/migrate'] << 'mingines/*/db/migrate'` to find future migrations
 
 Now it should look like:
-```
+```ruby
 require_relative "boot"
 
 require "rails"
@@ -144,13 +144,13 @@ end
 ```
 
 lets start rails
-```
+```bash
 bin.rails server
 ```
 and be sure it all still works
 
 cool let's commit:
-```
+```bash
 git add .
 git commit -m 'added a rails - core engine'
 ```
@@ -162,7 +162,7 @@ This is of course overdone for a single page, but for demo purposes we will pret
 Instead instead of running: `bin/rails plugin new landing --mountable --skip-git`
 
 we will instead build the engines ourselves (without the gemspecs and other extras to make our engine portable)
-```
+```bash
 # we will make a landing folder:
 mkdir -p mingines/landing
 
@@ -195,7 +195,7 @@ EOF
 ```
 
 So we can build our home page controller:
-```
+```bash
 # we can build it with the normal rails generator
 bin/rails g controller landing/home index --no-helper
 
@@ -209,7 +209,7 @@ mv app/views/landing mingines/landing/app/views/.
 ```
 
 Now we will need to update the 'mingine' route
-```
+```ruby
 mkdir -p mingines/landing/config
 touch mingines/landing/config/routes.rb
 
@@ -223,7 +223,7 @@ EOF
 ```
 
 NOW we need to update `config/routes.rb` so it looks like:
-```
+```ruby
 Rails.application.routes.draw do
   mount Landing::Engine => '/'
   # ...
@@ -234,7 +234,7 @@ Now we should have our landing page when we go to:
 `localhost:3000`
 
 assuming it works we can add a commit:
-```
+```bash
 git add .
 git commit -m 'added landing page minigine'
 ```
@@ -242,7 +242,7 @@ git commit -m 'added landing page minigine'
 ## Let's try an Engine with Data Models
 
 we will build the engines with just what we need
-```
+```bash
 # we will make a landing folder:
 mkdir -p mingines/blogs
 
@@ -276,7 +276,7 @@ EOF
 
 
 Let's create our models (etc) - again using standard generators
-```
+```bash
 bin/rails g scaffold blogs/user full_name email --no-helper
 bin/rails g scaffold blogs/article title body:text blogs_user:references --no-helper
 
@@ -297,7 +297,7 @@ mv db/migrate/* mingines/blogs/db/migrate/.
 ```
 
 now we need to update our mingine routes with:
-```
+```ruby
 Blogs::Engine.routes.draw do
   resources :articles
   resources :users
@@ -305,7 +305,7 @@ end
 ```
 
 now lets update the core routes:
-```
+```ruby
 Rails.application.routes.draw do
   mount Blogs::Engine, at: 'blogs'
   # ...
@@ -315,13 +315,11 @@ end
 Now we need to make 3 adjustments for the generators (of course if you are experienced you can avoid this and just create the necessary files yourself):
 
 **First** - the models classnames
-```
+```ruby
 # mingines/blogs/app/models/blogs/articles.rb
 class Blogs::Article < ApplicationRecord
   belongs_to :blogs_user, class_name: 'Blogs::User'
 end
-
-# and
 
 # mingines/blogs/app/models/blogs/user.rb
 class Blogs::User < ApplicationRecord
@@ -330,7 +328,7 @@ end
 ```
 
 **Second** - the paths
-```
+```bash
 edit_blogs_article_path -> edit_article_path
 new_blogs_article_path -> new_article_path
 blogs_article_path -> article_path
@@ -348,7 +346,7 @@ Now your paths should match: `bin/rails routes`
 
 **Third** - params in controllers:
 `param is missing or the value is empty: blogs_user`
-```
+```ruby
 # mingines/blogs/app/controllers/blogs/articles_controller.rb
     # Only allow a list of trusted parameters through.
     def blogs_article_params
@@ -369,18 +367,18 @@ end
 ```
 
 run the migrations (given the `config/application.rb` update they run in place)
-```
+```bash
 bin/rails db:migrate
 ```
 
 **NOTE:** I use the trick to configure them to run in-place, since I haven't set up the standard rails way to copy the migrations to the main app `db/migrations` folder - which would normally be done with:
-```
+```bash
 bin/rails blogs:install:migrations
 bin/rails db:migrate
 ```
 
 now we can go to:
-```
+```bash
 # first create a user
 http://localhost:3000/users
 
@@ -389,7 +387,7 @@ http://localhost:3000/articles
 ```
 
 now we commit
-```
+```bash
 git add .
 git commit -m "add the blogs mingine"
 ```

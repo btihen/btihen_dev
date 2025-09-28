@@ -8,7 +8,7 @@ authors: ['btihen']
 tags: ['Ruby', 'Rails', 'Modules', 'Isolation']
 categories: ["Code", "Ruby Language", "Rails Framework"]
 date: 2023-07-06T01:20:00+02:00
-lastmod: 2023-10-20T01:20:00+02:00
+lastmod: 2025-07-20T01:20:00+02:00
 featured: true
 draft: false
 
@@ -35,7 +35,7 @@ This experiment was inspired from an internal Tech Talk at [Garaio REM](https://
 The example given was similar to the following:
 
 Typical Ruby Code is very permissive:
-```
+```ruby
 module Taxes
   class TaxA
     def self.tax(amount) = amount * 0.1
@@ -59,7 +59,7 @@ amount + Taxes::TaxA.new.tax(amount) + Taxes::TaxB.tax(amount)
 ```
 
 If we rewrite the code with boundaries within the namespace, then it might look like:
-```
+```ruby
 module Taxes
   class TaxA
     def self.tax(amount) = amount * 0.1
@@ -110,7 +110,7 @@ In this quick example we will demonstrate using modules with strong boundaries a
 
 To facilitate the 'citadel' approach some teams re-organize the code so that all module code is together instead of Rails approach of scattered across the app (some modular proponents like to encourage the rails code to be its own module and not mixed with 'our' code) - this article will show how to do this fully in this style (mini-inner-rails apps):
 
-```
+```bash
 ├── app
 │   ├── assets
 │   └── javascript
@@ -133,7 +133,7 @@ To facilitate the 'citadel' approach some teams re-organize the code so that all
 ```
 
 Other structures are also easy to create, the first version seen in the Repo was:
-```
+```bash
 ├── app
 │   ├── assets
 │   ├── javascript
@@ -165,7 +165,7 @@ The code for this experiment can be found at: https://github.com/btihen/protecte
 
 Just for fun we will use the newest Rails and Ruby versions, but these techniques should work on any version of Rails.
 
-```
+```bash
 # just for fun
 rbenv install 3.3.0-preview1
 rbenv local 3.3.0-preview1
@@ -190,12 +190,12 @@ instead of the current:
 
 First let's start by allowing us to configure Rails to allow for organization by Modules instead of grouping our code all together.
 
-```
+```bash
 mkdir modules
 ```
 
 Allow Rails to find the modules.
-```
+```ruby
 # config/application.rb
 module RailsPack
   class Application < Rails::Application
@@ -207,7 +207,7 @@ end
 ```
 
 Let the controllers know how to find the `views` within modules by updating the views path in: `app/controllers/application_controller.rb` to:
-```
+```ruby
 # app/controllers/application_controller.rb
 class ApplicationController < ActionController::Base
   # find views within our modules
@@ -221,9 +221,7 @@ Let's create a module for our Rails code.
 
 So our project would look like:
 
-
-
-```
+```bash
 ├── app
 │   ├── assets
 │   └── javascript
@@ -255,7 +253,7 @@ So our project would look like:
 
 In this way we can keep our code separate from Rails itself.
 
-```
+```bash
 mkdir modules/rails
 
 mv app/views modules/rails/.
@@ -266,12 +264,12 @@ mv app/controllers modules/rails/.
 ```
 
 be sure rails still works (best to restart rails if already running)
-```
+```bash
 bin/rails s
 ```
 
 update git
-```
+```bash
 git add .
 git commit -m "rails as a module"
 ```
@@ -280,7 +278,7 @@ git commit -m "rails as a module"
 
 Let's add a landing page.  Each new module we create will be within a namespace (module) otherwise we cannot enforce privacy!  In the case of a landing page it is unnecessary, but it allows us to create a more complicated module in the future without a major code refactor.  So we will just use a namespace for all modules.
 
-```
+```bash
 bin/rails g controller landing/home index --no-helper
 
 mkdir modules/landing
@@ -291,7 +289,7 @@ mv app/controllers modules/landing/.
 
 
 Now update the routes file to look like:
-```
+```ruby
 # config/routes.rb
 Rails.application.routes.draw do
   namespace :landing do
@@ -308,14 +306,14 @@ start rails new with `bin/rails s`
 the new landing page should appear!
 
 update git
-```
+```bash
 git add .
 git commit -m "add landing page module"
 ```
 
 Now the structure looks like:
 
-```
+```bash
 ├── app
 │   ├── assets
 │   └── javascript
@@ -336,14 +334,14 @@ Now the structure looks like:
 
 Granted this is just an arbitrary module for demo purposes - but it is separate logically from the landing page and thus has it's own module.
 
-```
+```bash
 bin/rails g scaffold authors/user full_name email --no-helper
 bin/rails g scaffold authors/article title body:text authors_user:references --no-helper
 bin/rails db:migrate
 ```
 
 Let's build into an isolated module
-```
+```bash
 mkdir modules/authors
 
 mv app/views modules/authors/.
@@ -352,7 +350,7 @@ mv app/controllers modules/authors/.
 ```
 
 Rails overlooks namespace relations (when it sees `authors_users` it assumes a classname of `AuthorsUsers` but with namespaces it is actually `Authors::Users`) so we need be sure our relationships are properly adjusted.
-```
+```ruby
 # modules/authors/models/authors/article.rb
 class Authors::Article < ApplicationRecord
   belongs_to :authors_user, class_name: 'Authors::User'
@@ -360,7 +358,7 @@ end
 ```
 
 you will probably also want to update users to find all of a user's articles:
-```
+```ruby
 # modules/authors/models/authors/user.rb
 class Authors::User < ApplicationRecord
   has_many :authors_articles, class_name: 'Authors::Article', foreign_key: 'authors_user_id', dependent: :destroy
@@ -368,7 +366,7 @@ end
 ```
 
 so that the following works :
-```
+```ruby
 bin/rails c
 user = Authors::User.first
 user.authors_articles
@@ -380,14 +378,14 @@ test that `authors/users` & `authors/articles` work as expected
 
 
 update git
-```
+```bash
 git add .
 git commit -m "add authors module"
 ```
 
 Now the project looks like:
 
-```
+```bash
 ├── app
 │   ├── assets
 │   └── javascript
@@ -414,11 +412,11 @@ Now the project looks like:
 ## Protected Modules
 
 In Ruby 1.9.3 `private_constant` was introduced to help enforce privacy of Constants `private` only enforces privacy of methods.  Often we think of Constants as predefined information i.e.:
-```
+```ruby
 ARTICLE_STATUS = %i[draft inreview published].freeze
 ```
 If we don't want to share these states outside our Class then we can can write:
-```
+```ruby
 ARTICLE_STATUS = %i[draft inreview published].freeze
 private_constant :ARTICLE_STATUS
 ```
@@ -428,7 +426,7 @@ However our Classes are also Constants.  So within a module (namespace) we can p
 
 Let's try that out using `private_constant` on our Models within the `Authors` namespace.
 
-```
+```ruby
 # modules/authors/models/authors/article.rb
 module Authors
   class Article < ApplicationRecord
@@ -441,7 +439,7 @@ end
 
 and
 
-```
+```ruby
 # modules/authors/models/authors/user.rb
 module Authors
   class User < ApplicationRecord
@@ -453,7 +451,7 @@ end
 ```
 
 Now if we try to access our our Rails Authors controllers
-```
+```bash
 https://localhost:3000/authors/users
 # or
 https://localhost:3000/authors/articles
@@ -463,29 +461,29 @@ we throw lots of Privacy errors.
 To fix this we need refactor our controllers.
 
 We need to explicitly use our namespace as a module - thus:
-```
+```ruby
 class Authors::ArticlesController < ApplicationController
 ```
 
 becomes:
-```
+```ruby
 module Authors
   class ArticlesController < ApplicationController
 ```
 
 We also need to change all our class reference from:
-```
+```ruby
 @authors_articles = Authors::Article.all
 ```
 to:
-```
+```ruby
 @authors_articles = Article.all
 ```
 
 Which works since we have now explicitly defined our namespace as a module.  Within our namespace we have full access to our classes - **outside the namespace - we have no access!**
 
 Thus our controllers will now need to look like:
-```
+```ruby
 # modules/authors/controllers/authors/articles_controller.rb
 # an explicit module for namespace
 module Authors
@@ -559,7 +557,7 @@ end
 ```
 and
 
-```
+```ruby
 # modules/authors/controllers/authors/users_controller.rb
 module Authors
   class UsersController < ApplicationController
@@ -632,7 +630,7 @@ end
 Now lets create an API for other aspects of our APP.
 
 create public directory for it
-```
+```bash
 mkdir modules/authors/public/authors
 touch modules/authors/public/authors/article_data.rb
 touch modules/authors/public/authors/user_data.rb
@@ -640,7 +638,7 @@ touch modules/authors/public/authors/user_data.rb
 
 
 update git
-```
+```bash
 git add .
 git commit -m "authors is now a protected module"
 ```
@@ -651,7 +649,7 @@ Generally our code must cooperate with other code.  Thus each protected module w
 
 In this case, I allow full CRUD access to each model (just for demo purposes).
 
-```
+```ruby
 # modules/authors/public/authors/article_data.rb
 module Authors
   class ArticleData
@@ -695,7 +693,7 @@ end
 
 and
 
-```
+```ruby
 # modules/authors/public/authors/user_data.rb
 module Authors
   class UserData
@@ -741,7 +739,7 @@ PS - you may not want to include `include ActiveModel::Model` in the UserData/Ar
 now we cat test:
 
 be sure we can still create new users and articles in our controllers and that we have access outside with the new public entities
-```
+```ruby
 bin/rails c
 
 Authors::ArticleData.find(1)
@@ -750,13 +748,14 @@ Authors::UserData.find(1)
 ```
 
 update repo
-```
+```bash
 git add .
 git commit -m "protected module with public API"
 ```
 
 Now our code looks like:
-```
+
+```bash
 ├── app
 │   ├── assets
 │   └── javascript
@@ -779,13 +778,13 @@ Now our code looks like:
 
 Let's use the Ruby API to create a JSON API to collaborate to say a JS frontend.
 
-```
+```bash
 mkdir -p modules/api/controllers/api/v1
 touch modules/api/controllers/api/v1/articles_controller.rb
 touch modules/api/controllers/api/v1/users_controller.rb
 ```
 
-```
+```ruby
 # modules/api/controllers/api/v1/articles_controller.rb
 module Api
   module V1
@@ -802,7 +801,7 @@ end
 ```
 and
 
-```
+```ruby
 # modules/api/controllers/api/v1/users_controller.rb
 module Api
   module V1
@@ -819,7 +818,7 @@ end
 ```
 
 update the route with:
-```
+```ruby
 # config/routes.rb
 Rails.application.routes.draw do
   namespace :api do
@@ -840,15 +839,14 @@ and
 we should get the expected results
 
 let's update git:
-```
+```bash
 git add .
 git commit -m 'json api for the Authors Module'
 ```
 
 Now the structure looks like:
 
-
-```
+```bash
 ├── app
 │   ├── assets
 │   └── javascript
@@ -868,7 +866,7 @@ Now the structure looks like:
 ## Tests (Rspec) with Protected Modules
 
 Tests / Rspecs will need to be slightly different when using protected modules - the tests need to be within the `module` so they will need to look like:
-```
+```ruby
 require 'spec_helper'
 
 module Authors
@@ -879,7 +877,7 @@ end
 ```
 
 instead of:
-```
+```ruby
 require 'spec_helper'
 
 describe Authors::User do
@@ -895,7 +893,7 @@ If you have chosen to re-organize your rails environment to create 'packages, mo
 Packwerk is a linter and like RuboCop you can also have it ignore older code that isn't yet using your new design.  There is also a 'danger-packwerk' to auto-comment PRs in a Continious Integration system.
 
 In the gem file add:
-```
+```ruby
 # Gemfile
 ...
 # Packwerk (modular Rails) - dependency tooling and mapping
@@ -904,7 +902,7 @@ gem 'graphwerk', group: %i[development test]
 ```
 
 Setup packwerk with:
-```
+```bash
 # add the new gems to the codebase
 bundle install
 
@@ -922,7 +920,7 @@ Describe your dependencies and public APIs
 Now you describe you dependencies in the `packwerk.yml` file for each module:
 
 the rails shim:
-```
+```ruby
 # module/rails/packwerk.yml
 
 enforce_dependencies: true
@@ -937,7 +935,7 @@ enforce_privacy: true
 ```
 
 the landing page depends on Rails:
-```
+```ruby
 # module/landing/packwerk.yml
 
 enforce_dependencies: true
@@ -952,7 +950,7 @@ dependencies:
 ```
 
 The authors module depends on rails:
-```
+```ruby
 # module/authors/packwerk.yml
 
 enforce_dependencies: true
@@ -967,7 +965,7 @@ dependencies:
 ```
 
 the Json API requires both rails and the authors modules
-```
+```ruby
 # module/api/packwerk.yml
 
 enforce_dependencies: true
@@ -986,7 +984,7 @@ dependencies:
 ### Check your work
 
 You can now visualize your structure with:
-```
+```bash
 bin/rails graphwerk:update
 ```
 
@@ -994,7 +992,7 @@ now we should find the file `packwerk.png` and we can visualize the dependencies
 ![modules structure](packwerk.png)
 
 and you check for privacy and dependency violations (that you overlooked) with:
-```
+```bash
 bin/packwerk check
 ```
 ### Gems for CI, CD & Code Review Alerts
@@ -1010,7 +1008,7 @@ I didn't cover testing, but of course, you will probably want to arraign tests s
 
 I personally like this structure.  It mirrors the structure when using engines.
 
-```
+```bash
 ├── app
 │   ├── assets
 │   ├── javascript
@@ -1023,7 +1021,7 @@ I personally like this structure.  It mirrors the structure when using engines.
 
 This also works well and emphasizes that all sits within one App.
 
-```
+```bash
 ├── app
     ├── assets
     ├── javascript
@@ -1035,7 +1033,8 @@ This also works well and emphasizes that all sits within one App.
 ```
 
 But Modularization can be done without reorganization.
-```
+
+```bash
 ├── app
 │   ├── assets
 │   ├── channels

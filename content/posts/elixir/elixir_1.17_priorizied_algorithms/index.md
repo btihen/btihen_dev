@@ -1,13 +1,13 @@
 ---
 # Documentation: https://sourcethemes.com/academic/docs/managing-content/
 title: "Elixir - Prioritized Algorithms"
-subtitle: "Simple Clean Prioritized Algorithms"
-summary: "continue on failure, stop on success"
+subtitle: "Simple Clean Prioritized Algorithms using 'Pessimistic With'"
+summary: "using with to continue on failure, stop on success we call this a 'pessimistic with'"
 authors: ["btihen"]
-tags: ["Elixir", "With", "Prioritize With", "Reverse With"]
+tags: ["Elixir", "With", "Prioritize With", "Reverse With", "Pessimistic With"]
 categories: ["Code", "Elixir Language", "Prioritized Algorithms", "Prioritized Pattern"]
 date: 2024-10-02T01:01:53+02:00
-lastmod: 2024-10-02T01:01:53+02:00
+lastmod: 2025-05-14T01:01:53+02:00
 featured: true
 draft: false
 
@@ -172,10 +172,10 @@ IO.inspect(PrioritizedChain.best_contact(with_eve, "Jim"))
 
 This works just fine, but is relatively complex (to read). Worse yet, in the case of an error, we have to recover and pass an [].  This means these `chained` methods are dependent on each other (coupling).
 
-## Reverse With (decoupled)
+## Pessimistic With (decoupled)
 
 My colleage [Gernot Kogler](https://www.linkedin.com/in/gernot-kogler-075513162/),
-suggested a cool way to decouple and simplify these prioritized matching logic - using a **reverse** `with`.  Using it to guide the failed cases and dropping out with success.
+suggested a cool way to decouple and simplify these prioritized matching logic - using a **pessimistic** `with`.  Using it to guide the failed cases and dropping out with success.
 
 This was a new and surprising use of `with`, I had always used to match the happy path and not the failure path, but this creates a simple, clean and effective logic, that is easy to read _(except I like to add the unnecessary `else` to see the possible returns in the main function)_.
 
@@ -193,7 +193,7 @@ defmodule PrioritizedWith do
     end
   end
 
-  # reverse with testing for negative results
+  # 'pessimistic with' testing for negative results
   def filter_name(staff, name) do
     exact_match = fn s -> Enum.filter(s, &(&1.name == name)) end
     contains_match = fn s -> Enum.filter(s, &String.contains?(&1.name, name)) end
@@ -215,7 +215,7 @@ defmodule PrioritizedWith do
     end
   end
 
-  # mostly, reverse with testing for negative results
+  # 'pessimistic with' testing for negative results
   def filter_role(staff) do
     with [_ | _] <- staff,
         # assuming we have people in our array filter by the roles we most care about
@@ -285,7 +285,7 @@ defmodule PrioritizedMinimalWith do
     end
   end
 
-  # reverse with testing for negative results
+  # 'pessimistic with' testing for negative results
   def filter_name(staff, name) do
     exact_match = fn s -> Enum.filter(s, &(&1.name == name)) end
     contains_match = fn s -> Enum.filter(s, &String.contains?(&1.name, name)) end
@@ -304,7 +304,7 @@ defmodule PrioritizedMinimalWith do
     end
   end
 
-  # mostly, reverse with testing for negative results
+  # mostly, 'pessimistic with' testing for negative results
   def filter_role(staff) do
     with [_ | _] <- staff,
         # assuming we have people in our array filter by the roles we most care about
@@ -356,6 +356,4 @@ IO.inspect(PrioritizedMinimizedWith.best_contact(with_eve, "Jim"))
 
 ## Conclusion
 
-I appreciate the `prioritized with` or the `reverse with` pattern.
-
-It decouples various algorithms from each other, is relatively easy to read (especially with the redundant `else` to clearly show what will be returned)
+I appreciate how the `pessimistic with` pattern decouples various algorithms from each other, is easy to read (especially when using the redundant `else` to clearly show what will be returned)
